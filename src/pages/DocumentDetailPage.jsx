@@ -69,12 +69,15 @@ const DocumentDetailPage = () => {
     fetchDocument()
   }, [id])
 
-  // Auto focus barcode input
+  // Auto focus barcode input - sayfa yüklendiğinde ve her state değiştiğinde
   useEffect(() => {
-    if (barcodeInputRef.current) {
-      barcodeInputRef.current.focus()
-    }
-  }, [])
+    const timer = setTimeout(() => {
+      if (barcodeInputRef.current) {
+        barcodeInputRef.current.focus()
+      }
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [items, message])
 
   // Update statistics
   const updateStats = (currentItems) => {
@@ -286,82 +289,77 @@ const DocumentDetailPage = () => {
     )
   }
 
-  const completionPercentage = Math.round((stats.prepared / stats.total) * 100)
+  // Tamamlanma yüzdesini miktar bazında hesapla
+  const completionPercentage = useMemo(() => {
+    const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+    const totalOkutulan = items.reduce((sum, item) => sum + (item.okutulan || 0), 0)
+    
+    if (totalQuantity === 0) return 0
+    return Math.round((totalOkutulan / totalQuantity) * 100)
+  }, [items])
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-white to-gray-50 border-b-2 border-primary-100 shadow-md">
-        <div className="px-6 py-4">
+      {/* Header - Compact */}
+      <div className="bg-gradient-to-r from-white to-gray-50 border-b border-primary-100 shadow-sm">
+        <div className="px-6 py-2">
           <div className="flex items-center justify-between">
             {/* Left - Back Button & Document Info */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/documents')}
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white hover:bg-primary-50 border border-gray-200 hover:border-primary-300 transition-all shadow-sm hover:shadow"
+                className="w-9 h-9 flex items-center justify-center rounded-lg bg-white hover:bg-primary-50 border border-gray-200 hover:border-primary-300 transition-all shadow-sm"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-700" />
+                <ArrowLeft className="w-4 h-4 text-gray-700" />
               </button>
-              <div className="bg-primary-50 px-5 py-2.5 rounded-xl border border-primary-200 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <p className="text-xs text-primary-600 font-medium mb-0.5">
-                      {getDocumentTypeName(order.docType, order.tipi)}
-                    </p>
-                    <h1 className="text-xl font-bold text-primary-900">{order.orderNo}</h1>
-                  </div>
-                </div>
+              <div className="bg-primary-50 px-4 py-1.5 rounded-lg border border-primary-200">
+                <p className="text-[10px] text-primary-600 font-medium leading-tight">
+                  {getDocumentTypeName(order.docType, order.tipi)}
+                </p>
+                <h1 className="text-base font-bold text-primary-900 leading-tight">{order.orderNo}</h1>
               </div>
             </div>
             
-            {/* Center - Customer Info Cards */}
-            <div className="flex items-center gap-3">
-              <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+            {/* Center - Customer Info Cards - Compact */}
+            <div className="flex items-center gap-2">
+              <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <User className="w-4 h-4 text-blue-600" />
-                  </div>
+                  <User className="w-3.5 h-3.5 text-blue-600" />
                   <div>
-                    <p className="text-xs text-gray-500">Müşteri</p>
-                    <p className="text-sm font-bold text-gray-900">{order.customerName}</p>
+                    <p className="text-[10px] text-gray-500 leading-tight">Müşteri</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{order.customerName}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-                    <Hash className="w-4 h-4 text-purple-600" />
-                  </div>
+                  <Hash className="w-3.5 h-3.5 text-purple-600" />
                   <div>
-                    <p className="text-xs text-gray-500">Müşteri Kodu</p>
-                    <p className="text-sm font-bold text-gray-900">{order.customerCode}</p>
+                    <p className="text-[10px] text-gray-500 leading-tight">Müşteri Kodu</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">{order.customerCode}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <MapPin className="w-4 h-4 text-green-600" />
-                  </div>
+                  <MapPin className="w-3.5 h-3.5 text-green-600" />
                   <div>
-                    <p className="text-xs text-gray-500">İlçe / Şehir</p>
-                    <p className="text-sm font-bold text-gray-900">
+                    <p className="text-[10px] text-gray-500 leading-tight">İlçe / Şehir</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">
                       {order.district ? `${order.district} / ${order.city}` : order.city}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+              <div className="bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-orange-600" />
-                  </div>
+                  <Calendar className="w-3.5 h-3.5 text-orange-600" />
                   <div>
-                    <p className="text-xs text-gray-500">Belge Tarihi</p>
-                    <p className="text-sm font-bold text-gray-900">
+                    <p className="text-[10px] text-gray-500 leading-tight">Belge Tarihi</p>
+                    <p className="text-xs font-bold text-gray-900 leading-tight">
                       {order.orderDate ? new Date(order.orderDate).toLocaleDateString('tr-TR') : '-'}
                     </p>
                   </div>
@@ -369,11 +367,19 @@ const DocumentDetailPage = () => {
               </div>
             </div>
             
-            {/* Right - Completion Percentage */}
-            <div className="bg-gradient-to-br from-primary-500 to-primary-600 px-6 py-3 rounded-xl shadow-lg">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">{completionPercentage}%</div>
-                <div className="text-xs text-primary-100 font-medium">Tamamlanma</div>
+            {/* Right - Completion Progress Bar */}
+            <div className="bg-gradient-to-br from-primary-500 to-primary-600 px-5 py-2 rounded-lg shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white leading-tight">{completionPercentage}%</div>
+                  <div className="text-[10px] text-primary-100 font-medium leading-tight">Tamamlanma</div>
+                </div>
+                <div className="w-16 bg-white/20 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-white transition-all duration-500"
+                    style={{ width: `${completionPercentage}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
