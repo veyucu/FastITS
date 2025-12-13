@@ -29,9 +29,10 @@ const DocumentDetailPage = () => {
       return 'Sipariş'
     } else if (docType === '1' || docType === '2') {
       // TIPI alanına göre Alış veya Satış faturası
-      if (tipi && tipi.toLowerCase().includes('aliş')) {
+      const tipiStr = tipi ? String(tipi).toLowerCase() : ''
+      if (tipiStr.includes('aliş') || tipiStr.includes('alis')) {
         return 'Alış Faturası'
-      } else if (tipi && tipi.toLowerCase().includes('satiş')) {
+      } else if (tipiStr.includes('satiş') || tipiStr.includes('satis')) {
         return 'Satış Faturası'
       }
       // Eğer TIPI bilgisi yoksa, FTIRSIP'e göre varsayılan
