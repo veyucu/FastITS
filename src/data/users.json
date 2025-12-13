@@ -1,0 +1,34 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "admin123",
+      "name": "Admin Kullanıcı",
+      "email": "admin@atakodits.com",
+      "role": "admin",
+      "department": "Yönetim",
+      "avatar": null
+    },
+    {
+      "id": 2,
+      "username": "demo",
+      "password": "demo123",
+      "name": "Demo Kullanıcı",
+      "email": "demo@atakodits.com",
+      "role": "user",
+      "department": "Satış",
+      "avatar": null
+    },
+    {
+      "id": 3,
+      "username": "test",
+      "password": "test123",
+      "name": "Test Kullanıcı",
+      "email": "test@atakodits.com",
+      "role": "user",
+      "department": "Muhasebe",
+      "avatar": null
+    }
+  ]
+}
