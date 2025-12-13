@@ -85,7 +85,13 @@ const DocumentDetailPage = () => {
   const columnDefs = useMemo(() => [
     {
       headerName: '#',
-      valueGetter: 'node.rowIndex + 1',
+      valueGetter: (params) => {
+        // Footer için toplam satır sayısını göster
+        if (params.node.rowPinned === 'bottom') {
+          return params.api.getDisplayedRowCount() - 1 // -1 çünkü footer'ı saymamalıyız
+        }
+        return params.node.rowIndex + 1
+      },
       width: 60,
       cellClass: 'text-center font-semibold text-gray-600',
       pinned: 'left',
