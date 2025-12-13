@@ -126,19 +126,19 @@ const DocumentDetailPage = () => {
       headerName: 'Türü',
       field: 'turu',
       width: 80,
-      cellClass: 'text-center font-semibold',
+      cellClass: 'text-center font-bold',
       cellStyle: (params) => {
         if (params.node.rowPinned === 'bottom') return { backgroundColor: '#f3f4f6' }
-        if (params.value === 'ITS') return { color: '#2563eb', fontWeight: 'bold' }
-        if (params.value === 'UTS') return { color: '#dc2626', fontWeight: 'bold' }
-        return { color: '#6b7280', fontWeight: 'bold' }
+        if (params.value === 'ITS') return { color: '#2563eb', fontWeight: 'bold', fontSize: '13px' }
+        if (params.value === 'UTS') return { color: '#dc2626', fontWeight: 'bold', fontSize: '13px' }
+        return { color: '#6b7280', fontWeight: 'bold', fontSize: '13px' }
       }
     },
     {
       headerName: 'Stok Kodu',
       field: 'barcode',
       width: 150,
-      cellClass: 'font-mono font-semibold',
+      cellClass: 'font-mono',
       cellClassRules: {
         'bg-gray-100': (params) => params.node.rowPinned === 'bottom'
       }
@@ -148,6 +148,7 @@ const DocumentDetailPage = () => {
       field: 'productName',
       flex: 1,
       minWidth: 300,
+      cellClass: 'font-bold',
       cellClassRules: {
         'font-bold text-right bg-gray-100': (params) => params.node.rowPinned === 'bottom'
       }
@@ -156,18 +157,50 @@ const DocumentDetailPage = () => {
       headerName: 'Miktar',
       field: 'quantity',
       width: 100,
-      cellClass: 'text-center font-semibold',
-      cellClassRules: {
-        'font-bold bg-blue-50 text-blue-700': (params) => params.node.rowPinned === 'bottom'
+      cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { 
+            backgroundColor: '#dbeafe', 
+            color: '#1e40af', 
+            fontWeight: 'bold',
+            fontSize: '14px'
+          }
+        }
+        return { 
+          fontWeight: 'bold',
+          fontSize: '14px',
+          color: '#1f2937'
+        }
       }
     },
     {
       headerName: 'Okutulan',
       field: 'okutulan',
       width: 100,
-      cellClass: 'text-center font-semibold',
-      cellClassRules: {
-        'font-bold bg-green-50 text-green-700': (params) => params.node.rowPinned === 'bottom'
+      cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { 
+            backgroundColor: '#dcfce7', 
+            color: '#15803d', 
+            fontWeight: 'bold',
+            fontSize: '14px'
+          }
+        }
+        const okutulan = params.data.okutulan || 0
+        if (okutulan > 0) {
+          return { 
+            fontWeight: 'bold',
+            fontSize: '14px',
+            color: '#15803d'
+          }
+        }
+        return { 
+          fontWeight: 'bold',
+          fontSize: '14px',
+          color: '#6b7280'
+        }
       }
     },
     {
@@ -178,9 +211,29 @@ const DocumentDetailPage = () => {
         if (params.node.rowPinned === 'bottom') return params.data.kalan
         return (params.data.quantity || 0) - (params.data.okutulan || 0)
       },
-      cellClass: 'text-center font-semibold',
-      cellClassRules: {
-        'font-bold bg-yellow-50 text-yellow-700': (params) => params.node.rowPinned === 'bottom'
+      cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { 
+            backgroundColor: '#fef3c7', 
+            color: '#92400e', 
+            fontWeight: 'bold',
+            fontSize: '14px'
+          }
+        }
+        const kalan = (params.data.quantity || 0) - (params.data.okutulan || 0)
+        if (kalan > 0) {
+          return { 
+            fontWeight: 'bold',
+            fontSize: '14px',
+            color: '#b45309'
+          }
+        }
+        return { 
+          fontWeight: 'bold',
+          fontSize: '14px',
+          color: '#059669'
+        }
       }
     }
   ], [items])
@@ -262,12 +315,37 @@ const DocumentDetailPage = () => {
     return Math.round((totalOkutulan / totalQuantity) * 100)
   }, [items])
 
-  // Row Style
+  // Row Style - Satır renklerine göre
   const getRowStyle = (params) => {
-    if (params.data.isPrepared) {
-      return { backgroundColor: '#f0fdf4', opacity: 0.8 }
+    // Footer satırı için stil verme
+    if (params.node.rowPinned === 'bottom') {
+      return null
     }
-    return null
+    
+    const quantity = params.data.quantity || 0
+    const okutulan = params.data.okutulan || 0
+    
+    // Tamamı okutulan → Yeşil
+    if (okutulan > 0 && okutulan >= quantity) {
+      return { 
+        backgroundColor: '#f0fdf4', 
+        borderLeft: '3px solid #10b981'
+      }
+    }
+    
+    // Kısmen okutulan → Sarı
+    if (okutulan > 0 && okutulan < quantity) {
+      return { 
+        backgroundColor: '#fef9e7', 
+        borderLeft: '3px solid #f59e0b'
+      }
+    }
+    
+    // Hiç okutulmayan → Normal (beyaz)
+    return { 
+      backgroundColor: '#ffffff',
+      borderLeft: '3px solid transparent'
+    }
   }
 
   if (loading) {
