@@ -118,6 +118,7 @@ const DocumentDetailPage = () => {
       width: 60,
       cellClass: 'text-center font-semibold text-gray-600',
       pinned: 'left',
+      cellStyle: { borderLeft: 'none !important' },
       cellClassRules: {
         'font-bold text-gray-900 bg-gray-100': (params) => params.node.rowPinned === 'bottom'
       }
@@ -128,10 +129,11 @@ const DocumentDetailPage = () => {
       width: 80,
       cellClass: 'text-center font-bold',
       cellStyle: (params) => {
-        if (params.node.rowPinned === 'bottom') return { backgroundColor: '#f3f4f6' }
-        if (params.value === 'ITS') return { color: '#2563eb', fontWeight: 'bold', fontSize: '13px' }
-        if (params.value === 'UTS') return { color: '#dc2626', fontWeight: 'bold', fontSize: '13px' }
-        return { color: '#6b7280', fontWeight: 'bold', fontSize: '13px' }
+        const baseStyle = { borderLeft: 'none' }
+        if (params.node.rowPinned === 'bottom') return { ...baseStyle, backgroundColor: '#f3f4f6' }
+        if (params.value === 'ITS') return { ...baseStyle, color: '#2563eb', fontWeight: 'bold', fontSize: '13px' }
+        if (params.value === 'UTS') return { ...baseStyle, color: '#dc2626', fontWeight: 'bold', fontSize: '13px' }
+        return { ...baseStyle, color: '#6b7280', fontWeight: 'bold', fontSize: '13px' }
       }
     },
     {
@@ -156,7 +158,7 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Miktar',
       field: 'quantity',
-      width: 100,
+      width: 110,
       cellClass: 'text-center',
       cellStyle: (params) => {
         if (params.node.rowPinned === 'bottom') {
@@ -164,20 +166,23 @@ const DocumentDetailPage = () => {
             backgroundColor: '#dbeafe', 
             color: '#1e40af', 
             fontWeight: 'bold',
-            fontSize: '14px'
+            fontSize: '16px',
+            padding: '8px'
           }
         }
         return { 
           fontWeight: 'bold',
-          fontSize: '14px',
-          color: '#1f2937'
+          fontSize: '15px',
+          color: '#1f2937',
+          backgroundColor: '#f3f4f6',
+          padding: '6px'
         }
       }
     },
     {
       headerName: 'Okutulan',
       field: 'okutulan',
-      width: 100,
+      width: 110,
       cellClass: 'text-center',
       cellStyle: (params) => {
         if (params.node.rowPinned === 'bottom') {
@@ -185,28 +190,34 @@ const DocumentDetailPage = () => {
             backgroundColor: '#dcfce7', 
             color: '#15803d', 
             fontWeight: 'bold',
-            fontSize: '14px'
+            fontSize: '16px',
+            padding: '8px'
           }
         }
         const okutulan = params.data.okutulan || 0
         if (okutulan > 0) {
           return { 
             fontWeight: 'bold',
-            fontSize: '14px',
-            color: '#15803d'
+            fontSize: '15px',
+            color: '#ffffff',
+            backgroundColor: '#22c55e',
+            padding: '6px',
+            borderRadius: '4px'
           }
         }
         return { 
           fontWeight: 'bold',
-          fontSize: '14px',
-          color: '#6b7280'
+          fontSize: '15px',
+          color: '#9ca3af',
+          backgroundColor: '#f9fafb',
+          padding: '6px'
         }
       }
     },
     {
       headerName: 'Kalan',
       field: 'kalan',
-      width: 100,
+      width: 110,
       valueGetter: (params) => {
         if (params.node.rowPinned === 'bottom') return params.data.kalan
         return (params.data.quantity || 0) - (params.data.okutulan || 0)
@@ -218,21 +229,28 @@ const DocumentDetailPage = () => {
             backgroundColor: '#fef3c7', 
             color: '#92400e', 
             fontWeight: 'bold',
-            fontSize: '14px'
+            fontSize: '16px',
+            padding: '8px'
           }
         }
         const kalan = (params.data.quantity || 0) - (params.data.okutulan || 0)
         if (kalan > 0) {
           return { 
             fontWeight: 'bold',
-            fontSize: '14px',
-            color: '#b45309'
+            fontSize: '15px',
+            color: '#ffffff',
+            backgroundColor: '#f59e0b',
+            padding: '6px',
+            borderRadius: '4px'
           }
         }
         return { 
           fontWeight: 'bold',
-          fontSize: '14px',
-          color: '#059669'
+          fontSize: '15px',
+          color: '#ffffff',
+          backgroundColor: '#10b981',
+          padding: '6px',
+          borderRadius: '4px'
         }
       }
     }
