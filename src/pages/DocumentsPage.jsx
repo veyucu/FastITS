@@ -60,22 +60,43 @@ const DocumentsPage = () => {
     )
   }
 
+  // Badge Renderer - Sayısal değerler için
+  const BadgeRenderer = ({ value, type = 'default' }) => {
+    const styles = {
+      kalem: 'bg-slate-100 text-slate-700 border border-slate-300',
+      miktar: 'bg-blue-100 text-blue-700 border border-blue-300',
+      okutulan: 'bg-green-100 text-green-700 border border-green-300',
+      kalan: 'bg-orange-100 text-orange-700 border border-orange-300',
+      default: 'bg-gray-100 text-gray-700 border border-gray-300'
+    }
+    
+    return (
+      <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-bold ${styles[type]}`}>
+        {value || 0}
+      </span>
+    )
+  }
+
   // Column Definitions
   const columnDefs = useMemo(() => [
     {
       headerName: 'Belge Tipi',
       field: 'docType',
-      width: 120,
+      width: 140,
       cellRenderer: (params) => <DocTypeRenderer value={params.value} />,
-      filter: 'agSetColumnFilter'
+      filter: 'agSetColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Belge No',
       field: 'orderNo',
-      width: 140,
+      width: 150,
       pinned: 'left',
       cellClass: 'font-semibold text-blue-600',
-      filter: 'agTextColumnFilter'
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Saat',
@@ -94,71 +115,89 @@ const DocumentsPage = () => {
           return '';
         }
       },
-      filter: false
+      filter: false,
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Cari Kodu',
       field: 'customerCode',
-      width: 110,
-      filter: 'agTextColumnFilter'
+      width: 120,
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Cari İsim',
       field: 'customerName',
-      width: 200,
-      filter: 'agTextColumnFilter'
+      width: 220,
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'İlçe',
       field: 'district',
-      width: 110,
-      filter: 'agTextColumnFilter'
+      width: 120,
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Şehir',
       field: 'city',
-      width: 100,
-      filter: 'agTextColumnFilter'
+      width: 110,
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Telefon',
       field: 'phone',
-      width: 120,
-      filter: 'agTextColumnFilter'
+      width: 130,
+      filter: 'agTextColumnFilter',
+      wrapHeaderText: true,
+      autoHeaderHeight: true
     },
     {
       headerName: 'Kalem',
       field: 'totalItems',
-      width: 80,
+      width: 110,
       filter: 'agNumberColumnFilter',
-      cellClass: 'text-center font-semibold'
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalem" />
     },
     {
       headerName: 'Miktar',
       field: 'miktar',
-      width: 90,
+      width: 110,
       filter: 'agNumberColumnFilter',
-      cellClass: 'text-center font-semibold text-blue-600'
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellRenderer: (params) => <BadgeRenderer value={params.value} type="miktar" />
     },
     {
       headerName: 'Okutulan',
       field: 'okutulan',
-      width: 100,
+      width: 120,
       filter: 'agNumberColumnFilter',
-      cellClass: 'text-center font-semibold text-green-600'
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellRenderer: (params) => <BadgeRenderer value={params.value} type="okutulan" />
     },
     {
       headerName: 'Kalan',
       field: 'kalan',
-      width: 90,
+      width: 110,
       filter: 'agNumberColumnFilter',
-      cellClass: 'text-center font-semibold text-orange-600',
-      cellStyle: (params) => {
-        if (params.value === 0) {
-          return { backgroundColor: '#f0fdf4', color: '#16a34a' };
-        }
-        return null;
-      }
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalan" />
     }
   ], [])
 
