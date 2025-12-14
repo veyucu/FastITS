@@ -46,11 +46,35 @@
   background: #555;
 }
 
-/* AG Grid footer row - no hover effect */
+/* AG Grid footer row - no hover effect, header color */
+.ag-theme-alpine .footer-row-no-hover {
+  background-color: #f9fafb !important;
+}
+
 .ag-theme-alpine .footer-row-no-hover:hover {
   background-color: #f9fafb !important;
 }
 
+.ag-theme-alpine .footer-row-no-hover .ag-cell {
+  background-color: #f9fafb !important;
+}
+
 .ag-theme-alpine .footer-row-no-hover .ag-cell:hover {
-  background-color: transparent !important;
+  background-color: #f9fafb !important;
+}
+
+.ag-theme-alpine .ag-row-pinned-bottom {
+  background-color: #f9fafb !important;
+}
+
+.ag-theme-alpine .ag-row-pinned-bottom:hover {
+  background-color: #f9fafb !important;
+}
+
+.ag-theme-alpine .ag-row-pinned-bottom .ag-cell {
+  background-color: #f9fafb !important;
+}
+
+.ag-theme-alpine .ag-row-pinned-bottom .ag-cell:hover {
+  background-color: #f9fafb !important;
 }

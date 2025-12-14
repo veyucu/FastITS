@@ -118,9 +118,14 @@ const DocumentDetailPage = () => {
       width: 60,
       cellClass: 'text-center font-semibold text-gray-600',
       pinned: 'left',
-      cellStyle: { borderLeft: 'none !important' },
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { borderLeft: 'none', backgroundColor: '#f9fafb' }
+        }
+        return { borderLeft: 'none' }
+      },
       cellClassRules: {
-        'font-bold text-gray-900 bg-gray-100': (params) => params.node.rowPinned === 'bottom'
+        'font-bold text-gray-900': (params) => params.node.rowPinned === 'bottom'
       }
     },
     {
@@ -128,6 +133,12 @@ const DocumentDetailPage = () => {
       field: 'turu',
       width: 90,
       cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { backgroundColor: '#f9fafb' }
+        }
+        return {}
+      },
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
           return '' // Footer'da türü boş
@@ -146,8 +157,11 @@ const DocumentDetailPage = () => {
       field: 'barcode',
       width: 150,
       cellClass: 'font-mono',
-      cellClassRules: {
-        'bg-gray-100': (params) => params.node.rowPinned === 'bottom'
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { backgroundColor: '#f9fafb' }
+        }
+        return {}
       }
     },
     {
@@ -156,8 +170,11 @@ const DocumentDetailPage = () => {
       flex: 1,
       minWidth: 300,
       cellClass: 'font-bold',
-      cellClassRules: {
-        'font-bold text-right bg-gray-100': (params) => params.node.rowPinned === 'bottom'
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { textAlign: 'right', backgroundColor: '#f9fafb' }
+        }
+        return {}
       }
     },
     {
@@ -165,10 +182,16 @@ const DocumentDetailPage = () => {
       field: 'quantity',
       width: 110,
       cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { backgroundColor: '#f9fafb' }
+        }
+        return {}
+      },
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
           return (
-            <span className="px-3 py-1 rounded text-sm font-bold bg-blue-100 text-blue-800">
+            <span className="px-3 py-1 rounded text-sm font-bold bg-gray-100 text-gray-800">
               {params.value}
             </span>
           )
@@ -185,11 +208,25 @@ const DocumentDetailPage = () => {
       field: 'okutulan',
       width: 110,
       cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { backgroundColor: '#f9fafb' }
+        }
+        return {}
+      },
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
+          const val = params.value || 0
+          if (val > 0) {
+            return (
+              <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-700">
+                {val}
+              </span>
+            )
+          }
           return (
-            <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-800">
-              {params.value}
+            <span className="px-3 py-1 rounded text-sm font-bold bg-gray-100 text-gray-400">
+              {val}
             </span>
           )
         }
@@ -217,11 +254,25 @@ const DocumentDetailPage = () => {
         return (params.data.quantity || 0) - (params.data.okutulan || 0)
       },
       cellClass: 'text-center',
+      cellStyle: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return { backgroundColor: '#f9fafb' }
+        }
+        return {}
+      },
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
+          const val = params.value || 0
+          if (val > 0) {
+            return (
+              <span className="px-3 py-1 rounded text-sm font-bold bg-orange-100 text-orange-700">
+                {val}
+              </span>
+            )
+          }
           return (
-            <span className="px-3 py-1 rounded text-sm font-bold bg-yellow-100 text-yellow-800">
-              {params.value}
+            <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-700">
+              ✓
             </span>
           )
         }
