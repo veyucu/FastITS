@@ -533,9 +533,12 @@ const documentService = {
         )
       `
       
-      // Tarih formatı - saat bilgisi olmadan (YYYY-MM-DD)
+      // Tarih formatı - saat bilgisi olmadan (YYYY-MM-DD) - Local time, timezone sorunu olmasın
       const tarihDate = new Date(tarih)
-      const formattedTarih = tarihDate.toISOString().split('T')[0]
+      const year = tarihDate.getFullYear()
+      const month = String(tarihDate.getMonth() + 1).padStart(2, '0')
+      const day = String(tarihDate.getDate()).padStart(2, '0')
+      const formattedTarih = `${year}-${month}-${day}`
       
       const request = pool.request()
       request.input('kayitTipi', kayitTipi)

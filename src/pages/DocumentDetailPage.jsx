@@ -381,10 +381,21 @@ const DocumentDetailPage = () => {
         return
       }
       
-      // Belge tarihini saat bilgisi olmadan formatla (YYYY-MM-DD)
-      const belgeTarihiFormatted = order.orderDate 
-        ? new Date(order.orderDate).toISOString().split('T')[0]
-        : new Date().toISOString().split('T')[0]
+      // Belge tarihini saat bilgisi olmadan formatla (YYYY-MM-DD) - Local time
+      let belgeTarihiFormatted
+      if (order.orderDate) {
+        const date = new Date(order.orderDate)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        belgeTarihiFormatted = `${year}-${month}-${day}`
+      } else {
+        const today = new Date()
+        const year = today.getFullYear()
+        const month = String(today.getMonth() + 1).padStart(2, '0')
+        const day = String(today.getDate()).padStart(2, '0')
+        belgeTarihiFormatted = `${year}-${month}-${day}`
+      }
       
       // Backend'e ITS karekod gönder
       const result = await apiService.saveITSBarcode({
