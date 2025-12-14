@@ -158,117 +158,99 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Miktar',
       field: 'quantity',
-      width: 120,
+      width: 100,
       cellClass: 'text-center',
-      cellStyle: (params) => {
+      cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
-          return { 
-            backgroundColor: '#dbeafe', 
-            color: '#1e40af', 
-            fontWeight: 'bold',
-            fontSize: '15px',
-            padding: '8px'
-          }
+          return (
+            <div style={{ 
+              backgroundColor: '#dbeafe', 
+              color: '#1e40af', 
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '4px'
+            }}>
+              {params.value}
+            </div>
+          )
         }
-        return { 
-          fontWeight: 'bold',
-          fontSize: '13px',
-          color: '#1f2937',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '6px',
-          padding: '4px 8px',
-          margin: '4px',
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-        }
+        return (
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800">
+            {params.value}
+          </span>
+        )
       }
     },
     {
       headerName: 'Okutulan',
       field: 'okutulan',
-      width: 120,
+      width: 100,
       cellClass: 'text-center',
-      cellStyle: (params) => {
+      cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
-          return { 
-            backgroundColor: '#dcfce7', 
-            color: '#15803d', 
-            fontWeight: 'bold',
-            fontSize: '15px',
-            padding: '8px'
-          }
+          return (
+            <div style={{ 
+              backgroundColor: '#dcfce7', 
+              color: '#15803d', 
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '4px'
+            }}>
+              {params.value}
+            </div>
+          )
         }
-        const okutulan = params.data.okutulan || 0
+        const okutulan = params.value || 0
         if (okutulan > 0) {
-          return { 
-            fontWeight: 'bold',
-            fontSize: '13px',
-            color: '#15803d',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #86efac',
-            borderRadius: '6px',
-            padding: '4px 8px',
-            margin: '4px',
-            boxShadow: '0 1px 2px 0 rgba(34, 197, 94, 0.1)'
-          }
+          return (
+            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+              {okutulan}
+            </span>
+          )
         }
-        return { 
-          fontWeight: 'bold',
-          fontSize: '13px',
-          color: '#9ca3af',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '6px',
-          padding: '4px 8px',
-          margin: '4px',
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-        }
+        return (
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">
+            {okutulan}
+          </span>
+        )
       }
     },
     {
       headerName: 'Kalan',
       field: 'kalan',
-      width: 120,
+      width: 100,
       valueGetter: (params) => {
         if (params.node.rowPinned === 'bottom') return params.data.kalan
         return (params.data.quantity || 0) - (params.data.okutulan || 0)
       },
       cellClass: 'text-center',
-      cellStyle: (params) => {
+      cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
-          return { 
-            backgroundColor: '#fef3c7', 
-            color: '#92400e', 
-            fontWeight: 'bold',
-            fontSize: '15px',
-            padding: '8px'
-          }
+          return (
+            <div style={{ 
+              backgroundColor: '#fef3c7', 
+              color: '#92400e', 
+              fontWeight: 'bold',
+              fontSize: '14px',
+              padding: '4px'
+            }}>
+              {params.value}
+            </div>
+          )
         }
-        const kalan = (params.data.quantity || 0) - (params.data.okutulan || 0)
+        const kalan = params.value || 0
         if (kalan > 0) {
-          return { 
-            fontWeight: 'bold',
-            fontSize: '13px',
-            color: '#ea580c',
-            backgroundColor: '#fff7ed',
-            border: '1px solid #fdba74',
-            borderRadius: '6px',
-            padding: '4px 8px',
-            margin: '4px',
-            boxShadow: '0 1px 2px 0 rgba(245, 158, 11, 0.1)'
-          }
+          return (
+            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
+              {kalan}
+            </span>
+          )
         }
-        return { 
-          fontWeight: 'bold',
-          fontSize: '13px',
-          color: '#059669',
-          backgroundColor: '#ecfdf5',
-          border: '1px solid #6ee7b7',
-          borderRadius: '6px',
-          padding: '4px 8px',
-          margin: '4px',
-          boxShadow: '0 1px 2px 0 rgba(16, 185, 129, 0.1)'
-        }
+        return (
+          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+            ✓
+          </span>
+        )
       }
     }
   ], [items])
