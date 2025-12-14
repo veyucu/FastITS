@@ -381,16 +381,21 @@ const DocumentDetailPage = () => {
         return
       }
       
+      // Belge tarihini saat bilgisi olmadan formatla (YYYY-MM-DD)
+      const belgeTarihiFormatted = order.orderDate 
+        ? new Date(order.orderDate).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0]
+      
       // Backend'e ITS karekod gönder
       const result = await apiService.saveITSBarcode({
         barcode: itsBarcode,
         documentId: order.id,
         itemId: item.itemId,
         stokKodu: item.stokKodu,
-        belgeTip: item.sthar_htur || order.docType,
-        gckod: item.gckod || '',
+        belgeTip: item.stharHtur, // STHAR_HTUR
+        gckod: item.stharGckod || '', // STHAR_GCKOD
         belgeNo: order.orderNo,
-        belgeTarihi: order.orderDate,
+        belgeTarihi: belgeTarihiFormatted, // Belge tarihi (saat yok)
         docType: order.docType
       })
       

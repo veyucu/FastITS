@@ -400,6 +400,7 @@ const documentService = {
             H.STHAR_GCMIK AS MIKTAR,
             H.INCKEYNO,
             H.STHAR_HTUR,
+            H.STHAR_GCKOD,
             ISNULL((SELECT SUM(Y.MIKTAR) FROM TBLSERITRA Y WITH (NOLOCK) 
                     WHERE H.FISNO=Y.BELGENO 
                     AND H.STHAR_HTUR=Y.BELGETIP 
@@ -426,6 +427,7 @@ const documentService = {
             H.STHAR_GCMIK AS MIKTAR,
             H.INCKEYNO,
             H.STHAR_HTUR,
+            H.STHAR_GCKOD,
             ISNULL((SELECT SUM(Y.MIKTAR) FROM TBLSERITRA Y WITH (NOLOCK) 
                     WHERE H.FISNO=Y.BELGENO 
                     AND H.STHAR_HTUR=Y.BELGETIP 
@@ -461,7 +463,9 @@ const documentService = {
         unit: 'ADET', // Sabit birim
         turu: row.TURU, // ITS, UTS veya DGR
         okutulan: row.OKUTULAN || 0,
-        isPrepared: row.OKUTULAN >= row.MIKTAR
+        isPrepared: row.OKUTULAN >= row.MIKTAR,
+        stharHtur: row.STHAR_HTUR, // ITS için gerekli
+        stharGckod: row.STHAR_GCKOD // ITS için gerekli
       }))
       
       return items
@@ -529,12 +533,16 @@ const documentService = {
         )
       `
       
+      // Tarih formatı - saat bilgisi olmadan (YYYY-MM-DD)
+      const tarihDate = new Date(tarih)
+      const formattedTarih = tarihDate.toISOString().split('T')[0]
+      
       const request = pool.request()
       request.input('kayitTipi', kayitTipi)
       request.input('seriNo', seriNo)
       request.input('stokKodu', stokKodu)
       request.input('straInc', straInc)
-      request.input('tarih', tarih)
+      request.input('tarih', formattedTarih) // Belge tarihi - saat yok
       request.input('acik1', acik1)
       request.input('acik2', acik2)
       request.input('gckod', gckod)
