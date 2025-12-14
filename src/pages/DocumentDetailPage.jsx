@@ -780,7 +780,7 @@ const DocumentDetailPage = () => {
                   <User className="w-3 h-3 text-blue-600" />
                   <div>
                     <p className="text-[9px] text-gray-500 leading-tight">Müşteri</p>
-                    <p className="text-[11px] font-bold text-gray-900 leading-tight">{order.customerName}</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerName}</p>
                   </div>
                 </div>
               </div>
@@ -790,7 +790,7 @@ const DocumentDetailPage = () => {
                   <Hash className="w-3 h-3 text-purple-600" />
                   <div>
                     <p className="text-[9px] text-gray-500 leading-tight">Kod</p>
-                    <p className="text-[11px] font-bold text-gray-900 leading-tight">{order.customerCode}</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerCode}</p>
                   </div>
                 </div>
               </div>
@@ -800,7 +800,7 @@ const DocumentDetailPage = () => {
                   <MapPin className="w-3 h-3 text-green-600" />
                   <div>
                     <p className="text-[9px] text-gray-500 leading-tight">İlçe / Şehir</p>
-                    <p className="text-[11px] font-bold text-gray-900 leading-tight">
+                    <p className="text-sm font-bold text-gray-900 leading-tight">
                       {order.district ? `${order.district} / ${order.city}` : order.city}
                     </p>
                   </div>
@@ -812,7 +812,7 @@ const DocumentDetailPage = () => {
                   <Calendar className="w-3 h-3 text-orange-600" />
                   <div>
                     <p className="text-[9px] text-gray-500 leading-tight">Tarih</p>
-                    <p className="text-[11px] font-bold text-gray-900 leading-tight">
+                    <p className="text-sm font-bold text-gray-900 leading-tight">
                       {order.orderDate ? new Date(order.orderDate).toLocaleDateString('tr-TR') : '-'}
                     </p>
                   </div>
