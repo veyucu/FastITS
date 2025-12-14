@@ -321,9 +321,13 @@ const DocumentDetailPage = () => {
 
   // Row Style - Satır renklerine göre
   const getRowStyle = (params) => {
-    // Footer satırı için stil verme
+    // Footer satırı için stil - header ile aynı renk
     if (params.node.rowPinned === 'bottom') {
-      return null
+      return { 
+        backgroundColor: '#f9fafb',
+        fontWeight: 'bold',
+        borderTop: '2px solid #e5e7eb'
+      }
     }
     
     const quantity = params.data.quantity || 0
@@ -510,6 +514,13 @@ const DocumentDetailPage = () => {
             enableCellTextSelection={true}
             suppressCellFocus={true}
             pinnedBottomRowData={[totals]}
+            suppressRowHoverHighlight={false}
+            getRowClass={(params) => {
+              if (params.node.rowPinned === 'bottom') {
+                return 'footer-row-no-hover'
+              }
+              return ''
+            }}
           />
         </div>
       </div>
