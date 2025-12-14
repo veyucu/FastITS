@@ -95,7 +95,7 @@ const DocumentDetailPage = () => {
     
     return {
       rowNumber: items.length,
-      turu: '',
+      turu: null, // Footer'da türü boş olacak
       barcode: '',
       productName: 'Toplam',
       quantity: totalQuantity,
@@ -130,7 +130,7 @@ const DocumentDetailPage = () => {
       cellClass: 'text-center',
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
-          return <div style={{ backgroundColor: '#f3f4f6', padding: '4px' }}>{params.value}</div>
+          return '' // Footer'da türü boş
         }
         if (params.value === 'ITS') {
           return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">ITS</span>
@@ -168,15 +168,9 @@ const DocumentDetailPage = () => {
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
           return (
-            <div style={{ 
-              backgroundColor: '#dbeafe', 
-              color: '#1e40af', 
-              fontWeight: 'bold',
-              fontSize: '15px',
-              padding: '4px'
-            }}>
+            <span className="px-3 py-1 rounded text-sm font-bold bg-blue-100 text-blue-800">
               {params.value}
-            </div>
+            </span>
           )
         }
         return (
@@ -194,15 +188,9 @@ const DocumentDetailPage = () => {
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
           return (
-            <div style={{ 
-              backgroundColor: '#dcfce7', 
-              color: '#15803d', 
-              fontWeight: 'bold',
-              fontSize: '15px',
-              padding: '4px'
-            }}>
+            <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-800">
               {params.value}
-            </div>
+            </span>
           )
         }
         const okutulan = params.value || 0
@@ -232,15 +220,9 @@ const DocumentDetailPage = () => {
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
           return (
-            <div style={{ 
-              backgroundColor: '#fef3c7', 
-              color: '#92400e', 
-              fontWeight: 'bold',
-              fontSize: '15px',
-              padding: '4px'
-            }}>
+            <span className="px-3 py-1 rounded text-sm font-bold bg-yellow-100 text-yellow-800">
               {params.value}
-            </div>
+            </span>
           )
         }
         const kalan = params.value || 0
