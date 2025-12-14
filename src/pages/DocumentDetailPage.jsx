@@ -126,14 +126,19 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Türü',
       field: 'turu',
-      width: 80,
-      cellClass: 'text-center font-bold',
-      cellStyle: (params) => {
-        const baseStyle = { borderLeft: 'none' }
-        if (params.node.rowPinned === 'bottom') return { ...baseStyle, backgroundColor: '#f3f4f6' }
-        if (params.value === 'ITS') return { ...baseStyle, color: '#2563eb', fontWeight: 'bold', fontSize: '13px' }
-        if (params.value === 'UTS') return { ...baseStyle, color: '#dc2626', fontWeight: 'bold', fontSize: '13px' }
-        return { ...baseStyle, color: '#6b7280', fontWeight: 'bold', fontSize: '13px' }
+      width: 90,
+      cellClass: 'text-center',
+      cellRenderer: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return <div style={{ backgroundColor: '#f3f4f6', padding: '4px' }}>{params.value}</div>
+        }
+        if (params.value === 'ITS') {
+          return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-700">ITS</span>
+        }
+        if (params.value === 'UTS') {
+          return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-700">UTS</span>
+        }
+        return <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">{params.value}</span>
       }
     },
     {
@@ -158,7 +163,7 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Miktar',
       field: 'quantity',
-      width: 100,
+      width: 110,
       cellClass: 'text-center',
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
@@ -167,7 +172,7 @@ const DocumentDetailPage = () => {
               backgroundColor: '#dbeafe', 
               color: '#1e40af', 
               fontWeight: 'bold',
-              fontSize: '14px',
+              fontSize: '15px',
               padding: '4px'
             }}>
               {params.value}
@@ -175,7 +180,7 @@ const DocumentDetailPage = () => {
           )
         }
         return (
-          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800">
+          <span className="px-3 py-1 rounded text-sm font-bold bg-gray-100 text-gray-800">
             {params.value}
           </span>
         )
@@ -184,7 +189,7 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Okutulan',
       field: 'okutulan',
-      width: 100,
+      width: 110,
       cellClass: 'text-center',
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
@@ -193,7 +198,7 @@ const DocumentDetailPage = () => {
               backgroundColor: '#dcfce7', 
               color: '#15803d', 
               fontWeight: 'bold',
-              fontSize: '14px',
+              fontSize: '15px',
               padding: '4px'
             }}>
               {params.value}
@@ -203,13 +208,13 @@ const DocumentDetailPage = () => {
         const okutulan = params.value || 0
         if (okutulan > 0) {
           return (
-            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+            <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-700">
               {okutulan}
             </span>
           )
         }
         return (
-          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-400">
+          <span className="px-3 py-1 rounded text-sm font-bold bg-gray-100 text-gray-400">
             {okutulan}
           </span>
         )
@@ -218,7 +223,7 @@ const DocumentDetailPage = () => {
     {
       headerName: 'Kalan',
       field: 'kalan',
-      width: 100,
+      width: 110,
       valueGetter: (params) => {
         if (params.node.rowPinned === 'bottom') return params.data.kalan
         return (params.data.quantity || 0) - (params.data.okutulan || 0)
@@ -231,7 +236,7 @@ const DocumentDetailPage = () => {
               backgroundColor: '#fef3c7', 
               color: '#92400e', 
               fontWeight: 'bold',
-              fontSize: '14px',
+              fontSize: '15px',
               padding: '4px'
             }}>
               {params.value}
@@ -241,13 +246,13 @@ const DocumentDetailPage = () => {
         const kalan = params.value || 0
         if (kalan > 0) {
           return (
-            <span className="px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-700">
+            <span className="px-3 py-1 rounded text-sm font-bold bg-orange-100 text-orange-700">
               {kalan}
             </span>
           )
         }
         return (
-          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+          <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-700">
             ✓
           </span>
         )
