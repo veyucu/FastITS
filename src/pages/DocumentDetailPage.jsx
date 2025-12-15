@@ -26,6 +26,7 @@ const DocumentDetailPage = () => {
   const [selectedRecords, setSelectedRecords] = useState([])
   const [itsLoading, setItsLoading] = useState(false)
   const [deleteMode, setDeleteMode] = useState(false) // Silme modu
+  const [itsModalView, setItsModalView] = useState('grid') // 'grid' veya 'text'
 
   // Belge tipini belirle
   const getDocumentTypeName = (docType, tipi) => {
@@ -405,7 +406,7 @@ const DocumentDetailPage = () => {
     barcodeInputRef.current?.focus()
   }
 
-  // Normal Barkod İşlemi (DGR Ürünleri)
+  // Normal Barkod İşlemi (DGR/UTS Ürünleri - ITS DEĞİL!)
   const handleNormalBarcode = async (scannedBarcode) => {
     // Toplu okutma kontrolü: 100*Barkod formatı
     let quantity = 1
@@ -430,6 +431,13 @@ const DocumentDetailPage = () => {
     }
     
     const item = items[itemIndex]
+    
+    // ITS ürünü kontrolü - ITS ürünlerinde normal barkod kabul edilmez!
+    if (item.turu === 'ITS') {
+      showMessage(`❌ ${item.productName} - ITS ürünüdür! Karekod (2D) okutmalısınız!`, 'error')
+      playErrorSound()
+      return
+    }
     
     // Belge tarihini saat bilgisi olmadan formatla (YYYY-MM-DD) - Local time
     let belgeTarihiFormatted
@@ -579,10 +587,10 @@ const DocumentDetailPage = () => {
     }
   }
 
-  // DGR Barkod Silme İşlemi
+  // DGR/UTS Barkod Silme İşlemi (ITS DEĞİL!)
   const handleDeleteDGRBarcode = async (scannedBarcode) => {
     try {
-      console.log('🗑️ DGR Barkod siliniyor:', scannedBarcode)
+      console.log('🗑️ DGR/UTS Barkod siliniyor:', scannedBarcode)
       showMessage('🗑️ Siliniyor...', 'info')
       
       // Ürünü bul
@@ -595,6 +603,13 @@ const DocumentDetailPage = () => {
       }
       
       const item = items[itemIndex]
+      
+      // ITS ürünü kontrolü - ITS ürünlerinde normal barkod ile silme yapılamaz!
+      if (item.turu === 'ITS') {
+        showMessage(`❌ ${item.productName} - ITS ürünüdür! Silmek için karekod (2D) okutmalısınız!`, 'error')
+        playErrorSound()
+        return
+      }
       
       // Backend'e silme isteği gönder (DGR için seri_no = stok_kodu)
       const result = await apiService.deleteITSBarcodeRecords(
@@ -782,6 +797,38 @@ const DocumentDetailPage = () => {
     setSelectedItem(null)
     setItsRecords([])
     setSelectedRecords([])
+    setItsModalView('grid') // View'i sıfırla
+  }
+  
+  // ITS Karekodları Text Formatında Oluştur
+  const generateITSBarcodeTexts = () => {
+    return itsRecords.map(record => {
+      // Format: 010+ILC_GTIN+21+SERI_NO+17+ACIK1+10+ACIK2
+      const parts = [
+        '010',
+        record.barkod || '',
+        '21',
+        record.seriNo || '',
+        '17',
+        record.miad || '',
+        '10',
+        record.lot || ''
+      ]
+      return parts.join('+')
+    }).join('\n')
+  }
+  
+  // Tüm Karekodları Kopyala
+  const handleCopyAllBarcodes = () => {
+    const text = generateITSBarcodeTexts()
+    navigator.clipboard.writeText(text).then(() => {
+      showMessage('✅ Karekodlar kopyalandı!', 'success')
+      playSuccessSound()
+    }).catch(err => {
+      console.error('Kopyalama hatası:', err)
+      showMessage('❌ Kopyalama başarısız!', 'error')
+      playErrorSound()
+    })
   }
 
   // ITS Kayıtlarını Sil
@@ -1091,7 +1138,7 @@ const DocumentDetailPage = () => {
                   type="text"
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder={deleteMode ? "Silmek için barkod okutun..." : "Barkod okutun veya girin (DGR için: 100*Barkod)"}
+                  placeholder={deleteMode ? "Silmek için barkod okutun (ITS için karekod gerekli)..." : "Barkod okutun (ITS: karekod, DGR/UTS: normal barkod veya 100*Barkod)"}
                   className={`w-full pl-11 pr-4 py-2.5 text-base backdrop-blur-sm border-2 rounded-lg text-white placeholder-white/70 focus:border-white focus:outline-none transition-all ${
                     deleteMode 
                       ? 'bg-red-500/30 border-red-300/50 focus:bg-red-500/40' 
@@ -1132,8 +1179,8 @@ const DocumentDetailPage = () => {
             {message 
               ? message.text 
               : deleteMode 
-              ? '🗑️ SİLME MODU AKTİF - Silmek istediğiniz barkodu okutun' 
-              : 'Barkod okutmak için yukarıdaki alana okutun veya girin (DGR için toplu: 100*Barkod)'}
+              ? '🗑️ SİLME MODU AKTİF - ITS: Karekod okutun | DGR/UTS: Normal barkod okutun' 
+              : '📱 ITS ürünler için KAREKOD (2D) zorunlu | DGR/UTS için normal barkod (Toplu: 100*Barkod)'}
           </p>
         </div>
       </div>
@@ -1189,47 +1236,96 @@ const DocumentDetailPage = () => {
 
             {/* Modal Body */}
             <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
-              {/* ITS Records Grid */}
-              <div className="ag-theme-alpine flex-1 mb-4">
-                {itsLoading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <div className="animate-spin w-8 h-8 border-3 border-gray-200 border-t-primary-600 rounded-full mx-auto mb-2" />
-                      <p className="text-gray-600 text-sm">Yükleniyor...</p>
-                    </div>
+              {itsModalView === 'grid' ? (
+                <>
+                  {/* ITS Records Grid */}
+                  <div className="ag-theme-alpine flex-1 mb-4">
+                    {itsLoading ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="text-center">
+                          <div className="animate-spin w-8 h-8 border-3 border-gray-200 border-t-primary-600 rounded-full mx-auto mb-2" />
+                          <p className="text-gray-600 text-sm">Yükleniyor...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <AgGridReact
+                        rowData={itsRecords}
+                        columnDefs={itsModalColumnDefs}
+                        defaultColDef={itsModalDefaultColDef}
+                        rowSelection="multiple"
+                        suppressRowClickSelection={true}
+                        onSelectionChanged={(event) => {
+                          const selected = event.api.getSelectedRows()
+                          setSelectedRecords(selected.map(r => r.seriNo))
+                        }}
+                        animateRows={true}
+                        enableCellTextSelection={true}
+                      />
+                    )}
                   </div>
-                ) : (
-                  <AgGridReact
-                    rowData={itsRecords}
-                    columnDefs={itsModalColumnDefs}
-                    defaultColDef={itsModalDefaultColDef}
-                    rowSelection="multiple"
-                    suppressRowClickSelection={true}
-                    onSelectionChanged={(event) => {
-                      const selected = event.api.getSelectedRows()
-                      setSelectedRecords(selected.map(r => r.seriNo))
-                    }}
-                    animateRows={true}
-                    enableCellTextSelection={true}
-                  />
-                )}
-              </div>
 
-              {/* Action Bar - Fixed at Bottom */}
-              <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
-                <button
-                  onClick={handleDeleteITSRecords}
-                  disabled={selectedRecords.length === 0}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
-                >
-                  Seçilenleri Sil
-                </button>
-                {selectedRecords.length > 0 && (
-                  <span className="text-sm text-gray-600 font-semibold">
-                    {selectedRecords.length} kayıt seçildi
-                  </span>
-                )}
-              </div>
+                  {/* Action Bar - Fixed at Bottom */}
+                  <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+                    <button
+                      onClick={handleDeleteITSRecords}
+                      disabled={selectedRecords.length === 0}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg"
+                    >
+                      Seçilenleri Sil
+                    </button>
+                    <button
+                      onClick={() => setItsModalView('text')}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-lg"
+                    >
+                      📄 Karekodları Göster
+                    </button>
+                    {selectedRecords.length > 0 && (
+                      <span className="text-sm text-gray-600 font-semibold">
+                        {selectedRecords.length} kayıt seçildi
+                      </span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* ITS Karekod Text View */}
+                  <div className="flex-1 mb-4 flex flex-col">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Karekod Text Formatı
+                      </h3>
+                      <span className="text-sm text-gray-600">
+                        {itsRecords.length} kayıt
+                      </span>
+                    </div>
+                    <textarea
+                      value={generateITSBarcodeTexts()}
+                      readOnly
+                      className="flex-1 w-full p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      style={{ minHeight: '400px' }}
+                    />
+                  </div>
+
+                  {/* Action Bar - Fixed at Bottom */}
+                  <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+                    <button
+                      onClick={() => setItsModalView('grid')}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition-colors shadow-lg"
+                    >
+                      ← Tabloya Dön
+                    </button>
+                    <button
+                      onClick={handleCopyAllBarcodes}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-lg"
+                    >
+                      📋 Tümünü Kopyala
+                    </button>
+                    <span className="text-sm text-gray-600">
+                      Format: 010+BARKOD+21+SERİNO+17+MİAD+10+LOT
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
