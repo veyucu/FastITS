@@ -2,15 +2,20 @@ import axios from 'axios'
 import AdmZip from 'adm-zip'
 import xml2js from 'xml2js'
 
-// PTS Web Servis Bilgileri (NetProITS'den alındı)
+// PTS Web Servis Entegrasyonu - Gerçek API aktif
+// PTS Web Servis Bilgileri
 const PTS_CONFIG = {
   username: '86800010845240000',
   password: '1981aa',
   glnNo: '8680001084524',
-  baseUrl: process.env.PTS_BASE_URL || 'https://itsws.saglik.gov.tr', // ITS Production URL
+  // ITS REST API Base URL (NetProITS BildirimHelper.ItsHost)
+  // Üretim: https://its2.saglik.gov.tr
+  baseUrl: process.env.PTS_BASE_URL || 'https://its2.saglik.gov.tr',
   tokenUrl: '/token/app/token',
   searchUrl: '/pts/app/search',
-  getPackageUrl: '/pts/app/GetPackage'
+  getPackageUrl: '/pts/app/GetPackage',
+  // Simülasyon modu (geliştirme için)
+  simulationMode: false // Gerçek API'yi kullan
 }
 
 
@@ -19,13 +24,23 @@ const PTS_CONFIG = {
  * @returns {Promise<string|null>}
  */
 async function getAccessToken() {
+  // Simülasyon modu
+  if (PTS_CONFIG.simulationMode) {
+    console.log('🎭 Simülasyon modunda - Mock token dönülüyor')
+    return 'MOCK_TOKEN_FOR_SIMULATION'
+  }
+
   try {
+    console.log('🔑 Token alınıyor...')
+    console.log('URL:', `${PTS_CONFIG.baseUrl}${PTS_CONFIG.tokenUrl}`)
+    console.log('Username:', PTS_CONFIG.username)
+    
+    // NetProITS formatında JSON string olarak gönder
+    const requestBody = `{"username":"${PTS_CONFIG.username}","password":"${PTS_CONFIG.password}"}`
+    
     const response = await axios.post(
       `${PTS_CONFIG.baseUrl}${PTS_CONFIG.tokenUrl}`,
-      {
-        username: PTS_CONFIG.username,
-        password: PTS_CONFIG.password
-      },
+      requestBody,
       {
         headers: {
           'Content-Type': 'application/json'
@@ -34,9 +49,22 @@ async function getAccessToken() {
       }
     )
 
-    return response.data?.token || null
+    console.log('✅ Token alındı:', response.data)
+    
+    // Response'dan token'ı al
+    const token = response.data?.token || null
+    
+    if (!token) {
+      console.error('❌ Token response\'da bulunamadı:', response.data)
+    }
+    
+    return token
   } catch (error) {
     console.error('❌ Token alma hatası:', error.message)
+    if (error.response) {
+      console.error('Response status:', error.response.status)
+      console.error('Response data:', error.response.data)
+    }
     return null
   }
 }
@@ -48,6 +76,16 @@ async function getAccessToken() {
  * @returns {Promise<Object>}
  */
 async function searchPackages(startDate, endDate) {
+  // Simülasyon modu
+  if (PTS_CONFIG.simulationMode) {
+    console.log('🎭 Simülasyon modunda - Mock paket listesi dönülüyor')
+    return {
+      success: true,
+      data: ['123456789', '987654321', '555555555'], // Mock transfer ID'ler
+      message: '3 paket bulundu (Simülasyon)'
+    }
+  }
+
   try {
     const token = await getAccessToken()
     if (!token) {
@@ -103,6 +141,38 @@ async function searchPackages(startDate, endDate) {
  * @returns {Promise<Object>}
  */
 async function downloadPackage(transferId) {
+  // Simülasyon modu
+  if (PTS_CONFIG.simulationMode) {
+    console.log(`🎭 Simülasyon modunda - Mock paket verisi dönülüyor: ${transferId}`)
+    return {
+      success: true,
+      data: {
+        transferId,
+        documentNumber: `DOC-${transferId}`,
+        documentDate: new Date().toISOString().split('T')[0],
+        sourceGLN: '8680001000000',
+        destinationGLN: PTS_CONFIG.glnNo,
+        products: [
+          {
+            carrierLabel: 'SSCC123456789',
+            gtin: '08699544000015',
+            expirationDate: '2025-12-31',
+            lotNumber: 'LOT123',
+            serialNumber: 'SN001'
+          },
+          {
+            carrierLabel: 'SSCC123456789',
+            gtin: '08699544000015',
+            expirationDate: '2025-12-31',
+            lotNumber: 'LOT123',
+            serialNumber: 'SN002'
+          }
+        ]
+      },
+      message: '2 ürün bulundu (Simülasyon)'
+    }
+  }
+
   try {
     console.log(`📥 Paket indiriliyor: ${transferId}`)
 
@@ -128,13 +198,18 @@ async function downloadPackage(transferId) {
       }
     )
 
+    console.log('📦 API Response:', JSON.stringify(response.data).substring(0, 200))
+    
     const base64Data = response.data?.fileStream
     if (!base64Data) {
+      console.log('❌ fileStream bulunamadı. Response keys:', Object.keys(response.data || {}))
       return {
         success: false,
         message: 'Paket verisi alınamadı'
       }
     }
+    
+    console.log('✅ Base64 data alındı, uzunluk:', base64Data.length)
 
     // Base64'ten ZIP'e çevir
     const zipBuffer = Buffer.from(base64Data, 'base64')
@@ -153,12 +228,18 @@ async function downloadPackage(transferId) {
     // İlk XML dosyasını al
     const xmlContent = zipEntries[0].getData().toString('utf8')
     
+    console.log('📄 XML İçeriği (ilk 1500 karakter):', xmlContent.substring(0, 1500))
+    console.log('📄 XML Tam Uzunluk:', xmlContent.length)
+    
     // XML'i parse et
     const parser = new xml2js.Parser()
     const xmlData = await parser.parseStringPromise(xmlContent)
 
-    // XML'den bilgileri çıkar
-    const root = xmlData.shipmentNotification || xmlData
+    console.log('🔍 XML Root Keys:', Object.keys(xmlData))
+
+    // XML'den bilgileri çıkar  
+    const root = xmlData.package || xmlData.shipmentNotification || xmlData
+    console.log('📦 Root Keys:', Object.keys(root))
     const packageInfo = {
       transferId,
       documentNumber: root.documentNumber?.[0] || '',
@@ -196,9 +277,21 @@ async function downloadPackage(transferId) {
       }
     }
 
+    console.log(`✅ Paket parse edildi:`, {
+      transferId,
+      documentNumber: packageInfo.documentNumber,
+      documentDate: packageInfo.documentDate,
+      sourceGLN: packageInfo.sourceGLN,
+      destinationGLN: packageInfo.destinationGLN,
+      productCount: packageInfo.products.length
+    })
+
     return {
       success: true,
-      data: packageInfo,
+      data: {
+        ...packageInfo,
+        _rawXML: xmlContent // XML içeriğini de gönder
+      },
       message: `${packageInfo.products.length} ürün bulundu`
     }
 

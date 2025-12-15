@@ -1,6 +1,9 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Package, Home, Truck, Search } from 'lucide-react'
+import { AgGridReact } from 'ag-grid-react'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-alpine.css'
 import apiService from '../services/apiService'
 
 const PTSPage = () => {
@@ -39,6 +42,15 @@ const PTSPage = () => {
       if (response.success && response.data) {
         // Paketi listeye ekle
         const packageData = response.data
+        
+        // XML'i localStorage'a kaydet (manuel kontrol için)
+        if (packageData._rawXML) {
+          const xmlKey = `pts_xml_${barcode}`
+          localStorage.setItem(xmlKey, packageData._rawXML)
+          console.log(`💾 XML kaydedildi: ${xmlKey} (${packageData._rawXML.length} karakter)`)
+          console.log(`📄 İlk 500 karakter:`, packageData._rawXML.substring(0, 500))
+        }
+        
         const newPackage = {
           id: Date.now(),
           transferId: barcode,
@@ -113,6 +125,16 @@ const PTSPage = () => {
           
           if (response.success && response.data) {
             const packageData = response.data
+            console.log('📦 Paket verisi:', packageData)
+            
+            // XML'i localStorage'a kaydet (manuel kontrol için)
+            if (packageData._rawXML) {
+              const xmlKey = `pts_xml_${transferId}`
+              localStorage.setItem(xmlKey, packageData._rawXML)
+              console.log(`💾 XML kaydedildi: ${xmlKey} (${packageData._rawXML.length} karakter)`)
+              console.log(`📄 İlk 500 karakter:`, packageData._rawXML.substring(0, 500))
+            }
+            
             newPackages.push({
               id: Date.now() + i,
               transferId: transferId,
@@ -124,6 +146,8 @@ const PTSPage = () => {
               productCount: packageData.products?.length || 0,
               products: packageData.products || []
             })
+          } else {
+            console.error('❌ Paket indirme başarısız:', response.message)
           }
         } catch (error) {
           console.error(`Transfer ${transferIds[i]} indirme hatası:`, error)
@@ -157,10 +181,162 @@ const PTSPage = () => {
     }
   }
 
+  // LocalStorage'daki XML'leri göster
+  const handleShowStoredXML = () => {
+    const xmlKeys = Object.keys(localStorage).filter(key => key.startsWith('pts_xml_'))
+    
+    if (xmlKeys.length === 0) {
+      alert('LocalStorage\'da kayıtlı XML bulunamadı. Önce paket sorgulayın.')
+      return
+    }
+    
+    const xmlList = xmlKeys.map(key => {
+      const transferId = key.replace('pts_xml_', '')
+      const xml = localStorage.getItem(key)
+      return `\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTransfer ID: ${transferId}\nUzunluk: ${xml.length} karakter\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n${xml}\n`
+    }).join('\n')
+    
+    console.log('📄 LocalStorage\'daki XML\'ler:', xmlList)
+    alert(`${xmlKeys.length} adet XML bulundu.\n\nBrowser Console\'a (F12) yazdırıldı.\n\nXML\'leri görmek için Console\'u açın.`)
+  }
+
   // İstatistikler
   const stats = {
-    total: packages.length
+    total: packages.length,
+    totalProducts: packages.reduce((sum, pkg) => sum + pkg.productCount, 0)
   }
+
+  // Seçili paketin detayını göster
+  const [selectedPackageId, setSelectedPackageId] = useState(null)
+
+  // AG Grid Kolon Tanımları
+  const columnDefs = useMemo(() => [
+    {
+      headerName: '',
+      width: 50,
+      cellRenderer: (params) => {
+        const isExpanded = selectedPackageId === params.data.id
+        return `
+          <button 
+            class="w-full h-full flex items-center justify-center hover:bg-gray-100"
+            onclick="window.togglePTSPackage(${params.data.id})"
+          >
+            ${isExpanded ? '▼' : '▶'}
+          </button>
+        `
+      }
+    },
+    {
+      headerName: 'Transfer ID',
+      field: 'transferId',
+      width: 180,
+      cellClass: 'font-mono font-bold text-blue-600'
+    },
+    {
+      headerName: 'Belge No',
+      field: 'documentNumber',
+      width: 150,
+      cellClass: 'font-semibold'
+    },
+    {
+      headerName: 'Belge Tarihi',
+      field: 'documentDate',
+      width: 120,
+      cellClass: 'text-center'
+    },
+    {
+      headerName: 'Kaynak GLN',
+      field: 'sourceGLN',
+      width: 160,
+      cellClass: 'font-mono text-sm'
+    },
+    {
+      headerName: 'Hedef GLN',
+      field: 'destinationGLN',
+      width: 160,
+      cellClass: 'font-mono text-sm'
+    },
+    {
+      headerName: 'Ürün Sayısı',
+      field: 'productCount',
+      width: 110,
+      cellClass: 'text-center font-bold text-green-600'
+    },
+    {
+      headerName: 'Sorgu Zamanı',
+      field: 'timestamp',
+      width: 160,
+      cellClass: 'text-gray-600 text-sm'
+    },
+    {
+      headerName: 'İşlem',
+      width: 80,
+      cellRenderer: (params) => {
+        return `
+          <button 
+            class="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+            onclick="window.deletePTSPackage(${params.data.id})"
+          >
+            Sil
+          </button>
+        `
+      }
+    }
+  ], [selectedPackageId])
+
+  // Ürün detayları için kolon tanımları
+  const productColumnDefs = useMemo(() => [
+    {
+      headerName: 'GTIN',
+      field: 'gtin',
+      width: 180,
+      cellClass: 'font-mono font-bold'
+    },
+    {
+      headerName: 'Seri No',
+      field: 'serialNumber',
+      width: 280,
+      cellClass: 'font-mono text-red-600 font-bold'
+    },
+    {
+      headerName: 'Lot No',
+      field: 'lotNumber',
+      width: 150,
+      cellClass: 'font-mono'
+    },
+    {
+      headerName: 'Son Kullanma',
+      field: 'expirationDate',
+      width: 130,
+      cellClass: 'text-center'
+    },
+    {
+      headerName: 'Carrier Label',
+      field: 'carrierLabel',
+      flex: 1,
+      cellClass: 'font-mono text-sm'
+    }
+  ], [])
+
+  // Grid options
+  const defaultColDef = useMemo(() => ({
+    sortable: true,
+    filter: true,
+    resizable: true
+  }), [])
+
+  // Global functions
+  if (typeof window !== 'undefined') {
+    window.deletePTSPackage = (id) => {
+      handleDeletePackage(id)
+    }
+    window.togglePTSPackage = (id) => {
+      setSelectedPackageId(selectedPackageId === id ? null : id)
+    }
+  }
+
+  // Seçili paketin ürünlerini bul
+  const selectedPackage = packages.find(p => p.id === selectedPackageId)
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -189,8 +365,17 @@ const PTSPage = () => {
                 <div className="flex items-center gap-2">
                   <Package className="w-3.5 h-3.5" />
                   <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium opacity-90">Sorgulanan:</span>
+                    <span className="text-xs font-medium opacity-90">Paket:</span>
                     <span className="text-base font-bold">{stats.total}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded px-3 py-1.5 text-white shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Package className="w-3.5 h-3.5" />
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-xs font-medium opacity-90">Ürün:</span>
+                    <span className="text-base font-bold">{stats.totalProducts}</span>
                   </div>
                 </div>
               </div>
@@ -287,74 +472,75 @@ const PTSPage = () => {
           >
             Tümünü Temizle
           </button>
+
+          <button
+            type="button"
+            onClick={handleShowStoredXML}
+            disabled={loading}
+            className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl"
+          >
+            XML'leri Göster
+          </button>
         </form>
       </div>
 
-      {/* Paket Listesi */}
-      <div className="flex-1 px-6 py-4 overflow-auto">
+      {/* Paket Listesi - AG Grid */}
+      <div className="flex-1 px-6 py-4 flex flex-col gap-4">
         {packages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <Package className="w-16 h-16 mb-4" />
             <p className="text-lg font-medium">Henüz paket sorgulanmadı</p>
-            <p className="text-sm">Barkod okutarak paket sorgulayın</p>
+            <p className="text-sm">Transfer ID veya tarih aralığı ile paket sorgulayın</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {packages.map((pkg) => (
-              <div
-                key={pkg.id}
-                className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Package className="w-7 h-7 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-gray-500">Transfer ID:</span>
-                        <p className="text-lg font-mono font-bold text-blue-600">{pkg.transferId}</p>
-                      </div>
-                      <p className="text-xs text-gray-500 mb-2">{pkg.timestamp}</p>
-                      
-                      {/* PTS'den gelen bilgiler */}
-                      <div className="mt-2 space-y-1 text-sm">
-                        {pkg.documentNumber && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-500">Belge No:</span>
-                            <span className="text-sm text-gray-700">{pkg.documentNumber}</span>
-                          </div>
-                        )}
-                        {pkg.documentDate && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-500">Belge Tarihi:</span>
-                            <span className="text-sm text-gray-700">{pkg.documentDate}</span>
-                          </div>
-                        )}
-                        {pkg.sourceGLN && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-gray-500">Kaynak GLN:</span>
-                            <span className="text-sm text-gray-700 font-mono">{pkg.sourceGLN}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-gray-500">Ürün Sayısı:</span>
-                          <span className="text-sm font-bold text-green-600">{pkg.productCount}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleDeletePackage(pkg.id)}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
-                  >
-                    Sil
-                  </button>
+          <>
+            {/* Paketler Grid */}
+            <div className="ag-theme-alpine" style={{ height: '400px' }}>
+              <AgGridReact
+                rowData={packages}
+                columnDefs={columnDefs}
+                defaultColDef={defaultColDef}
+                animateRows={true}
+                rowHeight={50}
+                headerHeight={48}
+              />
+            </div>
+
+            {/* Seçili Paketin Ürünleri */}
+            {selectedPackage && (
+              <div className="flex-1 border border-gray-300 rounded-lg bg-white">
+                <div className="p-4 bg-gray-50 border-b border-gray-300 rounded-t-lg">
+                  <h3 className="text-lg font-bold text-gray-700">
+                    Paket İçeriği - Transfer ID: {selectedPackage.transferId}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedPackage.products.length} ürün bulundu
+                  </p>
                 </div>
+                
+                {selectedPackage.products.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    Bu pakette ürün bulunamadı
+                  </div>
+                ) : (
+                  <div className="ag-theme-alpine" style={{ height: 'calc(100% - 80px)' }}>
+                    <AgGridReact
+                      rowData={selectedPackage.products}
+                      columnDefs={productColumnDefs}
+                      defaultColDef={{
+                        sortable: true,
+                        filter: true,
+                        resizable: true
+                      }}
+                      animateRows={true}
+                      rowHeight={42}
+                      headerHeight={44}
+                    />
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
