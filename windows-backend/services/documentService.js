@@ -1120,79 +1120,77 @@ const documentService = {
         console.log('✓ Miktar kontrolü geçti:', currentOkutulan + miktar, '/', expectedQuantity)
       }
       
-      // Eğer sadece lot numarası girilmişse, aynı lot var mı kontrol et (miktar artacak)
-      if (!seriNo && lotNo) {
-        const checkQuery = `
-          SELECT MIKTAR
+      // Unique kontroller - Seri No ve Lot No teklik kontrolü
+      // Seri No unique kontrolü
+      if (seriNo) {
+        const seriCheckQuery = `
+          SELECT SERI_NO, ACIK2
           FROM TBLSERITRA WITH (NOLOCK)
-          WHERE KAYIT_TIPI = @kayitTipi
-            AND SERI_NO = @finalSeriNo
-            AND STOK_KODU = @stokKodu
+          WHERE BELGENO = @belgeNo
             AND STRA_INC = @straInc
-            AND BELGENO = @belgeNo
+            AND STOK_KODU = @stokKodu
             AND BELGETIP = @belgeTip
             AND SUBE_KODU = @subeKodu
+            AND KAYIT_TIPI = @kayitTipi
             AND GCKOD = @gckod
+            AND SERI_NO = @seriNo
         `
         
-        const checkRequest = pool.request()
-        checkRequest.input('kayitTipi', kayitTipi)
-        checkRequest.input('finalSeriNo', finalSeriNo)
-        checkRequest.input('stokKodu', stokKodu)
-        checkRequest.input('straInc', straInc)
-        checkRequest.input('belgeNo', belgeNo)
-        checkRequest.input('belgeTip', belgeTip)
-        checkRequest.input('subeKodu', subeKodu)
-        checkRequest.input('gckod', gckod)
+        const seriCheckRequest = pool.request()
+        seriCheckRequest.input('belgeNo', belgeNo)
+        seriCheckRequest.input('straInc', straInc)
+        seriCheckRequest.input('stokKodu', stokKodu)
+        seriCheckRequest.input('belgeTip', belgeTip)
+        seriCheckRequest.input('subeKodu', subeKodu)
+        seriCheckRequest.input('kayitTipi', kayitTipi)
+        seriCheckRequest.input('gckod', gckod)
+        seriCheckRequest.input('seriNo', seriNo)
         
-        const checkResult = await checkRequest.query(checkQuery)
+        const seriCheckResult = await seriCheckRequest.query(seriCheckQuery)
         
-        if (checkResult.recordset.length > 0) {
-          // Lot var, MIKTAR'ı güncelle
-          const currentMiktar = checkResult.recordset[0].MIKTAR || 0
-          const newMiktar = currentMiktar + miktar
-          
-          console.log(`✓ Lot bulundu, MIKTAR güncelleniyor: ${currentMiktar} -> ${newMiktar}`)
-          
-          const updateQuery = `
-            UPDATE TBLSERITRA
-            SET MIKTAR = @newMiktar
-            WHERE KAYIT_TIPI = @kayitTipi
-              AND SERI_NO = @finalSeriNo
-              AND STOK_KODU = @stokKodu
-              AND STRA_INC = @straInc
-              AND BELGENO = @belgeNo
-              AND BELGETIP = @belgeTip
-              AND SUBE_KODU = @subeKodu
-              AND GCKOD = @gckod
-          `
-          
-          const updateRequest = pool.request()
-          updateRequest.input('kayitTipi', kayitTipi)
-          updateRequest.input('finalSeriNo', finalSeriNo)
-          updateRequest.input('stokKodu', stokKodu)
-          updateRequest.input('straInc', straInc)
-          updateRequest.input('belgeNo', belgeNo)
-          updateRequest.input('belgeTip', belgeTip)
-          updateRequest.input('subeKodu', subeKodu)
-          updateRequest.input('gckod', gckod)
-          updateRequest.input('newMiktar', newMiktar)
-          
-          await updateRequest.query(updateQuery)
-          
-          console.log('✅✅✅ UTS BARKOD BAŞARIYLA GÜNCELLENDİ! ✅✅✅')
-          console.log('Stok Kodu:', stokKodu)
-          console.log('Lot No:', lotNo)
-          console.log('Yeni Miktar:', newMiktar)
-          
+        if (seriCheckResult.recordset.length > 0) {
+          console.log('⚠️ DUPLICATE! Aynı Seri No zaten kayıtlı:', seriNo)
           return {
-            success: true,
-            data: {
-              stokKodu,
-              lotNo,
-              miktar: newMiktar,
-              isUpdate: true
-            }
+            success: false,
+            error: 'DUPLICATE',
+            message: `Bu Seri No zaten kayıtlı: ${seriNo}`
+          }
+        }
+      }
+      
+      // Lot No unique kontrolü
+      if (lotNo) {
+        const lotCheckQuery = `
+          SELECT SERI_NO, ACIK2, MIKTAR
+          FROM TBLSERITRA WITH (NOLOCK)
+          WHERE BELGENO = @belgeNo
+            AND STRA_INC = @straInc
+            AND STOK_KODU = @stokKodu
+            AND BELGETIP = @belgeTip
+            AND SUBE_KODU = @subeKodu
+            AND KAYIT_TIPI = @kayitTipi
+            AND GCKOD = @gckod
+            AND ACIK2 = @lotNo
+        `
+        
+        const lotCheckRequest = pool.request()
+        lotCheckRequest.input('belgeNo', belgeNo)
+        lotCheckRequest.input('straInc', straInc)
+        lotCheckRequest.input('stokKodu', stokKodu)
+        lotCheckRequest.input('belgeTip', belgeTip)
+        lotCheckRequest.input('subeKodu', subeKodu)
+        lotCheckRequest.input('kayitTipi', kayitTipi)
+        lotCheckRequest.input('gckod', gckod)
+        lotCheckRequest.input('lotNo', lotNo)
+        
+        const lotCheckResult = await lotCheckRequest.query(lotCheckQuery)
+        
+        if (lotCheckResult.recordset.length > 0) {
+          console.log('⚠️ DUPLICATE! Aynı Lot No zaten kayıtlı:', lotNo)
+          return {
+            success: false,
+            error: 'DUPLICATE',
+            message: `Bu Lot No zaten kayıtlı: ${lotNo}`
           }
         }
       }

@@ -1116,13 +1116,25 @@ const DocumentDetailPage = () => {
         }
       }
 
-      // Aynı Lot No kontrolü (Seri No yoksa lot tekil olmalı)
-      const lotsWithoutSerial = validRows.filter(r => !r.seriNo && r.lot)
-      const lotCounts = {}
-      lotsWithoutSerial.forEach(row => {
-        lotCounts[row.lot] = (lotCounts[row.lot] || 0) + 1
+      // Seri No teklik kontrolü
+      const serialNumbers = validRows.filter(r => r.seriNo).map(r => r.seriNo.trim().toLowerCase())
+      const serialCounts = {}
+      serialNumbers.forEach(sn => {
+        serialCounts[sn] = (serialCounts[sn] || 0) + 1
       })
-      
+      const duplicateSerials = Object.keys(serialCounts).filter(sn => serialCounts[sn] > 1)
+      if (duplicateSerials.length > 0) {
+        showUTSMessage(`❌ Aynı Seri No birden fazla satırda kullanılamaz: ${duplicateSerials.join(', ')}`, 'error')
+        playErrorSound()
+        return
+      }
+
+      // Lot No teklik kontrolü
+      const lotNumbers = validRows.filter(r => r.lot).map(r => r.lot.trim().toLowerCase())
+      const lotCounts = {}
+      lotNumbers.forEach(lot => {
+        lotCounts[lot] = (lotCounts[lot] || 0) + 1
+      })
       const duplicateLots = Object.keys(lotCounts).filter(lot => lotCounts[lot] > 1)
       if (duplicateLots.length > 0) {
         showUTSMessage(`❌ Aynı Lot numarası birden fazla satırda kullanılamaz: ${duplicateLots.join(', ')}`, 'error')
@@ -1185,6 +1197,10 @@ const DocumentDetailPage = () => {
           savedCount++
         } else if (result.error === 'QUANTITY_EXCEEDED') {
           showUTSMessage(`❌ MİKTAR AŞIMI! ${result.message}`, 'error')
+          playErrorSound()
+          return
+        } else if (result.error === 'DUPLICATE') {
+          showUTSMessage(`❌ DUPLICATE! ${result.message}`, 'error')
           playErrorSound()
           return
         } else {
