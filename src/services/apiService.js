@@ -249,10 +249,10 @@ const apiService = {
   },
 
   // UTS Kayıtlarını Sil
-  deleteUTSBarcodeRecords: async (documentId, itemId, seriNos) => {
+  deleteUTSBarcodeRecords: async (documentId, itemId, records) => {
     try {
       const response = await apiClient.delete(`/documents/${documentId}/item/${itemId}/uts-records`, {
-        data: { seriNos }
+        data: { records }
       })
       return response.data
     } catch (error) {

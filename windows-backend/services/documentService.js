@@ -635,32 +635,34 @@ const documentService = {
   },
 
   // TBLSERITRA Kayıtlarını Sil - UTS
-  async deleteUTSBarcodeRecords(seriNos, subeKodu, belgeNo, straInc) {
+  async deleteUTSBarcodeRecords(records, subeKodu, belgeNo, straInc) {
     try {
       const pool = await getConnection()
       
-      // Seri numaralarını tek tek sil
-      for (const seriNo of seriNos) {
+      // Kayıtları tek tek sil (seriNo + lot kombinasyonu ile)
+      for (const record of records) {
         const query = `
           DELETE FROM TBLSERITRA
           WHERE SUBE_KODU = @subeKodu
             AND BELGENO = @belgeNo
             AND STRA_INC = @straInc
             AND SERI_NO = @seriNo
+            AND ACIK2 = @lot
         `
         
         const request = pool.request()
         request.input('subeKodu', subeKodu)
         request.input('belgeNo', belgeNo)
         request.input('straInc', straInc)
-        request.input('seriNo', seriNo)
+        request.input('seriNo', record.seriNo)
+        request.input('lot', record.lot)
         
         await request.query(query)
-        console.log('🗑️ UTS Kayıt Silindi:', seriNo)
+        console.log('🗑️ UTS Kayıt Silindi:', { seriNo: record.seriNo, lot: record.lot })
       }
       
-      console.log('✅ UTS Kayıtlar Başarıyla Silindi:', seriNos.length)
-      return { success: true, deletedCount: seriNos.length }
+      console.log('✅ UTS Kayıtlar Başarıyla Silindi:', records.length)
+      return { success: true, deletedCount: records.length }
       
     } catch (error) {
       console.error('❌ UTS Kayıt Silme Hatası:', error)

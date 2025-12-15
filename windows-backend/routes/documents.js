@@ -186,12 +186,12 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
 router.delete('/:documentId/item/:itemId/uts-records', async (req, res) => {
   try {
     const { documentId, itemId } = req.params
-    const { seriNos } = req.body // Array of seri numbers to delete
+    const { records } = req.body // Array of records {seriNo, lot} to delete
     
-    if (!seriNos || !Array.isArray(seriNos) || seriNos.length === 0) {
+    if (!records || !Array.isArray(records) || records.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Silinecek seri numaraları belirtilmeli'
+        message: 'Silinecek kayıtlar belirtilmeli'
       })
     }
     
@@ -199,7 +199,7 @@ router.delete('/:documentId/item/:itemId/uts-records', async (req, res) => {
     const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
     
     const result = await documentService.deleteUTSBarcodeRecords(
-      seriNos,
+      records,
       subeKodu,
       fatirs_no,
       itemId

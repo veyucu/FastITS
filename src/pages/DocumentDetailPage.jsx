@@ -1794,7 +1794,11 @@ const DocumentDetailPage = () => {
                     suppressRowClickSelection={true}
                     onSelectionChanged={(event) => {
                       const selected = event.api.getSelectedRows()
-                      setSelectedUTSRecords(selected.map(r => r.seriNo))
+                      // Seri No ve Lot No kombinasyonunu sakla (unique identifier için)
+                      setSelectedUTSRecords(selected.map(r => ({
+                        seriNo: r.seriNo,
+                        lot: r.lot
+                      })))
                     }}
                     animateRows={true}
                     enableCellTextSelection={true}
