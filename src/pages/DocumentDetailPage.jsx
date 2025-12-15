@@ -1800,6 +1800,12 @@ const DocumentDetailPage = () => {
                         lot: r.lot
                       })))
                     }}
+                    onCellValueChanged={(event) => {
+                      // Hücre değiştiğinde state'i güncelle (toplamlar için)
+                      const allRows = []
+                      event.api.forEachNode(node => allRows.push(node.data))
+                      setUtsRecords([...allRows])
+                    }}
                     animateRows={true}
                     enableCellTextSelection={true}
                     singleClickEdit={true}
