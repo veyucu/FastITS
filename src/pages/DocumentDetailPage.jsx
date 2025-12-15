@@ -35,6 +35,7 @@ const DocumentDetailPage = () => {
   const [showUTSModal, setShowUTSModal] = useState(false)
   const [selectedUTSItem, setSelectedUTSItem] = useState(null)
   const [utsRecords, setUtsRecords] = useState([])
+  const [originalUtsRecords, setOriginalUtsRecords] = useState([]) // DB'den gelen orijinal kayıtlar
   const [selectedUTSRecords, setSelectedUTSRecords] = useState([])
   const [utsLoading, setUtsLoading] = useState(false)
   const [utsModalMessage, setUtsModalMessage] = useState(null) // Modal içi mesajlar için
@@ -986,6 +987,7 @@ const DocumentDetailPage = () => {
           }
         })
         setUtsRecords(enrichedRecords)
+        setOriginalUtsRecords(JSON.parse(JSON.stringify(enrichedRecords))) // Deep copy
       } else {
         showMessage('UTS kayıtları yüklenemedi', 'error')
       }
@@ -1007,63 +1009,36 @@ const DocumentDetailPage = () => {
   }
 
   // UTS Kayıtlarını Sil
-  const handleDeleteUTSRecords = async () => {
+  const handleDeleteUTSRecords = () => {
     if (selectedUTSRecords.length === 0) {
-      showUTSMessage('Lütfen silinecek kayıtları seçin', 'warning')
+      showUTSMessage('⚠️ Lütfen silinecek kayıtları seçin', 'warning')
       playErrorSound()
       return
     }
 
-    if (!confirm(`${selectedUTSRecords.length} kayıt silinecek. Emin misiniz?`)) {
+    if (!confirm(`${selectedUTSRecords.length} kayıt grid'den kaldırılacak. "Kaydet" butonuna basınca veri tabanından silinecek. Emin misiniz?`)) {
       return
     }
 
-    try {
-      const result = await apiService.deleteUTSBarcodeRecords(
-        order.id,
-        selectedUTSItem.itemId,
-        selectedUTSRecords
-      )
-
-      if (result.success) {
-        showUTSMessage(`✅ ${result.deletedCount} kayıt silindi`, 'success')
-        playSuccessSound()
-        // Kayıtları yeniden yükle
-        const response = await apiService.getUTSBarcodeRecords(order.id, selectedUTSItem.itemId)
-        if (response.success) {
-          // Kayıtlara uretimTarihiDisplay ekle (YYMMDD -> YYYY-MM-DD)
-          const enrichedRecords = (response.data || []).map(record => {
-            let uretimTarihiDisplay = ''
-            if (record.uretimTarihi && record.uretimTarihi.length === 6) {
-              const yy = record.uretimTarihi.substring(0, 2)
-              const mm = record.uretimTarihi.substring(2, 4)
-              const dd = record.uretimTarihi.substring(4, 6)
-              const yyyy = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
-              uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
-            }
-            return {
-              ...record,
-              uretimTarihiDisplay
-            }
-          })
-          setUtsRecords(enrichedRecords)
-          setSelectedUTSRecords([])
-        }
-        
-        // Ana grid'i yenile
-        const docResponse = await apiService.getDocumentById(order.id)
-        if (docResponse.success && docResponse.data) {
-          setItems(docResponse.data.items || [])
-        }
+    // Sadece grid'den kaldır (veri tabanına dokunma)
+    const selectedSiraNumbers = selectedUTSRecords.map(r => r.siraNo).filter(Boolean)
+    const filteredRecords = utsRecords.filter(record => {
+      // SiraNo varsa ona göre, yoksa unique olarak seriNo+lot kombinasyonuna göre
+      if (record.siraNo) {
+        return !selectedSiraNumbers.includes(record.siraNo)
       } else {
-        showUTSMessage('❌ Kayıtlar silinemedi: ' + result.message, 'error')
-        playErrorSound()
+        // Yeni eklenmiş kayıtlar için (siraNo yok)
+        const selected = selectedUTSRecords.find(s => 
+          s.seriNo === record.seriNo && s.lot === record.lot
+        )
+        return !selected
       }
-    } catch (error) {
-      console.error('UTS kayıt silme hatası:', error)
-      showUTSMessage('❌ Kayıtlar silinemedi', 'error')
-      playErrorSound()
-    }
+    })
+    
+    setUtsRecords(filteredRecords)
+    setSelectedUTSRecords([])
+    showUTSMessage(`✅ ${selectedUTSRecords.length} kayıt grid'den kaldırıldı. "Kaydet" butonuna basın.`, 'success')
+    playSuccessSound()
   }
 
   // UTS Grid'e Yeni Boş Satır Ekle
@@ -1799,8 +1774,9 @@ const DocumentDetailPage = () => {
                     suppressRowClickSelection={true}
                     onSelectionChanged={(event) => {
                       const selected = event.api.getSelectedRows()
-                      // Seri No ve Lot No kombinasyonunu sakla (unique identifier için)
+                      // Seri No, Lot No ve Sira No kombinasyonunu sakla
                       setSelectedUTSRecords(selected.map(r => ({
+                        siraNo: r.siraNo,
                         seriNo: r.seriNo,
                         lot: r.lot
                       })))

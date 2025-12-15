@@ -262,6 +262,22 @@ const apiService = {
         message: error.response?.data?.message || error.message || 'UTS kayıtları silinemedi'
       }
     }
+  },
+
+  // UTS Kayıtlarını Toplu Kaydet/Güncelle/Sil
+  saveUTSRecords: async (data) => {
+    try {
+      console.log('💾 UTS Toplu Kayıt gönderiliyor:', data)
+      const response = await apiClient.post('/documents/uts-records/bulk-save', data)
+      console.log('✅ UTS Toplu Kayıt yanıtı:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ UTS Toplu Kayıt hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'UTS kayıtları kaydedilemedi'
+      }
+    }
   }
 }
 

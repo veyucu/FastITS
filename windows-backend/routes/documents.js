@@ -374,6 +374,64 @@ router.post('/uts-barcode', async (req, res) => {
   }
 })
 
+// POST /api/documents/uts-records/bulk-save - UTS Kayıtlarını Toplu Kaydet/Güncelle/Sil
+router.post('/uts-records/bulk-save', async (req, res) => {
+  try {
+    const {
+      records,          // Grid'den gelen kayıtlar
+      originalRecords,  // DB'den gelen orijinal kayıtlar
+      documentId,       // Belge ID
+      itemId,           // INCKEYNO
+      stokKodu,
+      belgeTip,
+      gckod,
+      belgeNo,
+      belgeTarihi,
+      docType,
+      expectedQuantity,
+      barcode
+    } = req.body
+    
+    console.log('💾 UTS Toplu Kayıt İsteği:', { documentId, itemId, recordCount: records.length })
+    
+    // Belge ID'sini parse et
+    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    
+    // KAYIT_TIPI belirle (Sipariş = M, Fatura = A)
+    const kayitTipi = docType === '6' ? 'M' : 'A'
+    
+    // Toplu kaydet
+    const saveResult = await documentService.saveUTSRecords({
+      records,
+      originalRecords,
+      kayitTipi,
+      stokKodu,
+      straInc: itemId,
+      tarih: belgeTarihi,
+      belgeNo,
+      belgeTip,
+      subeKodu,
+      gckod,
+      ilcGtin: barcode,
+      expectedQuantity
+    })
+    
+    res.json({
+      success: true,
+      message: `${saveResult.insertCount} eklendi, ${saveResult.updateCount} güncellendi, ${saveResult.deleteCount} silindi`,
+      data: saveResult
+    })
+    
+  } catch (error) {
+    console.error('❌ UTS Toplu Kayıt Hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: 'UTS kayıtları kaydedilemedi',
+      error: error.message
+    })
+  }
+})
+
 // POST /api/documents/dgr-barcode - DGR Barkod Okut ve Kaydet (ITS olmayan normal ürünler)
 router.post('/dgr-barcode', async (req, res) => {
   try {

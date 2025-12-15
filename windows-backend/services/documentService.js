@@ -552,6 +552,7 @@ const documentService = {
       
       const query = `
         SELECT
+          SIRA_NO,
           SERI_NO,
           STOK_KODU,
           STRA_INC,
@@ -570,7 +571,7 @@ const documentService = {
           AND BELGENO = @belgeNo
           AND STRA_INC = @straInc
           AND KAYIT_TIPI = @kayitTipi
-        ORDER BY SERI_NO
+        ORDER BY SIRA_NO
       `
       
       const request = pool.request()
@@ -582,6 +583,7 @@ const documentService = {
       const result = await request.query(query)
       
       const records = result.recordset.map(row => ({
+        siraNo: row.SIRA_NO, // Primary key - otomatik artan
         // Eğer hem SERI_NO hem LOT doluysa: seriNo = SERI_NO, lot = LOT
         // Eğer sadece SERI_NO dolu, LOT boş ise: seriNo = '', lot = SERI_NO
         seriNo: row.LOT ? row.SERI_NO : '', // LOT varsa SERI_NO göster, yoksa boş
@@ -1283,6 +1285,182 @@ const documentService = {
       
     } catch (error) {
       console.error('❌ UTS Barkod Kaydetme Hatası:', error)
+      throw error
+    }
+  },
+
+  // UTS Kayıtlarını Toplu Kaydet/Güncelle/Sil
+  async saveUTSRecords(data) {
+    try {
+      const pool = await getConnection()
+      
+      const {
+        records,          // Grid'den gelen kayıtlar (siraNo, seriNo, lot, miktar, uretimTarihi)
+        originalRecords,  // DB'den gelen orijinal kayıtlar (siraNo)
+        kayitTipi,        // 'M' veya 'A'
+        stokKodu,
+        straInc,
+        tarih,
+        belgeNo,
+        belgeTip,
+        subeKodu,
+        gckod,
+        ilcGtin,
+        expectedQuantity
+      } = data
+      
+      console.log('💾 UTS Toplu Kayıt İşlemi Başlıyor...')
+      console.log('Toplam Kayıt:', records.length)
+      
+      // Belge Tarih formatı
+      const tarihDate = new Date(tarih)
+      const year = tarihDate.getFullYear()
+      const month = String(tarihDate.getMonth() + 1).padStart(2, '0')
+      const day = String(tarihDate.getDate()).padStart(2, '0')
+      const formattedTarih = `${year}-${month}-${day}`
+      
+      const transaction = pool.transaction()
+      await transaction.begin()
+      
+      try {
+        // 1. Silinen kayıtları bul ve DELETE
+        const originalSiraNumbers = originalRecords.map(r => r.siraNo)
+        const currentSiraNumbers = records.filter(r => r.siraNo).map(r => r.siraNo)
+        const deletedSiraNumbers = originalSiraNumbers.filter(sno => !currentSiraNumbers.includes(sno))
+        
+        if (deletedSiraNumbers.length > 0) {
+          console.log(`🗑️ ${deletedSiraNumbers.length} kayıt silinecek:`, deletedSiraNumbers)
+          
+          for (const siraNo of deletedSiraNumbers) {
+            const deleteQuery = `DELETE FROM TBLSERITRA WHERE SIRA_NO = @siraNo`
+            const deleteRequest = transaction.request()
+            deleteRequest.input('siraNo', siraNo)
+            await deleteRequest.query(deleteQuery)
+          }
+          
+          console.log('✅ Silme işlemi tamamlandı')
+        }
+        
+        // 2. Her satır için INSERT veya UPDATE
+        let insertCount = 0
+        let updateCount = 0
+        
+        for (const record of records) {
+          // Üretim tarihini YYMMDD formatına çevir
+          let formattedUretimTarihi = ''
+          if (record.uretimTarihiDisplay && record.uretimTarihiDisplay.includes('-')) {
+            const [yyyy, mm, dd] = record.uretimTarihiDisplay.split('-')
+            const yy = yyyy.substring(2, 4)
+            formattedUretimTarihi = `${yy}${mm}${dd}`
+          } else if (record.uretimTarihi) {
+            formattedUretimTarihi = record.uretimTarihi
+          }
+          
+          // SERI_NO ve ACIK2 ayarla
+          const finalSeriNo = record.seriNo || record.lot
+          const finalAcik2 = record.seriNo ? record.lot : '' // Seri no varsa lot ACIK2'ye, yoksa boş
+          
+          if (record.siraNo) {
+            // UPDATE mevcut kayıt
+            const updateQuery = `
+              UPDATE TBLSERITRA
+              SET SERI_NO = @finalSeriNo,
+                  ACIK1 = @formattedUretimTarihi,
+                  ACIK2 = @finalAcik2,
+                  MIKTAR = @miktar
+              WHERE SIRA_NO = @siraNo
+            `
+            
+            const updateRequest = transaction.request()
+            updateRequest.input('siraNo', record.siraNo)
+            updateRequest.input('finalSeriNo', finalSeriNo)
+            updateRequest.input('formattedUretimTarihi', formattedUretimTarihi)
+            updateRequest.input('finalAcik2', finalAcik2)
+            updateRequest.input('miktar', record.miktar)
+            
+            await updateRequest.query(updateQuery)
+            updateCount++
+            console.log(`✏️ Kayıt güncellendi: SIRA_NO=${record.siraNo}`)
+            
+          } else {
+            // INSERT yeni kayıt
+            const insertQuery = `
+              INSERT INTO TBLSERITRA (
+                KAYIT_TIPI,
+                SERI_NO,
+                STOK_KODU,
+                STRA_INC,
+                TARIH,
+                ACIK1,
+                ACIK2,
+                GCKOD,
+                MIKTAR,
+                BELGENO,
+                BELGETIP,
+                SUBE_KODU,
+                DEPOKOD,
+                ILC_GTIN
+              ) VALUES (
+                @kayitTipi,
+                @finalSeriNo,
+                @stokKodu,
+                @straInc,
+                @tarih,
+                @formattedUretimTarihi,
+                @finalAcik2,
+                @gckod,
+                @miktar,
+                @belgeNo,
+                @belgeTip,
+                @subeKodu,
+                '0',
+                @ilcGtin
+              )
+            `
+            
+            const insertRequest = transaction.request()
+            insertRequest.input('kayitTipi', kayitTipi)
+            insertRequest.input('finalSeriNo', finalSeriNo)
+            insertRequest.input('stokKodu', stokKodu)
+            insertRequest.input('straInc', straInc)
+            insertRequest.input('tarih', formattedTarih)
+            insertRequest.input('formattedUretimTarihi', formattedUretimTarihi)
+            insertRequest.input('finalAcik2', finalAcik2)
+            insertRequest.input('gckod', gckod)
+            insertRequest.input('miktar', record.miktar)
+            insertRequest.input('belgeNo', belgeNo)
+            insertRequest.input('belgeTip', belgeTip)
+            insertRequest.input('subeKodu', subeKodu)
+            insertRequest.input('ilcGtin', ilcGtin)
+            
+            await insertRequest.query(insertQuery)
+            insertCount++
+            console.log(`➕ Yeni kayıt eklendi: ${finalSeriNo}`)
+          }
+        }
+        
+        // Transaction commit
+        await transaction.commit()
+        
+        console.log('✅✅✅ UTS TOPLU KAYIT BAŞARILI! ✅✅✅')
+        console.log(`➕ ${insertCount} yeni kayıt eklendi`)
+        console.log(`✏️ ${updateCount} kayıt güncellendi`)
+        console.log(`🗑️ ${deletedSiraNumbers.length} kayıt silindi`)
+        
+        return {
+          success: true,
+          insertCount,
+          updateCount,
+          deleteCount: deletedSiraNumbers.length
+        }
+        
+      } catch (error) {
+        await transaction.rollback()
+        throw error
+      }
+      
+    } catch (error) {
+      console.error('❌ UTS Toplu Kayıt Hatası:', error)
       throw error
     }
   }
