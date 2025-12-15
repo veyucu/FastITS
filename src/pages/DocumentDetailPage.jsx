@@ -37,6 +37,7 @@ const DocumentDetailPage = () => {
   const [utsRecords, setUtsRecords] = useState([])
   const [selectedUTSRecords, setSelectedUTSRecords] = useState([])
   const [utsLoading, setUtsLoading] = useState(false)
+  const [utsModalMessage, setUtsModalMessage] = useState(null) // Modal içi mesajlar için
 
   // Belge tipini belirle
   const getDocumentTypeName = (docType, tipi) => {
@@ -385,7 +386,7 @@ const DocumentDetailPage = () => {
     },
     {
       headerName: 'Üretim Tarihi',
-      field: 'uretimTarihiDisplay',
+      field: 'uretimTarihi',
       width: 150,
       cellClass: 'text-center font-semibold',
       editable: true,
@@ -394,38 +395,50 @@ const DocumentDetailPage = () => {
         min: '2000-01-01',
         max: '2099-12-31'
       },
+      valueGetter: (params) => {
+        // Grid'e YYYY-MM-DD formatında göster (edit için)
+        const data = params.data
+        if (!data) return ''
+        
+        // Eğer uretimTarihiDisplay varsa onu kullan
+        if (data.uretimTarihiDisplay) {
+          return data.uretimTarihiDisplay
+        }
+        
+        // YYMMDD formatını YYYY-MM-DD'ye çevir
+        if (data.uretimTarihi && data.uretimTarihi.length === 6) {
+          const yy = data.uretimTarihi.substring(0, 2)
+          const mm = data.uretimTarihi.substring(2, 4)
+          const dd = data.uretimTarihi.substring(4, 6)
+          const yyyy = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
+          return `${yyyy}-${mm}-${dd}`
+        }
+        return ''
+      },
+      valueSetter: (params) => {
+        // Edit sonrası değeri kaydet
+        const newValue = params.newValue
+        if (!newValue) return false
+        
+        params.data.uretimTarihiDisplay = newValue
+        
+        // YYYY-MM-DD -> YYMMDD formatına çevir
+        if (newValue.includes('-')) {
+          const [yyyy, mm, dd] = newValue.split('-')
+          const yy = yyyy.substring(2, 4)
+          params.data.uretimTarihi = `${yy}${mm}${dd}`
+        }
+        return true
+      },
       valueFormatter: (params) => {
-        // YYMMDD -> DD.MM.YYYY formatına çevir (gösterim için)
+        // Görüntüleme için DD.MM.YYYY formatı
         if (!params.value) return ''
         
-        // Eğer zaten YYYY-MM-DD formatındaysa
         if (params.value.includes('-')) {
           const [yyyy, mm, dd] = params.value.split('-')
           return `${dd}.${mm}.${yyyy}`
         }
-        
-        // YYMMDD formatından DD.MM.YYYY'ye
-        if (params.value.length === 6) {
-          const yy = params.value.substring(0, 2)
-          const mm = params.value.substring(2, 4)
-          const dd = params.value.substring(4, 6)
-          const yyyy = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
-          return `${dd}.${mm}.${yyyy}`
-        }
         return params.value
-      },
-      valueParser: (params) => {
-        // YYYY-MM-DD -> YYMMDD formatına çevir (internal storage için)
-        const value = params.newValue
-        if (!value) return ''
-        
-        if (value.includes('-')) {
-          // YYYY-MM-DD formatından parse et
-          const [yyyy, mm, dd] = value.split('-')
-          const yy = yyyy.substring(2, 4)
-          return `${yy}${mm}${dd}`
-        }
-        return value
       }
     },
     {
@@ -905,6 +918,12 @@ const DocumentDetailPage = () => {
     setTimeout(() => setMessage(null), 3000)
   }
 
+  // UTS Modal içi mesajlar için özel fonksiyon
+  const showUTSMessage = (text, type) => {
+    setUtsModalMessage({ text, type })
+    setTimeout(() => setUtsModalMessage(null), 4000)
+  }
+
   // UTS Modal Aç
   const handleOpenUTSModal = async (item) => {
     try {
@@ -949,12 +968,14 @@ const DocumentDetailPage = () => {
     setSelectedUTSItem(null)
     setUtsRecords([])
     setSelectedUTSRecords([])
+    setUtsModalMessage(null) // Modal mesajını temizle
   }
 
   // UTS Kayıtlarını Sil
   const handleDeleteUTSRecords = async () => {
     if (selectedUTSRecords.length === 0) {
-      showMessage('Lütfen silinecek kayıtları seçin', 'warning')
+      showUTSMessage('Lütfen silinecek kayıtları seçin', 'warning')
+      playErrorSound()
       return
     }
 
@@ -970,7 +991,8 @@ const DocumentDetailPage = () => {
       )
 
       if (result.success) {
-        showMessage(`${result.deletedCount} kayıt silindi`, 'success')
+        showUTSMessage(`✅ ${result.deletedCount} kayıt silindi`, 'success')
+        playSuccessSound()
         // Kayıtları yeniden yükle
         const response = await apiService.getUTSBarcodeRecords(order.id, selectedUTSItem.itemId)
         if (response.success) {
@@ -999,11 +1021,13 @@ const DocumentDetailPage = () => {
           setItems(docResponse.data.items || [])
         }
       } else {
-        showMessage('Kayıtlar silinemedi: ' + result.message, 'error')
+        showUTSMessage('❌ Kayıtlar silinemedi: ' + result.message, 'error')
+        playErrorSound()
       }
     } catch (error) {
       console.error('UTS kayıt silme hatası:', error)
-      showMessage('Kayıtlar silinemedi', 'error')
+      showUTSMessage('❌ Kayıtlar silinemedi', 'error')
+      playErrorSound()
     }
   }
 
@@ -1039,7 +1063,7 @@ const DocumentDetailPage = () => {
       const validRows = allRows.filter(row => row.seriNo || row.lot)
 
       if (validRows.length === 0) {
-        showMessage('❌ Kaydedilecek satır yok!', 'error')
+        showUTSMessage('❌ Kaydedilecek satır yok!', 'error')
         playErrorSound()
         return
       }
@@ -1051,14 +1075,14 @@ const DocumentDetailPage = () => {
 
         // Seri No veya Lot No zorunlu
         if (!row.seriNo && !row.lot) {
-          showMessage(`❌ Satır ${rowNum}: Seri No veya Lot No girilmeli!`, 'error')
+          showUTSMessage(`❌ Satır ${rowNum}: Seri No veya Lot No girilmeli!`, 'error')
           playErrorSound()
           return
         }
 
         // Üretim Tarihi zorunlu ve 6 karakter
         if (!row.uretimTarihi && !row.uretimTarihiDisplay) {
-          showMessage(`❌ Satır ${rowNum}: Üretim Tarihi girilmeli!`, 'error')
+          showUTSMessage(`❌ Satır ${rowNum}: Üretim Tarihi girilmeli!`, 'error')
           playErrorSound()
           return
         }
@@ -1072,21 +1096,21 @@ const DocumentDetailPage = () => {
         }
 
         if (uretimTarihiYYMMDD.length !== 6) {
-          showMessage(`❌ Satır ${rowNum}: Üretim Tarihi geçersiz format!`, 'error')
+          showUTSMessage(`❌ Satır ${rowNum}: Üretim Tarihi geçersiz format!`, 'error')
           playErrorSound()
           return
         }
 
         // Miktar kontrolü
         if (!row.miktar || row.miktar <= 0) {
-          showMessage(`❌ Satır ${rowNum}: Miktar 0'dan büyük olmalı!`, 'error')
+          showUTSMessage(`❌ Satır ${rowNum}: Miktar 0'dan büyük olmalı!`, 'error')
           playErrorSound()
           return
         }
 
         // Seri no varsa miktar 1 olmalı
         if (row.seriNo && row.miktar !== 1) {
-          showMessage(`❌ Satır ${rowNum}: Seri No girildiğinde miktar 1 olmalı!`, 'error')
+          showUTSMessage(`❌ Satır ${rowNum}: Seri No girildiğinde miktar 1 olmalı!`, 'error')
           playErrorSound()
           return
         }
@@ -1101,7 +1125,7 @@ const DocumentDetailPage = () => {
       
       const duplicateLots = Object.keys(lotCounts).filter(lot => lotCounts[lot] > 1)
       if (duplicateLots.length > 0) {
-        showMessage(`❌ Aynı Lot numarası birden fazla satırda kullanılamaz: ${duplicateLots.join(', ')}`, 'error')
+        showUTSMessage(`❌ Aynı Lot numarası birden fazla satırda kullanılamaz: ${duplicateLots.join(', ')}`, 'error')
         playErrorSound()
         return
       }
@@ -1109,7 +1133,7 @@ const DocumentDetailPage = () => {
       // Toplam miktar kontrolü
       const totalMiktar = validRows.reduce((sum, row) => sum + (row.miktar || 0), 0)
       if (totalMiktar > selectedUTSItem.quantity) {
-        showMessage(`❌ Toplam miktar (${totalMiktar}) belge kalemindeki miktarı (${selectedUTSItem.quantity}) geçemez!`, 'error')
+        showUTSMessage(`❌ Toplam miktar (${totalMiktar}) belge kalemindeki miktarı (${selectedUTSItem.quantity}) geçemez!`, 'error')
         playErrorSound()
         return
       }
@@ -1160,18 +1184,18 @@ const DocumentDetailPage = () => {
         if (result.success) {
           savedCount++
         } else if (result.error === 'QUANTITY_EXCEEDED') {
-          showMessage(`❌ MİKTAR AŞIMI! ${result.message}`, 'error')
+          showUTSMessage(`❌ MİKTAR AŞIMI! ${result.message}`, 'error')
           playErrorSound()
           return
         } else {
-          showMessage(`❌ Kayıt hatası: ${result.message}`, 'error')
+          showUTSMessage(`❌ Kayıt hatası: ${result.message}`, 'error')
           playErrorSound()
           return
         }
       }
 
       // Başarılı
-      showMessage(`✅ ${savedCount} kayıt başarıyla kaydedildi!`, 'success')
+      showUTSMessage(`✅ ${savedCount} kayıt başarıyla kaydedildi!`, 'success')
       playSuccessSound()
 
       // Grid'i yenile
@@ -1203,7 +1227,7 @@ const DocumentDetailPage = () => {
       }
     } catch (error) {
       console.error('UTS toplu kayıt hatası:', error)
-      showMessage('❌ Kayıt sırasında hata oluştu', 'error')
+      showUTSMessage('❌ Kayıt sırasında hata oluştu', 'error')
       playErrorSound()
     }
   }
@@ -1687,6 +1711,19 @@ const DocumentDetailPage = () => {
 
             {/* Modal Body */}
             <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
+              {/* UTS Modal Toast Message */}
+              {utsModalMessage && (
+                <div className={`mb-4 px-4 py-3 rounded-lg shadow-lg border-l-4 animate-pulse ${
+                  utsModalMessage.type === 'success' 
+                    ? 'bg-green-50 border-green-500 text-green-800' 
+                    : utsModalMessage.type === 'error' 
+                    ? 'bg-red-50 border-red-500 text-red-800'
+                    : 'bg-yellow-50 border-yellow-500 text-yellow-800'
+                }`}>
+                  <p className="font-semibold">{utsModalMessage.text}</p>
+                </div>
+              )}
+              
               {/* UTS Records Grid */}
               <div className="ag-theme-alpine flex-1 mb-4">
                 {utsLoading ? (
