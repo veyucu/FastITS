@@ -1863,50 +1863,42 @@ const DocumentDetailPage = () => {
             
             {/* Center - Customer Info Cards - Ultra Compact */}
             <div className="flex items-center gap-1.5">
+              {/* 1. Tarih */}
               <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-1.5">
-                  <User className="w-3 h-3 text-blue-600" />
+                  <Calendar className="w-3 h-3 text-orange-600" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Müşteri</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerName}</p>
+                    <p className="text-[9px] text-gray-500 leading-tight">Tarih</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                      {order.orderDate ? new Date(order.orderDate).toLocaleDateString('tr-TR') : '-'}
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {/* 2. Cari Kodu */}
               <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-1.5">
                   <Hash className="w-3 h-3 text-purple-600" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Kod</p>
+                    <p className="text-[9px] text-gray-500 leading-tight">Cari Kodu</p>
                     <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerCode}</p>
                   </div>
                 </div>
               </div>
 
-              {order.utsNo && (
-                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-indigo-600" />
-                    <div>
-                      <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
-                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.utsNo}</p>
-                    </div>
+              {/* 3. Cari İsim */}
+              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <User className="w-3 h-3 text-blue-600" />
+                  <div>
+                    <p className="text-[9px] text-gray-500 leading-tight">Cari İsim</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerName}</p>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {order.email && (
-                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-teal-600" />
-                    <div>
-                      <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
-                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.email}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
+              {/* 4. İlçe/Şehir */}
               <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-1.5">
                   <MapPin className="w-3 h-3 text-green-600" />
@@ -1919,17 +1911,31 @@ const DocumentDetailPage = () => {
                 </div>
               </div>
 
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3 text-orange-600" />
-                  <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Tarih</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
-                      {order.orderDate ? new Date(order.orderDate).toLocaleDateString('tr-TR') : '-'}
-                    </p>
+              {/* 5. GLN No */}
+              {order.email && (
+                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3 text-teal-600" />
+                    <div>
+                      <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.email}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* 6. UTS No */}
+              {order.utsNo && (
+                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3 text-indigo-600" />
+                    <div>
+                      <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.utsNo}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             {/* Right - Completion - Ultra Compact */}
