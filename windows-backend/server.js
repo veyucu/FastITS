@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import documentsRouter from './routes/documents.js';
 import ptsRouter from './routes/pts.js';
 import itsRouter from './routes/its.js';
+import settingsRouter from './routes/settings.js';
 import * as ptsDbService from './services/ptsDbService.js';
 import * as itsDbService from './services/itsDbService.js';
 
@@ -41,6 +42,7 @@ app.get('/api/test', (req, res) => {
 app.use('/api/documents', documentsRouter);
 app.use('/api/pts', ptsRouter);
 app.use('/api/its', itsRouter);
+app.use('/api/settings', settingsRouter);
 
 // 404 handler
 app.use((req, res) => {

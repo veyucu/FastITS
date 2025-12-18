@@ -630,7 +630,14 @@ const DocumentDetailPage = () => {
 
     const scannedBarcode = barcodeInput.trim()
     
-    // Koli modu kontrolü
+    // Hem Sil hem Koli modu aktifse - Koli barkoduna göre sil
+    if (deleteMode && koliMode) {
+      await handleDeleteCarrierBarcode(scannedBarcode)
+      setBarcodeInput('')
+      return
+    }
+    
+    // Sadece Koli modu aktifse - Koli barkodunu kaydet
     if (koliMode) {
       await handleCarrierBarcode(scannedBarcode)
       setBarcodeInput('')
@@ -667,30 +674,107 @@ const DocumentDetailPage = () => {
     }
   }
 
-  // ITS Karekod Parse Fonksiyonu (GS1 DataMatrix)
+  // ITS Karekod Parse Fonksiyonu (Backend ile aynı)
   const parseITSBarcode = (barcode) => {
     try {
-      // GS1 format: 01GTIN21SERINO17MIAD10LOT
-      const gtinMatch = barcode.match(/01(\d{14})/)
-      const serialMatch = barcode.match(/21([^\x1D]+)/)
-      const expiryMatch = barcode.match(/17(\d{6})/)
-      const lotMatch = barcode.match(/10([^\x1D]+)/)
+      let position = 0
+      const result = {
+        gtin: '',
+        serialNumber: '',
+        expiryDate: '',
+        lotNumber: '',
+        raw: barcode
+      }
 
-      if (!gtinMatch) {
+      // Boşluk ve özel karakterleri temizle
+      barcode = barcode.trim().replace(/\s+/g, '')
+
+      // 1. GTIN (01) - İlk 2 karakter
+      if (!barcode.startsWith('01')) {
+        console.error('Geçersiz ITS karekod formatı - 01 ile başlamalı')
+        return null
+      }
+      position += 2
+
+      // 2. GTIN - Sonraki 14 karakter
+      const gtinFull = barcode.substring(position, position + 14)
+      if (gtinFull.length < 14) {
+        console.error('Geçersiz GTIN uzunluğu')
+        return null
+      }
+      result.gtin = gtinFull
+      position += 14
+
+      // 3. Serial Number AI (21)
+      if (barcode.substring(position, position + 2) !== '21') {
+        console.error('Serial Number AI (21) bulunamadı')
+        return null
+      }
+      position += 2
+
+      // 4. Serial Number - 17 AI'sına kadar (tarih kontrolü ile)
+      const serialStartPos = position
+      const maxSerialLength = 20
+      const searchEndPos = Math.min(serialStartPos + maxSerialLength, barcode.length - 8)
+      
+      let expiryAIPos = -1
+      
+      for (let i = serialStartPos; i <= searchEndPos; i++) {
+        if (barcode.substring(i, i + 2) === '17') {
+          // 17'den sonraki 6 karakter var mı ve rakam mı?
+          const dateStr = barcode.substring(i + 2, i + 8)
+          if (dateStr.length === 6 && /^\d{6}$/.test(dateStr)) {
+            // Tarih formatı doğru mu kontrol et (YYMMDD)
+            const mm = parseInt(dateStr.substring(2, 4))
+            const dd = parseInt(dateStr.substring(4, 6))
+            
+            // Ay 01-12, gün 01-31 arası olmalı
+            if (mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+              // Seri no min 4 karakter olmalı
+              if (i - serialStartPos >= 4) {
+                expiryAIPos = i
+                break
+              }
+            }
+          }
+        }
+      }
+      
+      if (expiryAIPos === -1) {
+        console.error('Expiry Date AI (17) bulunamadı')
+        return null
+      }
+      
+      result.serialNumber = barcode.substring(serialStartPos, expiryAIPos)
+      position = expiryAIPos + 2 // 17'yi atla
+
+      // 5. Expiry Date (YYMMDD) - 6 karakter
+      result.expiryDate = barcode.substring(position, position + 6)
+      if (result.expiryDate.length !== 6) {
+        console.error('Geçersiz miad formatı (YYMMDD)')
+        return null
+      }
+      position += 6
+
+      // 6. Lot/Batch AI (10)
+      if (barcode.substring(position, position + 2) !== '10') {
+        console.error('Lot/Batch AI (10) bulunamadı')
+        return null
+      }
+      position += 2
+
+      // 7. Lot/Batch - String sonuna kadar (lot son alandır)
+      result.lotNumber = barcode.substring(position).replace(/\x1D/g, '').trim()
+
+      // Validasyon
+      if (!result.gtin || !result.serialNumber || !result.expiryDate || !result.lotNumber) {
+        console.error('Eksik karekod bilgisi')
         return null
       }
 
-      const gtin = gtinMatch[1]
-      const serialNumber = serialMatch ? serialMatch[1] : ''
-      const expiryDate = expiryMatch ? expiryMatch[1] : ''
-      const lotNumber = lotMatch ? lotMatch[1] : ''
+      console.log('✅ ITS Karekod Parse Başarılı:', result)
+      return result
 
-      return {
-        gtin: gtin,
-        serialNumber: serialNumber,
-        expiryDate: expiryDate,
-        lotNumber: lotNumber
-      }
     } catch (error) {
       console.error('ITS karekod parse hatası:', error)
       return null
@@ -964,6 +1048,64 @@ const DocumentDetailPage = () => {
     }
   }
 
+  // Koli Barkodu Silme İşlemi (ITS için)
+  const handleDeleteCarrierBarcode = async (carrierLabel) => {
+    try {
+      console.log('🗑️ Koli barkodu siliniyor:', carrierLabel)
+      showMessage('🗑️ Koli siliniyor...', 'info')
+      
+      const result = await apiService.deleteCarrierBarcode({
+        carrierLabel,
+        docId: id // Belge KAYITNO
+      })
+      
+      if (result.success) {
+        playSuccessSound()
+        showMessage(`✅ ${result.message || `${result.deletedCount} ürün koliden silindi`}`, 'success')
+        
+        // Local state'i güncelle (ekranı yenileme)
+        const updatedItems = [...items]
+        let hasChanges = false
+        
+        // Backend'den dönen GTIN'lere göre okutulan miktarlarını azalt
+        if (result.affectedGtins && result.affectedGtins.length > 0) {
+          result.affectedGtins.forEach(gtin => {
+            // Her GTIN için kaç adet ürün silindi?
+            const deletedCount = result.gtinCounts ? result.gtinCounts[gtin] : 0
+            
+            if (deletedCount > 0) {
+              // GTIN veya STOK_KODU ile eşleşen item'ı bul
+              const itemIndex = updatedItems.findIndex(item => 
+                item.gtin === gtin || 
+                item.stokKodu === gtin || 
+                item.barcode === gtin
+              )
+              
+              if (itemIndex !== -1) {
+                // Okutulan miktarı azalt (negatif olmasın)
+                updatedItems[itemIndex].okutulan = Math.max(0, (updatedItems[itemIndex].okutulan || 0) - deletedCount)
+                updatedItems[itemIndex].isPrepared = updatedItems[itemIndex].okutulan >= updatedItems[itemIndex].quantity
+                hasChanges = true
+              }
+            }
+          })
+        }
+        
+        if (hasChanges) {
+          setItems(updatedItems)
+          updateStats(updatedItems)
+        }
+      } else {
+        playErrorSound()
+        showMessage(`❌ ${result.message}`, 'error')
+      }
+    } catch (error) {
+      console.error('❌ Koli barkodu silme hatası:', error)
+      playErrorSound()
+      showMessage(`❌ ${error.response?.data?.message || error.message || 'Koli barkodu silinemedi'}`, 'error')
+    }
+  }
+
   // Normal Barkod İşlemi (DGR/UTS Ürünleri - ITS DEĞİL!)
   const handleNormalBarcode = async (scannedBarcode) => {
     // Toplu okutma kontrolü: 100*Barkod formatı
@@ -1087,15 +1229,26 @@ const DocumentDetailPage = () => {
       console.log('🗑️ ITS Barkod siliniyor:', itsBarcode.substring(0, 50) + '...')
       showMessage('🗑️ Siliniyor...', 'info')
       
-      // ITS karekoddan barkodu parse et
-      const barkodPart = itsBarcode.substring(3, 16) // 13 digit barkod
-      console.log('📦 Barkod parse edildi:', barkodPart)
+      // Karekodu parse et (aynı fonksiyonu kullan!)
+      const parsedData = parseITSBarcode(itsBarcode)
+      
+      if (!parsedData || !parsedData.serialNumber) {
+        showMessage(`❌ Seri numarası okunamadı!`, 'error')
+        playErrorSound()
+        return
+      }
+      
+      console.log('✅ Parse edildi:', parsedData)
       
       // Ürünü bul
-      const itemIndex = items.findIndex(item => item.barcode === barkodPart || item.stokKodu === barkodPart)
+      const itemIndex = items.findIndex(item => {
+        const normalizedGtin = item.barcode?.replace(/^0+/, '')
+        const normalizedParsedGtin = parsedData.gtin?.replace(/^0+/, '')
+        return normalizedGtin === normalizedParsedGtin || item.stokKodu === parsedData.gtin || item.barcode === parsedData.gtin.substring(1)
+      })
       
       if (itemIndex === -1) {
-        showMessage(`❌ Ürün bulunamadı: ${barkodPart}`, 'error')
+        showMessage(`❌ Ürün bulunamadı: ${parsedData.gtin}`, 'error')
         playErrorSound()
         return
       }
@@ -1109,15 +1262,7 @@ const DocumentDetailPage = () => {
         return
       }
       
-      // Seri numarasını karekoddan çıkar (21 ile başlayan kısım)
-      const seriMatch = itsBarcode.match(/21([^\x1D]+)/)
-      const seriNo = seriMatch ? seriMatch[1] : null
-      
-      if (!seriNo) {
-        showMessage(`❌ Seri numarası okunamadı!`, 'error')
-        playErrorSound()
-        return
-      }
+      const seriNo = parsedData.serialNumber
       
       // Backend'e silme isteği gönder
       const result = await apiService.deleteITSBarcodeRecords(
@@ -1373,11 +1518,10 @@ const DocumentDetailPage = () => {
         setUtsRecords(enrichedRecords)
         setOriginalUtsRecords(JSON.parse(JSON.stringify(enrichedRecords))) // Deep copy
       } else {
-        showMessage('UTS kayıtları yüklenemedi', 'error')
+        console.error('UTS kayıtları yüklenemedi')
       }
     } catch (error) {
       console.error('UTS kayıtları yükleme hatası:', error)
-      showMessage('UTS kayıtları yüklenemedi', 'error')
     } finally {
       setUtsLoading(false)
     }
@@ -1665,11 +1809,10 @@ const DocumentDetailPage = () => {
       if (response.success) {
         setItsRecords(response.data || [])
       } else {
-        showMessage('ITS kayıtları yüklenemedi', 'error')
+        console.error('ITS kayıtları yüklenemedi')
       }
     } catch (error) {
       console.error('ITS kayıtları yükleme hatası:', error)
-      showMessage('ITS kayıtları yüklenemedi', 'error')
     } finally {
       setItsLoading(false)
     }
@@ -1707,12 +1850,13 @@ const DocumentDetailPage = () => {
   const handleCopyAllBarcodes = () => {
     const text = generateITSBarcodeTexts()
     navigator.clipboard.writeText(text).then(() => {
-      showMessage('✅ Karekodlar kopyalandı!', 'success')
+      console.log('✅ Karekodlar kopyalandı!')
       playSuccessSound()
+      alert('✅ Karekodlar panoya kopyalandı!')
     }).catch(err => {
       console.error('Kopyalama hatası:', err)
-      showMessage('❌ Kopyalama başarısız!', 'error')
       playErrorSound()
+      alert('❌ Kopyalama başarısız!')
     })
   }
 
@@ -1720,12 +1864,54 @@ const DocumentDetailPage = () => {
   // ITS Kayıtlarını Sil
   const handleDeleteITSRecords = async () => {
     if (selectedRecords.length === 0) {
-      showMessage('Lütfen silinecek kayıtları seçin', 'warning')
+      alert('⚠️ Lütfen silinecek kayıtları seçin')
       return
     }
 
-    if (!confirm(`${selectedRecords.length} kayıt silinecek. Emin misiniz?`)) {
-      return
+    // Seçili kayıtlarda koli barkodu var mı kontrol et
+    const recordsWithCarrier = selectedRecords.filter(record => {
+      const fullRecord = itsRecords.find(r => r.seriNo === record)
+      return fullRecord && fullRecord.carrierLabel
+    })
+
+    // Koli barkodu varsa ve tüm kayıtlar seçili değilse uyar
+    if (recordsWithCarrier.length > 0) {
+      // Her bir koli barkodu için o koliden kaç kayıt olduğunu ve kaçının seçildiğini kontrol et
+      const carrierLabels = new Set()
+      recordsWithCarrier.forEach(record => {
+        const fullRecord = itsRecords.find(r => r.seriNo === record)
+        if (fullRecord && fullRecord.carrierLabel) {
+          carrierLabels.add(fullRecord.carrierLabel)
+        }
+      })
+
+      // Her koli için kontrol yap
+      let hasPartialSelection = false
+      for (const carrierLabel of carrierLabels) {
+        const totalWithCarrier = itsRecords.filter(r => r.carrierLabel === carrierLabel).length
+        const selectedWithCarrier = recordsWithCarrier.filter(record => {
+          const fullRecord = itsRecords.find(r => r.seriNo === record)
+          return fullRecord && fullRecord.carrierLabel === carrierLabel
+        }).length
+        
+        if (selectedWithCarrier < totalWithCarrier) {
+          hasPartialSelection = true
+          break
+        }
+      }
+
+      // Kullanıcıya uyarı göster
+      let confirmMessage = hasPartialSelection 
+        ? `⚠️ UYARI: Seçili kayıtlardan bazıları koli ile okutulmuştur.\n\nBu satırları silerseniz koli bütünlüğü bozulacak ve aynı koli barkoduna sahip diğer kayıtların da koli bilgisi silinecektir.\n\n${selectedRecords.length} kayıt silinecek. Emin misiniz?`
+        : `${selectedRecords.length} kayıt silinecek (koli bilgileri de silinecek). Emin misiniz?`
+      
+      if (!confirm(confirmMessage)) {
+        return
+      }
+    } else {
+      if (!confirm(`${selectedRecords.length} kayıt silinecek. Emin misiniz?`)) {
+        return
+      }
     }
 
     try {
@@ -1736,7 +1922,7 @@ const DocumentDetailPage = () => {
       )
 
       if (result.success) {
-        showMessage(`${result.deletedCount} kayıt silindi`, 'success')
+        console.log('✅ ITS kayıtlar silindi:', result.deletedCount)
         // Kayıtları yeniden yükle
         const response = await apiService.getITSBarcodeRecords(order.id, selectedItem.itemId)
         if (response.success) {
@@ -1750,11 +1936,11 @@ const DocumentDetailPage = () => {
           setItems(docResponse.data.items || [])
         }
       } else {
-        showMessage('Kayıtlar silinemedi: ' + result.message, 'error')
+        alert('❌ Kayıtlar silinemedi: ' + result.message)
       }
     } catch (error) {
       console.error('ITS kayıt silme hatası:', error)
-      showMessage('Kayıtlar silinemedi', 'error')
+      alert('❌ Kayıtlar silinemedi')
     }
   }
 
@@ -1987,30 +2173,30 @@ const DocumentDetailPage = () => {
               </div>
 
               {/* 5. GLN No */}
-              {order.email && (
-                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-teal-600" />
-                    <div>
-                      <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
-                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.email}</p>
-                    </div>
+              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3 h-3 text-teal-600" />
+                  <div>
+                    <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                      {order.email || '-'}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* 6. UTS No */}
-              {order.utsNo && (
-                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="w-3 h-3 text-indigo-600" />
-                    <div>
-                      <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
-                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.utsNo}</p>
-                    </div>
+              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-1.5">
+                  <FileText className="w-3 h-3 text-indigo-600" />
+                  <div>
+                    <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
+                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                      {order.utsNo || '-'}
+                    </p>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
             
             {/* Right - Completion - Ultra Compact */}

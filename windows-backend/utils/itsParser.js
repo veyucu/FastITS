@@ -99,23 +99,8 @@ function parseITSBarcode(barcode) {
     }
     position += 2
 
-    // 7. Lot/Batch - Sonraki AI'ya kadar veya sonuna kadar
-    // Bir sonraki AI'yı bul (iki rakam ile başlar)
-    let lotEndPos = position
-    for (let i = position + 2; i < barcode.length - 1; i++) {
-      const nextTwo = barcode.substring(i, i + 2)
-      // Eğer iki rakam varsa ve yaygın bir AI ise (17, 21, 72, 29, vb.)
-      if (/^\d{2}$/.test(nextTwo) && ['17', '21', '10', '72', '29', '91', '92', '93'].includes(nextTwo)) {
-        lotEndPos = i
-        break
-      }
-    }
-    if (lotEndPos === position) {
-      // Başka AI bulunamadı, sonuna kadar lot
-    result.lot = barcode.substring(position)
-    } else {
-      result.lot = barcode.substring(position, lotEndPos)
-    }
+    // 7. Lot/Batch - String sonuna kadar (lot son alandır)
+    result.lot = barcode.substring(position).replace(/\x1D/g, '').trim()
 
     // Validasyon
     if (!result.barkod || !result.seriNo || !result.miad || !result.lot) {

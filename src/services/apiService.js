@@ -230,6 +230,19 @@ const apiService = {
     }
   },
 
+  // Koli Barkodu Sil (ITS için)
+  deleteCarrierBarcode: async (data) => {
+    try {
+      console.log('🗑️ Koli Barkodu siliniyor:', data)
+      const response = await apiClient.delete('/documents/carrier-barcode', { data })
+      console.log('✅ Koli Barkodu silindi:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Koli Barkodu silme hatası:', error)
+      throw error
+    }
+  },
+
   // UTS Barkod Okut ve Kaydet
   saveUTSBarcode: async (data) => {
     try {
@@ -563,6 +576,30 @@ const apiService = {
         success: false,
         message: error.response?.data?.message || error.message || 'Liste alınamadı'
       }
+    }
+  },
+
+  // Settings API
+  getSettings: async () => {
+    try {
+      const response = await apiClient.get('/settings')
+      return response.data
+    } catch (error) {
+      console.error('Get settings error:', error)
+      return {
+        success: false,
+        message: error.message || 'Ayarlar alınamadı'
+      }
+    }
+  },
+
+  saveSettings: async (settings) => {
+    try {
+      const response = await apiClient.post('/settings', settings)
+      return response.data
+    } catch (error) {
+      console.error('Save settings error:', error)
+      throw error
     }
   }
 }

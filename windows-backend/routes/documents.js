@@ -149,6 +149,8 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
     const { documentId, itemId } = req.params
     const { seriNos } = req.body // Array of seri numbers to delete
     
+    console.log('🗑️ ITS Kayıt Silme İsteği:', { documentId, itemId, seriNos })
+    
     if (!seriNos || !Array.isArray(seriNos) || seriNos.length === 0) {
       return res.status(400).json({
         success: false,
@@ -159,12 +161,16 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
     // Document ID parse et
     const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
     
+    console.log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, straInc: itemId })
+    
     const result = await documentService.deleteITSBarcodeRecords(
       seriNos,
       subeKodu,
       fatirs_no,
       itemId
     )
+    
+    console.log('✅ Silme sonucu:', result)
     
     res.json({
       success: true,
@@ -490,6 +496,43 @@ router.post('/carrier-barcode', async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Koli barkodu işlenirken hata oluştu'
+    })
+  }
+})
+
+// DELETE /api/documents/carrier-barcode - Koli Barkoduna Göre ITS Kayıtlarını Sil
+router.delete('/carrier-barcode', async (req, res) => {
+  try {
+    const {
+      carrierLabel,  // Koli barkodu
+      docId          // Belge ID (SUBE_KODU-FTIRSIP-FATIRS_NO)
+    } = req.body
+    
+    console.log('🗑️ Koli Barkodu Silme İsteği:', { carrierLabel, docId })
+    
+    if (!carrierLabel) {
+      return res.status(400).json({
+        success: false,
+        message: 'Koli barkodu zorunludur'
+      })
+    }
+    
+    if (!docId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Belge ID zorunludur'
+      })
+    }
+    
+    // Koli barkoduna göre ITS kayıtlarını sil
+    const result = await documentService.deleteCarrierBarcodeRecords(carrierLabel, docId)
+    
+    res.json(result)
+  } catch (error) {
+    console.error('❌ Koli Barkodu Silme Hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Koli barkodu silinirken hata oluştu'
     })
   }
 })

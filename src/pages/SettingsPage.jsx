@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Settings, Save, Eye, EyeOff, Home, RefreshCw } from 'lucide-react'
+import apiService from '../services/apiService'
 
 const DEFAULT_SETTINGS = {
   // ITS Ayarları
@@ -65,9 +66,14 @@ const SettingsPage = () => {
     }))
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
+      // LocalStorage'a kaydet
       localStorage.setItem('appSettings', JSON.stringify(settings))
+      
+      // Backend'e de kaydet
+      await apiService.saveSettings(settings)
+      
       setMessage({ type: 'success', text: '✅ Ayarlar başarıyla kaydedildi!' })
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
