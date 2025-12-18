@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
@@ -70,33 +70,34 @@ const DocumentDetailPage = () => {
     return 'Belge'
   }
 
+  // Fetch document function - reusable
+  const fetchDocument = useCallback(async () => {
+    try {
+      setLoading(true)
+      console.log('Fetching document with ID:', id)
+      const response = await apiService.getDocumentById(id)
+      console.log('API Response:', response)
+      
+      if (response.success && response.data) {
+        const doc = response.data
+        console.log('Document data:', doc)
+        setOrder(doc)
+        setItems(doc.items || [])
+        updateStats(doc.items || [])
+      } else {
+        console.error('API response unsuccessful or no data:', response)
+      }
+    } catch (error) {
+      console.error('Belge yükleme hatası:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [id, updateStats])
+
   // Load order and items from API
   useEffect(() => {
-    const fetchDocument = async () => {
-      try {
-        setLoading(true)
-        console.log('Fetching document with ID:', id)
-        const response = await apiService.getDocumentById(id)
-        console.log('API Response:', response)
-        
-        if (response.success && response.data) {
-          const doc = response.data
-          console.log('Document data:', doc)
-          setOrder(doc)
-          setItems(doc.items || [])
-          updateStats(doc.items || [])
-        } else {
-          console.error('API response unsuccessful or no data:', response)
-        }
-      } catch (error) {
-        console.error('Belge yükleme hatası:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
     fetchDocument()
-  }, [id])
+  }, [fetchDocument])
 
   // Auto focus barcode input - sayfa yüklendiğinde ve her state değiştiğinde
   useEffect(() => {
@@ -142,12 +143,12 @@ const DocumentDetailPage = () => {
   }, [showITSModal, showUTSModal])
 
   // Update statistics
-  const updateStats = (currentItems) => {
+  const updateStats = useCallback((currentItems) => {
     const total = currentItems.length
     const prepared = currentItems.filter(item => item.isPrepared).length
     const remaining = total - prepared
     setStats({ total, prepared, remaining })
-  }
+  }, [])
 
   // Calculate totals for footer
   const totals = useMemo(() => {
