@@ -312,26 +312,29 @@ async function savePackageData(packageData) {
       const { transferId, documentNumber, documentDate, sourceGLN, destinationGLN, 
               actionType, shipTo, note, version, products, _rawXML } = packageData
       
+      // transferId'yi string'e dönüştür (API'den number geliyor)
+      const transferIdStr = String(transferId)
+      
       // Transfer ID'nin zaten kaydedilip kaydedilmediğini kontrol et
       const checkRequest = new sql.Request(transaction)
-      checkRequest.input('transferId', sql.NVarChar(50), transferId)
+      checkRequest.input('transferId', sql.NVarChar(50), transferIdStr)
       const checkResult = await checkRequest.query(`
         SELECT ID FROM AKTBLPTSMAS WHERE TRANSFER_ID = @transferId
       `)
       
       if (checkResult.recordset.length > 0) {
-        console.log(`⚠️ Transfer ID ${transferId} zaten kayıtlı, atlanıyor...`)
+        console.log(`⚠️ Transfer ID ${transferIdStr} zaten kayıtlı, atlanıyor...`)
         await transaction.rollback()
         return {
           success: true,
           skipped: true,
-          message: `Paket zaten kayıtlı: ${transferId}`,
-          data: { transferId }
+          message: `Paket zaten kayıtlı: ${transferIdStr}`,
+          data: { transferId: transferIdStr }
         }
         
         // Güncelleme
         const updateRequest = new sql.Request(transaction)
-        updateRequest.input('transferId', sql.NVarChar(50), transferId)
+        updateRequest.input('transferId', sql.NVarChar(50), transferIdStr)
         updateRequest.input('documentNumber', sql.NVarChar(50), documentNumber || null)
         updateRequest.input('documentDate', sql.Date, documentDate ? new Date(documentDate) : null)
         updateRequest.input('sourceGLN', sql.NVarChar(50), sourceGLN || null)
@@ -359,17 +362,17 @@ async function savePackageData(packageData) {
         
         // Eski transaction kayıtlarını sil
         const deleteRequest = new sql.Request(transaction)
-        deleteRequest.input('transferId', sql.NVarChar(50), transferId)
+        deleteRequest.input('transferId', sql.NVarChar(50), transferIdStr)
         await deleteRequest.query(`
           DELETE FROM AKTBLPTSTRA WHERE TRANSFER_ID = @transferId
         `)
         
       } else {
         // Yeni kayıt
-        console.log(`💾 Transfer ID ${transferId} kaydediliyor...`)
+        console.log(`💾 Transfer ID ${transferIdStr} kaydediliyor...`)
         
         const insertRequest = new sql.Request(transaction)
-        insertRequest.input('transferId', sql.NVarChar(50), transferId)
+        insertRequest.input('transferId', sql.NVarChar(50), transferIdStr)
         insertRequest.input('documentNumber', sql.NVarChar(50), documentNumber || null)
         insertRequest.input('documentDate', sql.Date, documentDate ? new Date(documentDate) : null)
         insertRequest.input('sourceGLN', sql.NVarChar(50), sourceGLN || null)
@@ -397,7 +400,7 @@ async function savePackageData(packageData) {
         
         for (const product of products) {
           const productRequest = new sql.Request(transaction)
-          productRequest.input('transferId', sql.NVarChar(50), transferId)
+          productRequest.input('transferId', sql.NVarChar(50), transferIdStr)
           productRequest.input('carrierLabel', sql.NVarChar(100), product.carrierLabel || null)
           productRequest.input('parentCarrierLabel', sql.NVarChar(100), product.parentCarrierLabel || null)
           productRequest.input('containerType', sql.NVarChar(10), product.containerType || null)
@@ -425,13 +428,13 @@ async function savePackageData(packageData) {
       
       await transaction.commit()
       
-      console.log(`✅ Paket kaydedildi: ${transferId} (${products?.length || 0} ürün)`)
+      console.log(`✅ Paket kaydedildi: ${transferIdStr} (${products?.length || 0} ürün)`)
       
       return {
         success: true,
-        message: `Paket kaydedildi: ${transferId}`,
+        message: `Paket kaydedildi: ${transferIdStr}`,
         data: {
-          transferId,
+          transferId: transferIdStr,
           productCount: products?.length || 0
         }
       }
