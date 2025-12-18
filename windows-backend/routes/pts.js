@@ -118,16 +118,30 @@ router.post('/download-bulk', async (req, res) => {
           continue
         }
 
-        // Paketi indir ve kaydet
+        // Paketi indir
         const downloadResult = await ptsService.downloadPackage(transferId, settings)
         
         if (downloadResult.success) {
-          results.downloaded++
-          results.packages.push({
-            transferId,
-            status: 'success',
-            productCount: downloadResult.data?.products?.length || 0
-          })
+          // Veritabanına kaydet
+          const saveResult = await ptsDbService.savePackageData(downloadResult.data)
+          
+          if (saveResult.success) {
+            results.downloaded++
+            results.packages.push({
+              transferId,
+              status: 'success',
+              productCount: downloadResult.data?.products?.length || 0
+            })
+            console.log(`✅ ${transferId} veritabanına kaydedildi`)
+          } else {
+            results.failed++
+            results.packages.push({
+              transferId,
+              status: 'failed',
+              message: `Kayıt hatası: ${saveResult.message}`
+            })
+            console.error(`❌ ${transferId} veritabanına kaydedilemedi:`, saveResult.message)
+          }
         } else {
           results.failed++
           results.packages.push({
