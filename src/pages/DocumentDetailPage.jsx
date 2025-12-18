@@ -5,7 +5,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { 
   ArrowLeft, Package, CheckCircle, XCircle, Barcode, 
-  AlertTriangle, User, MapPin, Calendar, Hash
+  AlertTriangle, User, MapPin, Calendar, Hash, FileText
 } from 'lucide-react'
 import apiService from '../services/apiService'
 
@@ -1882,6 +1882,30 @@ const DocumentDetailPage = () => {
                   </div>
                 </div>
               </div>
+
+              {order.utsNo && (
+                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3 text-indigo-600" />
+                    <div>
+                      <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.utsNo}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {order.email && (
+                <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-3 h-3 text-teal-600" />
+                    <div>
+                      <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
+                      <p className="text-sm font-bold text-gray-900 leading-tight">{order.email}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
                 <div className="flex items-center gap-1.5">
