@@ -99,10 +99,31 @@ const PTSDetailPage = () => {
       accessorKey: 'gtin',
       header: 'GTIN',
       enableSorting: true,
-      size: 180,
+      size: 200,
       cell: info => <span className="font-mono font-bold text-primary-400">{info.getValue()}</span>,
       enableGrouping: true,
-      aggregatedCell: ({ getValue, row }) => {
+      aggregatedCell: ({ getValue, row }) => (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={row.getToggleExpandedHandler()}
+            className="p-1 hover:bg-dark-600 rounded transition-all duration-200 bg-dark-700/50"
+          >
+            {row.getIsExpanded() ? 
+              <ChevronDown className="w-3.5 h-3.5 text-primary-400" /> : 
+              <ChevronRight className="w-3.5 h-3.5 text-primary-400" />
+            }
+          </button>
+          <span className="font-mono font-bold text-primary-300 text-sm bg-primary-500/10 px-2 py-0.5 rounded border border-primary-500/20">{getValue()}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'stockName',
+      header: 'Stok Adı',
+      enableSorting: true,
+      size: 300,
+      cell: info => <span className="font-medium text-slate-200">{info.getValue()}</span>,
+      aggregatedCell: ({ row }) => {
         // MIAD'ları grupla (YIL-AY formatında)
         const miads = row.subRows
           .map(r => r.original.expirationDate)
@@ -117,45 +138,23 @@ const PTSDetailPage = () => {
         const uniqueMiads = [...new Set(miads)].sort()
         
         return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={row.getToggleExpandedHandler()}
-              className="p-1 hover:bg-dark-600 rounded transition-all duration-200 bg-dark-700/50"
-            >
-              {row.getIsExpanded() ? 
-                <ChevronDown className="w-3.5 h-3.5 text-primary-400" /> : 
-                <ChevronRight className="w-3.5 h-3.5 text-primary-400" />
-              }
-            </button>
-            <span className="font-mono font-bold text-primary-300 text-sm bg-primary-500/10 px-2 py-0.5 rounded border border-primary-500/20">{getValue()}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-slate-100 text-sm">{row.subRows[0]?.original.stockName}</span>
             <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold">
               {row.subRows.length}
             </span>
             {uniqueMiads.length > 0 && (
-              <div className="flex items-center gap-1 ml-1">
-                {uniqueMiads.slice(0, 4).map((miad, idx) => (
+              <div className="flex items-center gap-1">
+                {uniqueMiads.map((miad, idx) => (
                   <span key={idx} className="px-1.5 py-0.5 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded text-xs">
                     {miad}
                   </span>
                 ))}
-                {uniqueMiads.length > 4 && (
-                  <span className="text-slate-500 text-xs">+{uniqueMiads.length - 4}</span>
-                )}
               </div>
             )}
           </div>
         )
       },
-    },
-    {
-      accessorKey: 'stockName',
-      header: 'Stok Adı',
-      enableSorting: true,
-      size: 250,
-      cell: info => <span className="font-medium text-slate-200">{info.getValue()}</span>,
-      aggregatedCell: ({ row }) => (
-        <span className="font-semibold text-slate-100 text-sm">{row.subRows[0]?.original.stockName}</span>
-      ),
     },
     {
       accessorKey: 'serialNumber',
