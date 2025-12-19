@@ -479,21 +479,21 @@ const PTSPage = () => {
         <div className="px-6 py-3">
           <div className="flex items-center gap-4">
             {/* Sol - Başlık ve Arama */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-1">
               <button
                 onClick={() => navigate('/')}
-                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
+                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0"
                 title="Ana Menü"
               >
                 <Home className="w-5 h-5 text-slate-300" />
               </button>
-              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30">
+              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
                 <Truck className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-lg font-bold text-slate-100">PTS</h1>
+              <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS</h1>
               
               {/* Arama Input */}
-              <div className="relative w-96 ml-4">
+              <div className="relative flex-1 ml-4 mr-6">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
@@ -506,7 +506,7 @@ const PTSPage = () => {
             </div>
 
             {/* Sağ - İşlem Butonları ve Filtreler */}
-            <div className="flex items-center gap-3 ml-auto">
+            <div className="flex items-center gap-3 flex-shrink-0">
 
               {/* İndir Butonu */}
               <button
@@ -645,7 +645,7 @@ const PTSPage = () => {
             {/* Pagination içinde sol tarafa bilgi mesajı */}
             <div className="absolute bottom-0 left-0 h-[48px] flex items-center px-4 text-xs text-slate-500 gap-1.5 pointer-events-none">
               <Info className="w-3.5 h-3.5" />
-              <span>Detay için satıra çift tıklayın</span>
+              <span>PTS içeriği için satıra çift tıklayın</span>
             </div>
           </div>
         ) : (
