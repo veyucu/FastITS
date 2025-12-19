@@ -102,25 +102,50 @@ const PTSDetailPage = () => {
       size: 180,
       cell: info => <span className="font-mono font-bold text-primary-400">{info.getValue()}</span>,
       enableGrouping: true,
-      aggregatedCell: ({ getValue, row }) => (
-        <div className="flex items-center gap-3">
-          <button
-            onClick={row.getToggleExpandedHandler()}
-            className="p-1.5 hover:bg-dark-600 rounded-lg transition-all duration-200 bg-dark-700/50"
-          >
-            {row.getIsExpanded() ? 
-              <ChevronDown className="w-4 h-4 text-primary-400" /> : 
-              <ChevronRight className="w-4 h-4 text-primary-400" />
+      aggregatedCell: ({ getValue, row }) => {
+        // MIAD'ları grupla (YIL-AY formatında)
+        const miads = row.subRows
+          .map(r => r.original.expirationDate)
+          .filter(Boolean)
+          .map(date => {
+            const parts = date.split('.')
+            if (parts.length >= 2) {
+              return `${parts[1]}/${parts[2]}` // AA/YYYY
             }
-          </button>
-          <div className="flex items-center gap-3">
-            <span className="font-mono font-bold text-primary-300 text-sm bg-primary-500/10 px-2 py-1 rounded border border-primary-500/20">{getValue()}</span>
-            <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-xs font-bold">
-              {row.subRows.length} Adet
+            return date
+          })
+        const uniqueMiads = [...new Set(miads)].sort()
+        
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={row.getToggleExpandedHandler()}
+              className="p-1 hover:bg-dark-600 rounded transition-all duration-200 bg-dark-700/50"
+            >
+              {row.getIsExpanded() ? 
+                <ChevronDown className="w-3.5 h-3.5 text-primary-400" /> : 
+                <ChevronRight className="w-3.5 h-3.5 text-primary-400" />
+              }
+            </button>
+            <span className="font-mono font-bold text-primary-300 text-sm bg-primary-500/10 px-2 py-0.5 rounded border border-primary-500/20">{getValue()}</span>
+            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold">
+              {row.subRows.length}
             </span>
+            {uniqueMiads.length > 0 && (
+              <div className="flex items-center gap-1 ml-1">
+                {uniqueMiads.slice(0, 4).map((miad, idx) => (
+                  <span key={idx} className="px-1.5 py-0.5 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded text-xs">
+                    {miad}
+                  </span>
+                ))}
+                {uniqueMiads.length > 4 && (
+                  <span className="text-slate-500 text-xs">+{uniqueMiads.length - 4}</span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       accessorKey: 'stockName',
@@ -140,13 +165,6 @@ const PTSDetailPage = () => {
       cell: info => <span className="font-mono text-rose-400 font-bold text-sm">{info.getValue()}</span>,
     },
     {
-      accessorKey: 'lotNumber',
-      header: 'Lot No',
-      enableSorting: true,
-      size: 120,
-      cell: info => <span className="font-mono text-slate-300">{info.getValue() || '-'}</span>,
-    },
-    {
       accessorKey: 'expirationDate',
       header: 'Miad',
       enableSorting: true,
@@ -156,6 +174,13 @@ const PTSDetailPage = () => {
           {info.getValue() || '-'}
         </span>
       ),
+    },
+    {
+      accessorKey: 'lotNumber',
+      header: 'Lot No',
+      enableSorting: true,
+      size: 120,
+      cell: info => <span className="font-mono text-slate-300">{info.getValue() || '-'}</span>,
     },
     {
       accessorKey: 'productionDate',
@@ -388,7 +413,7 @@ const PTSDetailPage = () => {
                       key={cell.id}
                       className={`
                         px-4 text-sm
-                        ${row.getIsGrouped() ? 'font-semibold py-2.5' : 'py-2'}
+                        ${row.getIsGrouped() ? 'font-semibold py-1.5' : 'py-2'}
                         ${index === 0 && !row.getIsGrouped() ? 'pl-14' : ''}
                       `}
                     >
