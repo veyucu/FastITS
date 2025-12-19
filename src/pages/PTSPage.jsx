@@ -599,7 +599,7 @@ const PTSPage = () => {
       <div className="flex-1 px-6 py-4 flex flex-col min-h-0">
         {listData.length > 0 ? (
           /* Liste Görünümü */
-          <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700 flex-1">
+          <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700 flex-1 relative">
             <AgGridReact
               ref={gridRef}
               rowData={filteredData}
@@ -642,10 +642,10 @@ const PTSPage = () => {
                 }
               }}
             />
-            {/* Footer Info */}
-            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+            {/* Pagination içinde sol tarafa bilgi mesajı */}
+            <div className="absolute bottom-0 left-0 h-[48px] flex items-center px-4 text-xs text-slate-500 gap-1.5 pointer-events-none">
               <Info className="w-3.5 h-3.5" />
-              <span>İşlem yapmak istediğiniz satıra çift tıklayın</span>
+              <span>Detay için satıra çift tıklayın</span>
             </div>
           </div>
         ) : (
