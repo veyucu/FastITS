@@ -99,7 +99,7 @@ const PTSDetailPage = () => {
       accessorKey: 'gtin',
       header: 'GTIN',
       enableSorting: true,
-      size: 200,
+      size: 170,
       cell: info => <span className="font-mono font-bold text-primary-400">{info.getValue()}</span>,
       enableGrouping: true,
       aggregatedCell: ({ getValue, row }) => (
@@ -113,7 +113,7 @@ const PTSDetailPage = () => {
               <ChevronRight className="w-3.5 h-3.5 text-primary-400" />
             }
           </button>
-          <span className="font-mono font-bold text-primary-300 text-sm bg-primary-500/10 px-2 py-0.5 rounded border border-primary-500/20">{getValue()}</span>
+          <span className="font-mono font-bold text-primary-300 text-xs">{getValue()}</span>
         </div>
       ),
     },
@@ -124,34 +124,45 @@ const PTSDetailPage = () => {
       size: 300,
       cell: info => <span className="font-medium text-slate-200">{info.getValue()}</span>,
       aggregatedCell: ({ row }) => {
-        // MIAD'ları grupla (YIL-AY formatında)
-        const miads = row.subRows
-          .map(r => r.original.expirationDate)
-          .filter(Boolean)
-          .map(date => {
+        // MIAD'ları adetleriyle grupla
+        const miadCounts = {}
+        row.subRows.forEach(r => {
+          const date = r.original.expirationDate
+          if (date) {
             const parts = date.split('.')
             if (parts.length >= 2) {
-              return `${parts[1]}/${parts[2]}` // AA/YYYY
+              const miadKey = `${parts[1]}/${parts[2]}` // AA/YYYY
+              miadCounts[miadKey] = (miadCounts[miadKey] || 0) + 1
             }
-            return date
-          })
-        const uniqueMiads = [...new Set(miads)].sort()
+          }
+        })
+        
+        const miadList = Object.entries(miadCounts).sort((a, b) => a[0].localeCompare(b[0]))
+        const totalCount = row.subRows.length
+        const showTotal = miadList.length > 1
         
         return (
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3">
             <span className="font-semibold text-slate-100 text-sm">{row.subRows[0]?.original.stockName}</span>
-            <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold">
-              {row.subRows.length}
-            </span>
-            {uniqueMiads.length > 0 && (
-              <div className="flex items-center gap-1">
-                {uniqueMiads.map((miad, idx) => (
-                  <span key={idx} className="px-1.5 py-0.5 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded text-xs">
+            <span className="text-slate-600">|</span>
+            <div className="flex items-center gap-2">
+              {miadList.map(([miad, count], idx) => (
+                <span key={idx} className="flex items-center gap-1">
+                  <span className="text-emerald-400 text-xs font-bold">{count}</span>
+                  <span className="px-1.5 py-0.5 bg-amber-500/15 text-amber-400 border border-amber-500/20 rounded text-xs">
                     {miad}
                   </span>
-                ))}
-              </div>
-            )}
+                </span>
+              ))}
+              {showTotal && (
+                <>
+                  <span className="text-slate-600">=</span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-bold">
+                    {totalCount} Toplam
+                  </span>
+                </>
+              )}
+            </div>
           </div>
         )
       },
