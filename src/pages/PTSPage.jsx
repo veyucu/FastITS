@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, Home, Truck, Search, Download, RefreshCw, List } from 'lucide-react'
+import { Package, Home, Truck, Search, Download, RefreshCw, X, AlertCircle, CheckCircle, AlertTriangle, Info } from 'lucide-react'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
@@ -529,16 +529,32 @@ const PTSPage = () => {
       </div>
 
 
-      {/* Mesaj Alanı - Dark Theme */}
+      {/* Toast Notification - Sağ Üst Köşe */}
       {message && (
-        <div className="px-6 py-2">
-          <div className={`p-3 rounded-lg text-sm font-medium border ${
-            message.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-            message.type === 'error' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
-            message.type === 'warning' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
-            'bg-primary-500/20 text-primary-400 border-primary-500/30'
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
+          <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl border backdrop-blur-sm min-w-[300px] max-w-[450px] ${
+            message.type === 'success' ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50' :
+            message.type === 'error' ? 'bg-rose-900/90 text-rose-100 border-rose-500/50' :
+            message.type === 'warning' ? 'bg-amber-900/90 text-amber-100 border-amber-500/50' :
+            'bg-primary-900/90 text-primary-100 border-primary-500/50'
           }`}>
-            {message.text}
+            {/* İkon */}
+            <div className="flex-shrink-0">
+              {message.type === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
+              {message.type === 'error' && <AlertCircle className="w-5 h-5 text-rose-400" />}
+              {message.type === 'warning' && <AlertTriangle className="w-5 h-5 text-amber-400" />}
+              {message.type === 'info' && <Info className="w-5 h-5 text-primary-400" />}
+              {!['success', 'error', 'warning', 'info'].includes(message.type) && <Info className="w-5 h-5 text-primary-400" />}
+            </div>
+            {/* Mesaj */}
+            <span className="flex-1 text-sm font-medium">{message.text.replace(/^[⚠️❌✅ℹ️]+\s*/, '')}</span>
+            {/* Kapat Butonu */}
+            <button 
+              onClick={() => setMessage(null)}
+              className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
