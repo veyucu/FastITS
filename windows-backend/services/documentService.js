@@ -691,15 +691,46 @@ const documentService = {
           turu
         })
         
-        // Önce kaydın var olup olmadığını kontrol et
-        const checkExistQuery = `
-          SELECT SERI_NO, CARRIER_LABEL, GTIN, STOK_KODU
-          FROM AKTBLITSUTS WITH (NOLOCK)
-          WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
-            AND SERI_NO = @seriNo
-            AND TURU = @turu
-        `
+        // ITS/UTS için SERI_NO, DGR için STOK_KODU kullan
+        let checkExistQuery, query
+        
+        if (turu === 'DGR') {
+          // DGR için STOK_KODU ile arama
+          checkExistQuery = `
+            SELECT SERI_NO, CARRIER_LABEL, GTIN, STOK_KODU
+            FROM AKTBLITSUTS WITH (NOLOCK)
+            WHERE FATIRS_NO = @belgeNo
+              AND HAR_RECNO = @straInc
+              AND STOK_KODU = @seriNo
+              AND TURU = @turu
+          `
+          
+          query = `
+            DELETE FROM AKTBLITSUTS
+            WHERE FATIRS_NO = @belgeNo
+              AND HAR_RECNO = @straInc
+              AND STOK_KODU = @seriNo
+              AND TURU = @turu
+          `
+        } else {
+          // ITS/UTS için SERI_NO ile arama
+          checkExistQuery = `
+            SELECT SERI_NO, CARRIER_LABEL, GTIN, STOK_KODU
+            FROM AKTBLITSUTS WITH (NOLOCK)
+            WHERE FATIRS_NO = @belgeNo
+              AND HAR_RECNO = @straInc
+              AND SERI_NO = @seriNo
+              AND TURU = @turu
+          `
+          
+          query = `
+            DELETE FROM AKTBLITSUTS
+            WHERE FATIRS_NO = @belgeNo
+              AND HAR_RECNO = @straInc
+              AND SERI_NO = @seriNo
+              AND TURU = @turu
+          `
+        }
         
         const checkRequest = pool.request()
         checkRequest.input('belgeNo', belgeNo)
@@ -715,7 +746,7 @@ const documentService = {
           
           // Belgedeki kayıtları listele
           const allRecordsQuery = `
-            SELECT TOP 5 SERI_NO, HAR_RECNO, CARRIER_LABEL, TURU
+            SELECT TOP 5 SERI_NO, STOK_KODU, HAR_RECNO, CARRIER_LABEL, TURU
             FROM AKTBLITSUTS WITH (NOLOCK)
             WHERE FATIRS_NO = @belgeNo
               AND TURU = @turu
@@ -727,14 +758,6 @@ const documentService = {
           const allResult = await allRequest.query(allRecordsQuery)
           console.log(`📋 Bu belgedeki son 5 ${turu} kaydı:`, allResult.recordset)
         }
-        
-        const query = `
-          DELETE FROM AKTBLITSUTS
-          WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
-            AND SERI_NO = @seriNo
-            AND TURU = @turu
-        `
         
         const request = pool.request()
         request.input('belgeNo', belgeNo)
@@ -1208,7 +1231,6 @@ const documentService = {
             FATIRS_NO,
             CARI_KODU,
             STOK_KODU,
-            SERI_NO,
             GTIN,
             HAR_RECNO,
             MIKTAR,
@@ -1219,7 +1241,6 @@ const documentService = {
             @ftirsip,
             @belgeNo,
             @cariKodu,
-            @stokKodu,
             @stokKodu,
             @ilcGtin,
             @straInc,
