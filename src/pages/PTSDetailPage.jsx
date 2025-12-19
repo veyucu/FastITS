@@ -79,7 +79,10 @@ const PTSDetailPage = () => {
             expirationDate: p.EXPIRATION_DATE ? new Date(p.EXPIRATION_DATE).toLocaleDateString('tr-TR') : '',
             productionDate: p.PRODUCTION_DATE ? new Date(p.PRODUCTION_DATE).toLocaleDateString('tr-TR') : '',
             carrierLabel: p.CARRIER_LABEL,
-            containerType: p.CONTAINER_TYPE
+            containerType: p.CONTAINER_TYPE,
+            durum: p.DURUM || data.DURUM || '-',
+            bildirimTarihi: p.BILDIRIM_TARIHI ? new Date(p.BILDIRIM_TARIHI).toLocaleDateString('tr-TR') : 
+                           (data.BILDIRIM_TARIHI ? new Date(data.BILDIRIM_TARIHI).toLocaleDateString('tr-TR') : '-')
           }))
         
         setProducts(onlyProducts)
@@ -172,6 +175,35 @@ const PTSDetailPage = () => {
       size: 200,
       cell: info => (
         <span className="font-mono text-xs text-slate-400 bg-dark-700/50 border border-dark-600 px-2 py-1 rounded">
+          {info.getValue() || '-'}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'durum',
+      header: 'Durum',
+      enableSorting: true,
+      size: 130,
+      cell: info => {
+        const value = info.getValue()
+        if (!value || value === '-') return <span className="text-slate-500">-</span>
+        const style = getStatusStyle(value)
+        const StatusIcon = style.icon
+        return (
+          <div className={`inline-flex items-center gap-1.5 px-2 py-1 ${style.bg} ${style.border} border rounded text-xs font-medium`}>
+            <StatusIcon className={`w-3 h-3 ${style.text}`} />
+            <span className={style.text}>{value}</span>
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: 'bildirimTarihi',
+      header: 'Bildirim',
+      enableSorting: true,
+      size: 100,
+      cell: info => (
+        <span className="px-2 py-1 bg-primary-500/20 text-primary-300 border border-primary-500/30 rounded font-medium text-xs">
           {info.getValue() || '-'}
         </span>
       ),
