@@ -374,14 +374,9 @@ async function downloadPackage(transferId, settings = null) {
       productCount: packageInfo.products.length
     })
 
-    // Veritabanına kaydet
-    const dataToSave = {
-      ...packageInfo,
-      _rawXML: xmlContent
-    }
-    
+    // Veritabanına kaydet (XML_CONTENT artık tabloda tutulmuyor - optimize edildi)
     try {
-      const saveResult = await ptsDbService.savePackageData(dataToSave)
+      const saveResult = await ptsDbService.savePackageData(packageInfo)
       if (saveResult.success) {
         console.log(`💾 Paket veritabanına kaydedildi: ${transferId}`)
       } else {
@@ -394,10 +389,7 @@ async function downloadPackage(transferId, settings = null) {
 
     return {
       success: true,
-      data: {
-        ...packageInfo,
-        _rawXML: xmlContent // XML içeriğini de gönder
-      },
+      data: packageInfo,
       message: `${packageInfo.products.length} ürün bulundu`
     }
 

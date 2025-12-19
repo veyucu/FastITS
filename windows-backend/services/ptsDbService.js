@@ -206,10 +206,9 @@ async function createTablesIfNotExists() {
         
         log('✅ Tablo yapısı hiyerarşik yapıya güncellendi')
         
-        // TRANSFER_ID tipini BIGINT'ten NVARCHAR(50)'ye güncelle
-        log('🔄 TRANSFER_ID tipleri kontrol ediliyor...')
+        // TRANSFER_ID tipi kontrol - artık BIGINT olmalı (optimize edilmiş yapı)
+        log('🔄 TRANSFER_ID tipi kontrol ediliyor...')
         try {
-          // TRANSFER_ID'nin tipini kontrol et
           const checkTransferIdType = await pool.request().query(`
             SELECT DATA_TYPE 
             FROM INFORMATION_SCHEMA.COLUMNS 
@@ -218,66 +217,12 @@ async function createTablesIfNotExists() {
           `)
           
           if (checkTransferIdType.recordset[0]?.DATA_TYPE === 'bigint') {
-            log('🔄 TRANSFER_ID tipleri NVARCHAR(50)\'ye dönüştürülüyor...')
-            
-            // Foreign key'i kaldır
-            await pool.request().query(`
-              IF EXISTS (SELECT * FROM sys.foreign_keys WHERE name = 'FK_AKTBLPTSTRA_TRANSFER_ID')
-              BEGIN
-                ALTER TABLE AKTBLPTSTRA DROP CONSTRAINT FK_AKTBLPTSTRA_TRANSFER_ID
-              END
-            `)
-            
-            // Unique index'i kaldır
-            await pool.request().query(`
-              IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AKTBLPTSMAS_TRANSFER_ID' AND object_id = OBJECT_ID('AKTBLPTSMAS'))
-              BEGIN
-                DROP INDEX IX_AKTBLPTSMAS_TRANSFER_ID ON AKTBLPTSMAS
-              END
-            `)
-            
-            // Normal index'i kaldır
-            await pool.request().query(`
-              IF EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_AKTBLPTSTRA_TRANSFER_ID' AND object_id = OBJECT_ID('AKTBLPTSTRA'))
-              BEGIN
-                DROP INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA
-              END
-            `)
-            
-            // AKTBLPTSMAS.TRANSFER_ID'yi değiştir
-            await pool.request().query(`
-              ALTER TABLE AKTBLPTSMAS 
-              ALTER COLUMN TRANSFER_ID NVARCHAR(50) NOT NULL
-            `)
-            
-            // AKTBLPTSTRA.TRANSFER_ID'yi değiştir
-            await pool.request().query(`
-              ALTER TABLE AKTBLPTSTRA 
-              ALTER COLUMN TRANSFER_ID NVARCHAR(50) NOT NULL
-            `)
-            
-            // Index'leri yeniden oluştur
-            await pool.request().query(`
-              CREATE UNIQUE INDEX IX_AKTBLPTSMAS_TRANSFER_ID ON AKTBLPTSMAS(TRANSFER_ID)
-            `)
-            
-            await pool.request().query(`
-              CREATE INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA(TRANSFER_ID)
-            `)
-            
-            // Foreign key'i yeniden ekle
-            await pool.request().query(`
-              ALTER TABLE AKTBLPTSTRA
-              ADD CONSTRAINT FK_AKTBLPTSTRA_TRANSFER_ID 
-              FOREIGN KEY (TRANSFER_ID) REFERENCES AKTBLPTSMAS(TRANSFER_ID)
-            `)
-            
-            log('✅ TRANSFER_ID tipleri NVARCHAR(50) olarak güncellendi')
+            log('✅ TRANSFER_ID zaten BIGINT tipinde (optimize edilmiş)')
           } else {
-            log('✅ TRANSFER_ID zaten NVARCHAR tipinde')
+            log('⚠️ TRANSFER_ID henüz BIGINT değil. Migration script\'ini çalıştırın: windows-backend/migrations/optimize_pts_tables.sql')
           }
         } catch (transferIdError) {
-          log('⚠️ TRANSFER_ID tip güncellemesi hatası (devam ediliyor):', transferIdError.message)
+          log('⚠️ TRANSFER_ID tip kontrolü hatası:', transferIdError.message)
         }
         
         // DURUM ve BILDIRIM_TARIHI kolonlarını ekle
@@ -778,7 +723,6 @@ async function getProductsByCarrierLabel(carrierLabel) {
       WITH CarrierHierarchy AS (
         -- Root: Okutulan carrier (kendisi de dahil)
         SELECT 
-          ID,
           TRANSFER_ID,
           CARRIER_LABEL,
           PARENT_CARRIER_LABEL,
@@ -791,7 +735,7 @@ async function getProductsByCarrierLabel(carrierLabel) {
           PRODUCTION_DATE,
           PO_NUMBER,
           0 AS DEPTH,
-          CAST(CARRIER_LABEL AS NVARCHAR(500)) AS PATH
+          CAST(CARRIER_LABEL AS VARCHAR(500)) AS PATH
         FROM AKTBLPTSTRA
         WHERE CARRIER_LABEL = @carrierLabel
         
@@ -799,7 +743,6 @@ async function getProductsByCarrierLabel(carrierLabel) {
         
         -- Recursive: Alt carrier'lar ve ürünler
         SELECT 
-          t.ID,
           t.TRANSFER_ID,
           t.CARRIER_LABEL,
           t.PARENT_CARRIER_LABEL,
@@ -812,12 +755,12 @@ async function getProductsByCarrierLabel(carrierLabel) {
           t.PRODUCTION_DATE,
           t.PO_NUMBER,
           ch.DEPTH + 1,
-          CAST(ch.PATH + ' -> ' + ISNULL(t.CARRIER_LABEL, '[Ürün]') AS NVARCHAR(500))
+          CAST(ch.PATH + ' -> ' + ISNULL(t.CARRIER_LABEL, '[Ürün]') AS VARCHAR(500))
         FROM AKTBLPTSTRA t
         INNER JOIN CarrierHierarchy ch ON t.PARENT_CARRIER_LABEL = ch.CARRIER_LABEL
       )
       SELECT * FROM CarrierHierarchy
-      ORDER BY DEPTH, CARRIER_LEVEL, ID
+      ORDER BY DEPTH, CARRIER_LEVEL
     `)
     
     // Ürünleri ve carrier'ları ayır
@@ -1062,7 +1005,7 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
       WITH CarrierHierarchy AS (
         -- Ana koli (en büyük TRANSFER_ID ile)
         SELECT 
-          ID, TRANSFER_ID, CARRIER_LABEL, PARENT_CARRIER_LABEL, 
+          TRANSFER_ID, CARRIER_LABEL, PARENT_CARRIER_LABEL, 
           CONTAINER_TYPE, CARRIER_LEVEL, GTIN, SERIAL_NUMBER, 
           LOT_NUMBER, EXPIRATION_DATE, PRODUCTION_DATE, PO_NUMBER
         FROM AKTBLPTSTRA
@@ -1073,7 +1016,7 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
         
         -- Alt koliler (recursive) - aynı TRANSFER_ID ile
         SELECT 
-          c.ID, c.TRANSFER_ID, c.CARRIER_LABEL, c.PARENT_CARRIER_LABEL,
+          c.TRANSFER_ID, c.CARRIER_LABEL, c.PARENT_CARRIER_LABEL,
           c.CONTAINER_TYPE, c.CARRIER_LEVEL, c.GTIN, c.SERIAL_NUMBER,
           c.LOT_NUMBER, c.EXPIRATION_DATE, c.PRODUCTION_DATE, c.PO_NUMBER
         FROM AKTBLPTSTRA c
@@ -1081,12 +1024,12 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
           AND c.TRANSFER_ID = @maxTransferId
       )
       SELECT * FROM CarrierHierarchy
-      ORDER BY CARRIER_LEVEL, ID
+      ORDER BY CARRIER_LEVEL, GTIN, SERIAL_NUMBER
     `
     
     const request = pool.request()
     request.input('carrierLabel', sql.VarChar(25), carrierLabel)
-    request.input('maxTransferId', maxTransferId)
+    request.input('maxTransferId', sql.BigInt, maxTransferId)
     
     const result = await request.query(query)
     
