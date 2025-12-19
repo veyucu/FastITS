@@ -642,6 +642,11 @@ const PTSPage = () => {
                 }
               }}
             />
+            {/* Footer Info */}
+            <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
+              <Info className="w-3.5 h-3.5" />
+              <span>İşlem yapmak istediğiniz satıra çift tıklayın</span>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
