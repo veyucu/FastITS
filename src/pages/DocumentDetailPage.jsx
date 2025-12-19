@@ -398,6 +398,13 @@ const DocumentDetailPage = () => {
               </span>
             )
           }
+          if (val < 0) {
+            return (
+              <span className="px-3 py-1 rounded text-sm font-bold bg-red-100 text-red-700">
+                {val}
+              </span>
+            )
+          }
           return (
             <span className="px-3 py-1 rounded text-sm font-bold bg-green-100 text-green-700">
               ✓
@@ -408,6 +415,13 @@ const DocumentDetailPage = () => {
         if (kalan > 0) {
           return (
             <span className="px-3 py-1 rounded text-sm font-bold bg-orange-100 text-orange-700">
+              {kalan}
+            </span>
+          )
+        }
+        if (kalan < 0) {
+          return (
+            <span className="px-3 py-1 rounded text-sm font-bold bg-red-100 text-red-700">
               {kalan}
             </span>
           )
