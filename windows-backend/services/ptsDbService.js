@@ -1080,26 +1080,49 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
   try {
     const pool = await getPTSConnection()
     
-    // Recursive CTE ile tüm alt kolileri ve ürünleri bul
+    // Önce bu koli barkoduna ait en büyük TRANSFER_ID'yi bul
+    const maxTransferIdQuery = `
+      SELECT MAX(TRANSFER_ID) AS MAX_TRANSFER_ID
+      FROM AKTBLPTSTRA
+      WHERE CARRIER_LABEL = @carrierLabel
+    `
+    
+    const maxTransferIdRequest = pool.request()
+    maxTransferIdRequest.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    const maxTransferIdResult = await maxTransferIdRequest.query(maxTransferIdQuery)
+    
+    if (maxTransferIdResult.recordset.length === 0 || !maxTransferIdResult.recordset[0].MAX_TRANSFER_ID) {
+      return {
+        success: false,
+        error: `Koli barkodu bulunamadı: ${carrierLabel}`
+      }
+    }
+    
+    const maxTransferId = maxTransferIdResult.recordset[0].MAX_TRANSFER_ID
+    console.log(`📦 Koli ${carrierLabel} için en büyük TRANSFER_ID: ${maxTransferId}`)
+    
+    // Recursive CTE ile tüm alt kolileri ve ürünleri bul (sadece en büyük TRANSFER_ID için)
     const query = `
       WITH CarrierHierarchy AS (
-        -- Ana koli
+        -- Ana koli (en büyük TRANSFER_ID ile)
         SELECT 
           ID, TRANSFER_ID, CARRIER_LABEL, PARENT_CARRIER_LABEL, 
           CONTAINER_TYPE, CARRIER_LEVEL, GTIN, SERIAL_NUMBER, 
           LOT_NUMBER, EXPIRATION_DATE, PRODUCTION_DATE, PO_NUMBER
         FROM AKTBLPTSTRA
         WHERE CARRIER_LABEL = @carrierLabel
+          AND TRANSFER_ID = @maxTransferId
         
         UNION ALL
         
-        -- Alt koliler (recursive)
+        -- Alt koliler (recursive) - aynı TRANSFER_ID ile
         SELECT 
           c.ID, c.TRANSFER_ID, c.CARRIER_LABEL, c.PARENT_CARRIER_LABEL,
           c.CONTAINER_TYPE, c.CARRIER_LEVEL, c.GTIN, c.SERIAL_NUMBER,
           c.LOT_NUMBER, c.EXPIRATION_DATE, c.PRODUCTION_DATE, c.PO_NUMBER
         FROM AKTBLPTSTRA c
         INNER JOIN CarrierHierarchy ch ON c.PARENT_CARRIER_LABEL = ch.CARRIER_LABEL
+          AND c.TRANSFER_ID = @maxTransferId
       )
       SELECT * FROM CarrierHierarchy
       ORDER BY CARRIER_LEVEL, ID
@@ -1107,6 +1130,7 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     
     const request = pool.request()
     request.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    request.input('maxTransferId', maxTransferId)
     
     const result = await request.query(query)
     

@@ -661,15 +661,18 @@ const DocumentDetailPage = () => {
 
     const scannedBarcode = barcodeInput.trim()
     
-    // Hem Sil hem Koli modu aktifse - Koli barkoduna göre sil
-    if (deleteMode && koliMode) {
+    // Koli barkodu otomatik algılama (00 ile başlıyorsa koli barkodudur)
+    const isCarrierBarcode = scannedBarcode.startsWith('00')
+    
+    // Hem Sil hem Koli modu aktifse VEYA otomatik koli algılandıysa - Koli barkoduna göre sil
+    if (deleteMode && (koliMode || isCarrierBarcode)) {
       await handleDeleteCarrierBarcode(scannedBarcode)
       setBarcodeInput('')
       return
     }
     
-    // Sadece Koli modu aktifse - Koli barkodunu kaydet
-    if (koliMode) {
+    // Sadece Koli modu aktifse VEYA otomatik koli algılandıysa - Koli barkodunu kaydet
+    if (koliMode || isCarrierBarcode) {
       await handleCarrierBarcode(scannedBarcode)
       setBarcodeInput('')
       return
@@ -1357,7 +1360,8 @@ const DocumentDetailPage = () => {
       const result = await apiService.deleteITSBarcodeRecords(
         order.id,
         item.itemId,
-        [item.stokKodu]  // DGR için SERI_NO = STOK_KODU
+        [item.stokKodu],  // DGR için SERI_NO = STOK_KODU
+        item.turu  // 'DGR' veya 'UTS'
       )
       
       if (result.success) {
@@ -2064,6 +2068,16 @@ const DocumentDetailPage = () => {
     
     const quantity = params.data.quantity || 0
     const okutulan = params.data.okutulan || 0
+    const kalan = quantity - okutulan
+    
+    // FAZLA OKUTULAN (Kalan < 0) → KIRMIZI
+    if (kalan < 0) {
+      return { 
+        backgroundColor: '#fee2e2',
+        color: '#991b1b',
+        fontWeight: 'bold'
+      }
+    }
     
     // Tamamı okutulan → Yeşil
     if (okutulan > 0 && okutulan >= quantity) {

@@ -143,13 +143,13 @@ router.get('/:documentId/item/:itemId/uts-records', async (req, res) => {
   }
 })
 
-// DELETE /api/documents/:documentId/item/:itemId/its-records - ITS Kayıtlarını Sil
+// DELETE /api/documents/:documentId/item/:itemId/its-records - ITS/DGR/UTS Kayıtlarını Sil
 router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
   try {
     const { documentId, itemId } = req.params
-    const { seriNos } = req.body // Array of seri numbers to delete
+    const { seriNos, turu = 'ITS' } = req.body // Array of seri numbers to delete, turu (ITS/DGR/UTS)
     
-    console.log('🗑️ ITS Kayıt Silme İsteği:', { documentId, itemId, seriNos })
+    console.log('🗑️ Kayıt Silme İsteği:', { documentId, itemId, seriNos, turu })
     
     if (!seriNos || !Array.isArray(seriNos) || seriNos.length === 0) {
       return res.status(400).json({
@@ -161,13 +161,14 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
     // Document ID parse et
     const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
     
-    console.log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, straInc: itemId })
+    console.log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, straInc: itemId, turu })
     
     const result = await documentService.deleteITSBarcodeRecords(
       seriNos,
       subeKodu,
       fatirs_no,
-      itemId
+      itemId,
+      turu
     )
     
     console.log('✅ Silme sonucu:', result)

@@ -186,10 +186,10 @@ const apiService = {
   },
 
   // ITS Kayıtlarını Sil
-  deleteITSBarcodeRecords: async (documentId, itemId, seriNos) => {
+  deleteITSBarcodeRecords: async (documentId, itemId, seriNos, turu = 'ITS') => {
     try {
       const response = await apiClient.delete(`/documents/${documentId}/item/${itemId}/its-records`, {
-        data: { seriNos }
+        data: { seriNos, turu }
       })
       return response.data
     } catch (error) {

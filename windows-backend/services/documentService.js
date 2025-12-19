@@ -622,58 +622,62 @@ const documentService = {
     }
   },
 
-  // TBLSERITRA Kayıtlarını Sil - ITS
-  async deleteITSBarcodeRecords(seriNos, subeKodu, belgeNo, straInc) {
+  // TBLSERITRA Kayıtlarını Sil - ITS/DGR/UTS
+  async deleteITSBarcodeRecords(seriNos, subeKodu, belgeNo, straInc, turu = 'ITS') {
     try {
       const pool = await getConnection()
       
-      // Önce silinecek kayıtların CARRIER_LABEL değerlerini al
+      // Önce silinecek kayıtların CARRIER_LABEL değerlerini al (sadece ITS için)
       const carrierLabelsToUpdate = new Set()
       
-      for (const seriNo of seriNos) {
-        const checkQuery = `
-          SELECT CARRIER_LABEL
-          FROM AKTBLITSUTS WITH (NOLOCK)
-          WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
-            AND SERI_NO = @seriNo
-            AND TURU = 'ITS'
-            AND CARRIER_LABEL IS NOT NULL
-        `
-        
-        const checkRequest = pool.request()
-        checkRequest.input('belgeNo', belgeNo)
-        checkRequest.input('straInc', straInc)
-        checkRequest.input('seriNo', seriNo)
-        
-        const checkResult = await checkRequest.query(checkQuery)
-        if (checkResult.recordset.length > 0 && checkResult.recordset[0].CARRIER_LABEL) {
-          carrierLabelsToUpdate.add(checkResult.recordset[0].CARRIER_LABEL)
-        }
-      }
-      
-      // Silinecek kayıtların CARRIER_LABEL değerleri varsa, 
-      // aynı CARRIER_LABEL'a sahip diğer kayıtların da CARRIER_LABEL'ını NULL yap
-      if (carrierLabelsToUpdate.size > 0) {
-        console.log('📦 Koli bütünlüğü korunuyor, CARRIER_LABEL değerleri temizleniyor:', Array.from(carrierLabelsToUpdate))
-        
-        for (const carrierLabel of carrierLabelsToUpdate) {
-          const updateQuery = `
-            UPDATE AKTBLITSUTS
-            SET CARRIER_LABEL = NULL, CONTAINER_TYPE = NULL
+      if (turu === 'ITS') {
+        for (const seriNo of seriNos) {
+          const checkQuery = `
+            SELECT CARRIER_LABEL
+            FROM AKTBLITSUTS WITH (NOLOCK)
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
-              AND CARRIER_LABEL = @carrierLabel
-              AND TURU = 'ITS'
+              AND SERI_NO = @seriNo
+              AND TURU = @turu
+              AND CARRIER_LABEL IS NOT NULL
           `
           
-          const updateRequest = pool.request()
-          updateRequest.input('belgeNo', belgeNo)
-          updateRequest.input('straInc', straInc)
-          updateRequest.input('carrierLabel', carrierLabel)
+          const checkRequest = pool.request()
+          checkRequest.input('belgeNo', belgeNo)
+          checkRequest.input('straInc', straInc)
+          checkRequest.input('seriNo', seriNo)
+          checkRequest.input('turu', turu)
           
-          await updateRequest.query(updateQuery)
-          console.log('🔄 Koli bilgisi temizlendi:', carrierLabel)
+          const checkResult = await checkRequest.query(checkQuery)
+          if (checkResult.recordset.length > 0 && checkResult.recordset[0].CARRIER_LABEL) {
+            carrierLabelsToUpdate.add(checkResult.recordset[0].CARRIER_LABEL)
+          }
+        }
+        
+        // Silinecek kayıtların CARRIER_LABEL değerleri varsa, 
+        // aynı CARRIER_LABEL'a sahip diğer kayıtların da CARRIER_LABEL'ını NULL yap
+        if (carrierLabelsToUpdate.size > 0) {
+          console.log('📦 Koli bütünlüğü korunuyor, CARRIER_LABEL değerleri temizleniyor:', Array.from(carrierLabelsToUpdate))
+          
+          for (const carrierLabel of carrierLabelsToUpdate) {
+            const updateQuery = `
+              UPDATE AKTBLITSUTS
+              SET CARRIER_LABEL = NULL, CONTAINER_TYPE = NULL
+              WHERE FATIRS_NO = @belgeNo
+                AND HAR_RECNO = @straInc
+                AND CARRIER_LABEL = @carrierLabel
+                AND TURU = @turu
+            `
+            
+            const updateRequest = pool.request()
+            updateRequest.input('belgeNo', belgeNo)
+            updateRequest.input('straInc', straInc)
+            updateRequest.input('carrierLabel', carrierLabel)
+            updateRequest.input('turu', turu)
+            
+            await updateRequest.query(updateQuery)
+            console.log('🔄 Koli bilgisi temizlendi:', carrierLabel)
+          }
         }
       }
       
@@ -684,8 +688,7 @@ const documentService = {
           straInc,
           seriNo,
           seriNoLength: seriNo.length,
-          seriNoHex: Array.from(seriNo).map(c => c.charCodeAt(0).toString(16)).join(' '),
-          turu: 'ITS'
+          turu
         })
         
         // Önce kaydın var olup olmadığını kontrol et
@@ -695,32 +698,34 @@ const documentService = {
           WHERE FATIRS_NO = @belgeNo
             AND HAR_RECNO = @straInc
             AND SERI_NO = @seriNo
-            AND TURU = 'ITS'
+            AND TURU = @turu
         `
         
         const checkRequest = pool.request()
         checkRequest.input('belgeNo', belgeNo)
         checkRequest.input('straInc', straInc)
         checkRequest.input('seriNo', seriNo)
+        checkRequest.input('turu', turu)
         
         const checkResult = await checkRequest.query(checkExistQuery)
         console.log('📊 Kayıt kontrolü - Bulunan:', checkResult.recordset.length, checkResult.recordset)
         
         if (checkResult.recordset.length === 0) {
-          console.log('⚠️ Kayıt bulunamadı! Alternatif kontrol yapılıyor...')
+          console.log(`⚠️ Kayıt bulunamadı! Alternatif kontrol yapılıyor...`)
           
-          // Belgedeki tüm ITS kayıtlarını listele
+          // Belgedeki kayıtları listele
           const allRecordsQuery = `
-            SELECT TOP 5 SERI_NO, HAR_RECNO, CARRIER_LABEL
+            SELECT TOP 5 SERI_NO, HAR_RECNO, CARRIER_LABEL, TURU
             FROM AKTBLITSUTS WITH (NOLOCK)
             WHERE FATIRS_NO = @belgeNo
-              AND TURU = 'ITS'
+              AND TURU = @turu
             ORDER BY RECNO DESC
           `
           const allRequest = pool.request()
           allRequest.input('belgeNo', belgeNo)
+          allRequest.input('turu', turu)
           const allResult = await allRequest.query(allRecordsQuery)
-          console.log('📋 Bu belgedeki son 5 ITS kaydı:', allResult.recordset)
+          console.log(`📋 Bu belgedeki son 5 ${turu} kaydı:`, allResult.recordset)
         }
         
         const query = `
@@ -728,13 +733,14 @@ const documentService = {
           WHERE FATIRS_NO = @belgeNo
             AND HAR_RECNO = @straInc
             AND SERI_NO = @seriNo
-            AND TURU = 'ITS'
+            AND TURU = @turu
         `
         
         const request = pool.request()
         request.input('belgeNo', belgeNo)
         request.input('straInc', straInc)
         request.input('seriNo', seriNo)
+        request.input('turu', turu)
         
         const result = await request.query(query)
         console.log('🗑️ DELETE Sonucu - Etkilenen Satır Sayısı:', result.rowsAffected[0])
@@ -742,15 +748,15 @@ const documentService = {
         if (result.rowsAffected[0] === 0) {
           console.log('❌ SİLME BAŞARISIZ! Kayıt silinemedi')
         } else {
-          console.log('✅ ITS Kayıt Başarıyla Silindi:', seriNo)
+          console.log(`✅ ${turu} Kayıt Başarıyla Silindi:`, seriNo)
         }
       }
       
-      console.log('✅ ITS Kayıtlar Başarıyla Silindi:', seriNos.length)
+      console.log(`✅ ${turu} Kayıtlar Başarıyla Silindi:`, seriNos.length)
       return { success: true, deletedCount: seriNos.length }
       
     } catch (error) {
-      console.error('❌ ITS Kayıt Silme Hatası:', error)
+      console.error(`❌ ${turu || 'ITS'} Kayıt Silme Hatası:`, error)
       throw error
     }
   },
@@ -1792,17 +1798,23 @@ const documentService = {
           carrierQty
         })
         
-        if (carrierQty > remainingQty) {
+        // Sadece kalan miktar 0 veya negatifse hata ver
+        if (remainingQty <= 0) {
           throw new Error(
-            `Koli içindeki ürün miktarı, belgedeki kalan miktarı aşıyor!\n\n` +
+            `Bu ürün için kalan miktar yok!\n\n` +
             `Ürün: ${item.STOK_KODU}\n` +
             `GTIN: ${cleanItemGtin}\n` +
             `Belgedeki toplam: ${expectedQty}\n` +
             `Daha önce okutulan: ${preparedQty}\n` +
             `Kalan: ${remainingQty}\n` +
             `Kolide: ${carrierQty}\n\n` +
-            `❌ ${carrierQty - remainingQty} adet fazla!`
+            `❌ Tüm miktar zaten okutulmuş!`
           )
+        }
+        
+        // Kalan > 0 ise, koli miktarı kalan miktarı geçse bile izin ver
+        if (carrierQty > remainingQty) {
+          console.log(`⚠️ UYARI: Koli miktarı (${carrierQty}) kalan miktarı (${remainingQty}) aşıyor, ancak izin veriliyor.`)
         }
       }
       
