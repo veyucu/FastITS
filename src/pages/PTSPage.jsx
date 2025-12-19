@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, Home, Truck, Search } from 'lucide-react'
+import { Package, Home, Truck, Search, Download, RefreshCw, List } from 'lucide-react'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
@@ -46,12 +46,13 @@ const PTSPage = () => {
     getStoredValue('pts_endDate', new Date().toISOString().split('T')[0])
   )
   const [dateFilterType, setDateFilterType] = useState(() => 
-    getStoredValue('pts_dateFilterType', 'created')
+    getStoredValue('pts_dateFilterType', 'document') // Varsayılan: Belge Tarihi
   )
   const [listData, setListData] = useState([]) // Grid için liste verisi
   const [searchText, setSearchText] = useState(() => 
     getStoredValue('pts_searchText', '')
   ) // Arama metni
+  const [initialLoadDone, setInitialLoadDone] = useState(false) // İlk yükleme kontrolü
   
   // İndirme modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false)
@@ -87,10 +88,44 @@ const PTSPage = () => {
     setTimeout(() => setMessage(null), 5000)
   }
 
+  // Tarih validasyonu - geçersiz tarihleri kontrol et
+  const isValidDate = (dateString) => {
+    if (!dateString) return false
+    const date = new Date(dateString)
+    // Geçersiz tarih kontrolü (Invalid Date veya tarih string'i ile eşleşmiyorsa)
+    if (isNaN(date.getTime())) return false
+    // Girilen tarih ile parse edilen tarih aynı mı kontrol et
+    const [year, month, day] = dateString.split('-').map(Number)
+    return date.getFullYear() === year && 
+           date.getMonth() === month - 1 && 
+           date.getDate() === day
+  }
+
+  // Tarih değiştirme handler'ları
+  const handleStartDateChange = (e) => {
+    const value = e.target.value
+    setStartDate(value)
+  }
+
+  const handleEndDateChange = (e) => {
+    const value = e.target.value
+    setEndDate(value)
+  }
+
   // Veritabanındaki kayıtları listele
   const handleListPackages = useCallback(async () => {
     if (!startDate || !endDate) {
       showMessage('⚠️ Başlangıç ve bitiş tarihi seçin', 'error')
+      return
+    }
+
+    if (!isValidDate(startDate)) {
+      showMessage('⚠️ Geçersiz başlangıç tarihi', 'error')
+      return
+    }
+
+    if (!isValidDate(endDate)) {
+      showMessage('⚠️ Geçersiz bitiş tarihi', 'error')
       return
     }
 
@@ -121,10 +156,28 @@ const PTSPage = () => {
     }
   }, [startDate, endDate, dateFilterType])
 
+  // Sayfa yüklendiğinde otomatik listeleme
+  useEffect(() => {
+    if (!initialLoadDone && startDate && endDate && isValidDate(startDate) && isValidDate(endDate)) {
+      setInitialLoadDone(true)
+      handleListPackages()
+    }
+  }, [initialLoadDone, startDate, endDate, handleListPackages])
+
   // Tarih aralığına göre paketleri indir ve veritabanına kaydet
   const handleSearchByDate = async () => {
     if (!startDate || !endDate) {
       showMessage('⚠️ Başlangıç ve bitiş tarihi seçin', 'error')
+      return
+    }
+
+    if (!isValidDate(startDate)) {
+      showMessage('⚠️ Geçersiz başlangıç tarihi', 'error')
+      return
+    }
+
+    if (!isValidDate(endDate)) {
+      showMessage('⚠️ Geçersiz bitiş tarihi', 'error')
       return
     }
 
@@ -406,9 +459,10 @@ const PTSPage = () => {
                 type="button"
                 onClick={handleSearchByDate}
                 disabled={loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
               >
-                📥 İndir
+                <Download className={`w-3.5 h-3.5 ${loading ? 'animate-bounce' : ''}`} />
+                İndir
               </button>
 
               {/* Tarih Aralığı */}
@@ -416,7 +470,7 @@ const PTSPage = () => {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={handleStartDateChange}
                   className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
@@ -424,7 +478,7 @@ const PTSPage = () => {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={handleEndDateChange}
                   className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
@@ -446,9 +500,10 @@ const PTSPage = () => {
                 type="button"
                 onClick={handleListPackages}
                 disabled={loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
               >
-                📋 Listele
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Listele
               </button>
             </div>
           </div>
