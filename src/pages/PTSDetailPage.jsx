@@ -325,7 +325,7 @@ const PTSDetailPage = () => {
 
       {/* TanStack Table - Scrollable Area */}
       <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
-        <div className="flex-1 flex flex-col min-h-0 bg-dark-800/60 rounded-2xl border border-dark-700 overflow-hidden shadow-xl shadow-dark-950/50">
+        <div className="flex-1 flex flex-col min-h-0 bg-dark-800/60 rounded-xl border border-dark-700 overflow-hidden shadow-xl shadow-dark-950/50">
           {/* Table with scroll */}
           <div className="flex-1 overflow-auto">
             <table className="w-full">
