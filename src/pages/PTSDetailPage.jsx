@@ -104,29 +104,29 @@ const PTSDetailPage = () => {
       accessorKey: 'stockName',
       header: 'Stok Adı',
       enableSorting: true,
-      cell: info => <span className="font-medium text-gray-800">{info.getValue()}</span>,
+      cell: info => <span className="font-medium text-slate-200">{info.getValue()}</span>,
       aggregatedCell: ({ row }) => (
-        <span className="font-semibold text-gray-900 text-sm">{row.subRows[0]?.original.stockName}</span>
+        <span className="font-semibold text-slate-100 text-sm">{row.subRows[0]?.original.stockName}</span>
       ),
     },
     {
       accessorKey: 'serialNumber',
       header: 'Seri No',
       enableSorting: true,
-      cell: info => <span className="font-mono text-red-600 font-bold text-sm">{info.getValue()}</span>,
+      cell: info => <span className="font-mono text-rose-400 font-bold text-sm">{info.getValue()}</span>,
     },
     {
       accessorKey: 'lotNumber',
       header: 'Lot No',
       enableSorting: true,
-      cell: info => <span className="font-mono text-gray-700">{info.getValue() || '-'}</span>,
+      cell: info => <span className="font-mono text-slate-300">{info.getValue() || '-'}</span>,
     },
     {
       accessorKey: 'expirationDate',
       header: 'Son Kullanma Tarihi',
       enableSorting: true,
       cell: info => (
-        <span className="px-2 py-1 bg-amber-50 text-amber-800 rounded font-medium text-sm">
+        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-medium text-sm">
           {info.getValue() || '-'}
         </span>
       ),
@@ -136,7 +136,7 @@ const PTSDetailPage = () => {
       header: 'Üretim Tarihi',
       enableSorting: true,
       cell: info => (
-        <span className="px-2 py-1 bg-green-50 text-green-800 rounded font-medium text-sm">
+        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-medium text-sm">
           {info.getValue() || '-'}
         </span>
       ),
@@ -146,7 +146,7 @@ const PTSDetailPage = () => {
       header: 'Carrier Label',
       enableSorting: true,
       cell: info => (
-        <span className="font-mono text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded">
+        <span className="font-mono text-xs text-slate-400 bg-dark-700/50 border border-dark-600 px-2 py-1 rounded">
           {info.getValue() || '-'}
         </span>
       ),
@@ -217,7 +217,7 @@ const PTSDetailPage = () => {
                 <h1 className="text-xl font-bold text-slate-100">PTS Paket Detayı</h1>
                 <p className="text-slate-500 text-sm">Transfer ID: {transferId}</p>
               </div>
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-3 text-sm">
                 <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
                   <span className="font-semibold text-slate-400">Belge No:</span> <span className="text-slate-200">{packageData.DOCUMENT_NUMBER || '-'}</span>
                 </div>
@@ -228,18 +228,17 @@ const PTSDetailPage = () => {
                 <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
                   <span className="font-semibold text-slate-400">Kaynak GLN:</span>{' '}
                   <span className="font-mono text-slate-200">{packageData.SOURCE_GLN || '-'}</span>
-                  {packageData.SOURCE_GLN_NAME && (
-                    <span className="ml-2 text-amber-400">
-                      ({packageData.SOURCE_GLN_NAME}
+                </div>
+                {packageData.SOURCE_GLN_NAME && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-lg">
+                    <span className="font-semibold text-amber-400">Cari:</span>{' '}
+                    <span className="text-amber-300">
+                      {packageData.SOURCE_GLN_NAME}
                       {packageData.SOURCE_GLN_ILCE && ` - ${packageData.SOURCE_GLN_ILCE}`}
-                      {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`})
+                      {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
                     </span>
-                  )}
-                </div>
-                <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold text-slate-400">Hedef GLN:</span>{' '}
-                  <span className="font-mono text-slate-200">{packageData.DESTINATION_GLN || '-'}</span>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
