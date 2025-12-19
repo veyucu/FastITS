@@ -50,7 +50,8 @@ const fixTurkishChars = (str) => {
  */
 
 /**
- * Tabloları oluştur (ilk çalıştırmada)
+ * Tabloları oluştur (ilk çalıştırmada) - Optimize edilmiş yapı
+ * TRANSFER_ID: BIGINT PRIMARY KEY (eskiden NVARCHAR + ayrı ID)
  */
 async function createTablesIfNotExists() {
   try {
@@ -63,20 +64,18 @@ async function createTablesIfNotExists() {
     `)
     
     if (checkMasterTable.recordset.length === 0) {
-      log('📋 AKTBLPTSMAS tablosu oluşturuluyor...')
+      log('📋 AKTBLPTSMAS tablosu oluşturuluyor (optimize edilmiş)...')
       await pool.request().query(`
         CREATE TABLE AKTBLPTSMAS (
-          ID INT IDENTITY(1,1) PRIMARY KEY,
-          TRANSFER_ID NVARCHAR(50) NOT NULL,
-          DOCUMENT_NUMBER NVARCHAR(50) NULL,
+          TRANSFER_ID BIGINT NOT NULL PRIMARY KEY,
+          DOCUMENT_NUMBER VARCHAR(30) NULL,
           DOCUMENT_DATE DATE NULL,
-          SOURCE_GLN NVARCHAR(50) NULL,
-          DESTINATION_GLN NVARCHAR(50) NULL,
-          ACTION_TYPE NVARCHAR(10) NULL,
-          SHIP_TO NVARCHAR(50) NULL,
-          NOTE NVARCHAR(500) NULL,
-          VERSION NVARCHAR(10) NULL,
-          XML_CONTENT NVARCHAR(MAX) NULL,
+          SOURCE_GLN VARCHAR(15) NULL,
+          DESTINATION_GLN VARCHAR(15) NULL,
+          ACTION_TYPE VARCHAR(10) NULL,
+          SHIP_TO VARCHAR(15) NULL,
+          NOTE VARCHAR(500) NULL,
+          VERSION VARCHAR(10) NULL,
           DURUM VARCHAR(20) NULL,
           BILDIRIM_TARIHI DATETIME NULL,
           CREATED_DATE DATETIME DEFAULT GETDATE(),
@@ -85,16 +84,16 @@ async function createTablesIfNotExists() {
       `)
       
       await pool.request().query(`
-        CREATE UNIQUE INDEX IX_AKTBLPTSMAS_TRANSFER_ID ON AKTBLPTSMAS(TRANSFER_ID)
-      `)
-      await pool.request().query(`
         CREATE INDEX IX_AKTBLPTSMAS_DOCUMENT_DATE ON AKTBLPTSMAS(DOCUMENT_DATE)
       `)
       await pool.request().query(`
         CREATE INDEX IX_AKTBLPTSMAS_SOURCE_GLN ON AKTBLPTSMAS(SOURCE_GLN)
       `)
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSMAS_DESTINATION_GLN ON AKTBLPTSMAS(DESTINATION_GLN)
+        CREATE INDEX IX_AKTBLPTSMAS_BILDIRIM_TARIHI ON AKTBLPTSMAS(BILDIRIM_TARIHI)
+      `)
+      await pool.request().query(`
+        CREATE INDEX IX_AKTBLPTSMAS_CREATED_DATE ON AKTBLPTSMAS(CREATED_DATE)
       `)
       
       log('✅ AKTBLPTSMAS tablosu oluşturuldu')
@@ -109,50 +108,41 @@ async function createTablesIfNotExists() {
     `)
     
     if (checkTransTable.recordset.length === 0) {
-      log('📋 AKTBLPTSTRA tablosu oluşturuluyor...')
+      log('📋 AKTBLPTSTRA tablosu oluşturuluyor (optimize edilmiş)...')
       await pool.request().query(`
         CREATE TABLE AKTBLPTSTRA (
-          ID INT IDENTITY(1,1) PRIMARY KEY,
-          TRANSFER_ID NVARCHAR(50) NOT NULL,
-          CARRIER_LABEL NVARCHAR(100) NULL,
-          PARENT_CARRIER_LABEL NVARCHAR(100) NULL,
-          CONTAINER_TYPE NVARCHAR(10) NULL,
-          CARRIER_LEVEL INT NULL,
-          GTIN NVARCHAR(50) NULL,
-          SERIAL_NUMBER NVARCHAR(100) NULL,
-          LOT_NUMBER NVARCHAR(50) NULL,
+          TRANSFER_ID BIGINT NOT NULL,
+          CARRIER_LABEL VARCHAR(30) NULL,
+          PARENT_CARRIER_LABEL VARCHAR(30) NULL,
+          CONTAINER_TYPE VARCHAR(5) NULL,
+          CARRIER_LEVEL TINYINT NULL,
+          GTIN VARCHAR(14) NULL,
+          SERIAL_NUMBER VARCHAR(25) NULL,
+          LOT_NUMBER VARCHAR(25) NULL,
           EXPIRATION_DATE DATE NULL,
           PRODUCTION_DATE DATE NULL,
-          PO_NUMBER NVARCHAR(50) NULL,
+          PO_NUMBER VARCHAR(30) NULL,
           DURUM VARCHAR(20) NULL,
           BILDIRIM_TARIHI DATETIME NULL,
-          CREATED_DATE DATETIME DEFAULT GETDATE()
+          CREATED_DATE DATETIME DEFAULT GETDATE(),
+          CONSTRAINT FK_AKTBLPTSTRA_TRANSFER_ID FOREIGN KEY (TRANSFER_ID) REFERENCES AKTBLPTSMAS(TRANSFER_ID) ON DELETE CASCADE
         )
       `)
       
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA(TRANSFER_ID)
+        CREATE CLUSTERED INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA(TRANSFER_ID)
       `)
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_CARRIER_LABEL ON AKTBLPTSTRA(CARRIER_LABEL)
+        CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_CARRIER_LABEL ON AKTBLPTSTRA(CARRIER_LABEL) INCLUDE (TRANSFER_ID, GTIN, SERIAL_NUMBER)
       `)
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_PARENT_CARRIER_LABEL ON AKTBLPTSTRA(PARENT_CARRIER_LABEL)
+        CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_GTIN ON AKTBLPTSTRA(GTIN) INCLUDE (TRANSFER_ID, SERIAL_NUMBER, EXPIRATION_DATE)
       `)
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_GTIN ON AKTBLPTSTRA(GTIN)
+        CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_SERIAL_NUMBER ON AKTBLPTSTRA(SERIAL_NUMBER) INCLUDE (TRANSFER_ID, GTIN)
       `)
       await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_SERIAL_NUMBER ON AKTBLPTSTRA(SERIAL_NUMBER)
-      `)
-      await pool.request().query(`
-        CREATE INDEX IX_AKTBLPTSTRA_EXPIRATION_DATE ON AKTBLPTSTRA(EXPIRATION_DATE)
-      `)
-      
-      await pool.request().query(`
-        ALTER TABLE AKTBLPTSTRA
-        ADD CONSTRAINT FK_AKTBLPTSTRA_TRANSFER_ID 
-        FOREIGN KEY (TRANSFER_ID) REFERENCES AKTBLPTSMAS(TRANSFER_ID)
+        CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_EXPIRATION_DATE ON AKTBLPTSTRA(EXPIRATION_DATE) INCLUDE (TRANSFER_ID, GTIN)
       `)
       
       log('✅ AKTBLPTSTRA tablosu oluşturuldu')
@@ -373,87 +363,50 @@ async function savePackageData(packageData) {
       const { transferId, documentNumber, documentDate, sourceGLN, destinationGLN, 
               actionType, shipTo, note, version, products, _rawXML } = packageData
       
-      // transferId'yi string'e dönüştür (API'den number geliyor)
-      const transferIdStr = String(transferId)
+      // transferId'yi BIGINT'e dönüştür
+      const transferIdBigInt = BigInt(transferId)
       
       // Transfer ID'nin zaten kaydedilip kaydedilmediğini kontrol et
       const checkRequest = new sql.Request(transaction)
-      checkRequest.input('transferId', sql.NVarChar(50), transferIdStr)
+      checkRequest.input('transferId', sql.BigInt, transferIdBigInt)
       const checkResult = await checkRequest.query(`
-        SELECT ID FROM AKTBLPTSMAS WHERE TRANSFER_ID = @transferId
+        SELECT TRANSFER_ID FROM AKTBLPTSMAS WHERE TRANSFER_ID = @transferId
       `)
       
       if (checkResult.recordset.length > 0) {
-        console.log(`⚠️ Transfer ID ${transferIdStr} zaten kayıtlı, atlanıyor...`)
+        console.log(`⚠️ Transfer ID ${transferIdBigInt} zaten kayıtlı, atlanıyor...`)
         await transaction.rollback()
         return {
           success: true,
           skipped: true,
-          message: `Paket zaten kayıtlı: ${transferIdStr}`,
-          data: { transferId: transferIdStr }
+          message: `Paket zaten kayıtlı: ${transferIdBigInt}`,
+          data: { transferId: String(transferIdBigInt) }
         }
-        
-        // Güncelleme
-        const updateRequest = new sql.Request(transaction)
-        updateRequest.input('transferId', sql.NVarChar(50), transferIdStr)
-        updateRequest.input('documentNumber', sql.NVarChar(50), documentNumber || null)
-        updateRequest.input('documentDate', sql.Date, documentDate ? new Date(documentDate) : null)
-        updateRequest.input('sourceGLN', sql.NVarChar(50), sourceGLN || null)
-        updateRequest.input('destinationGLN', sql.NVarChar(50), destinationGLN || null)
-        updateRequest.input('actionType', sql.NVarChar(10), actionType || null)
-        updateRequest.input('shipTo', sql.NVarChar(50), shipTo || null)
-        updateRequest.input('note', sql.NVarChar(500), note || null)
-        updateRequest.input('version', sql.NVarChar(10), version || null)
-        updateRequest.input('xmlContent', sql.NVarChar(sql.MAX), _rawXML || null)
-        
-        await updateRequest.query(`
-          UPDATE AKTBLPTSMAS SET
-            DOCUMENT_NUMBER = @documentNumber,
-            DOCUMENT_DATE = @documentDate,
-            SOURCE_GLN = @sourceGLN,
-            DESTINATION_GLN = @destinationGLN,
-            ACTION_TYPE = @actionType,
-            SHIP_TO = @shipTo,
-            NOTE = @note,
-            VERSION = @version,
-            XML_CONTENT = @xmlContent,
-            UPDATED_DATE = GETDATE()
-          WHERE TRANSFER_ID = @transferId
-        `)
-        
-        // Eski transaction kayıtlarını sil
-        const deleteRequest = new sql.Request(transaction)
-        deleteRequest.input('transferId', sql.NVarChar(50), transferIdStr)
-        await deleteRequest.query(`
-          DELETE FROM AKTBLPTSTRA WHERE TRANSFER_ID = @transferId
-        `)
-        
-      } else {
-        // Yeni kayıt
-        console.log(`💾 Transfer ID ${transferIdStr} kaydediliyor...`)
-        
-        const insertRequest = new sql.Request(transaction)
-        insertRequest.input('transferId', sql.NVarChar(50), transferIdStr)
-        insertRequest.input('documentNumber', sql.NVarChar(50), documentNumber || null)
-        insertRequest.input('documentDate', sql.Date, documentDate ? new Date(documentDate) : null)
-        insertRequest.input('sourceGLN', sql.NVarChar(50), sourceGLN || null)
-        insertRequest.input('destinationGLN', sql.NVarChar(50), destinationGLN || null)
-        insertRequest.input('actionType', sql.NVarChar(10), actionType || null)
-        insertRequest.input('shipTo', sql.NVarChar(50), shipTo || null)
-        insertRequest.input('note', sql.NVarChar(500), note || null)
-        insertRequest.input('version', sql.NVarChar(10), version || null)
-        insertRequest.input('xmlContent', sql.NVarChar(sql.MAX), _rawXML || null)
-        
-        await insertRequest.query(`
-          INSERT INTO AKTBLPTSMAS (
-            TRANSFER_ID, DOCUMENT_NUMBER, DOCUMENT_DATE, SOURCE_GLN, DESTINATION_GLN,
-            ACTION_TYPE, SHIP_TO, NOTE, VERSION, XML_CONTENT
-          ) VALUES (
-            @transferId, @documentNumber, @documentDate, @sourceGLN, @destinationGLN,
-            @actionType, @shipTo, @note, @version, @xmlContent
-          )
-        `)
       }
+      
+      // Yeni kayıt
+      console.log(`💾 Transfer ID ${transferIdBigInt} kaydediliyor...`)
+      
+      const insertRequest = new sql.Request(transaction)
+      insertRequest.input('transferId', sql.BigInt, transferIdBigInt)
+      insertRequest.input('documentNumber', sql.VarChar(25), documentNumber ? documentNumber.substring(0, 25) : null)
+      insertRequest.input('documentDate', sql.Date, documentDate ? new Date(documentDate) : null)
+      insertRequest.input('sourceGLN', sql.VarChar(15), sourceGLN ? sourceGLN.substring(0, 15) : null)
+      insertRequest.input('destinationGLN', sql.VarChar(15), destinationGLN ? destinationGLN.substring(0, 15) : null)
+      insertRequest.input('actionType', sql.VarChar(5), actionType ? actionType.substring(0, 5) : null)
+      insertRequest.input('shipTo', sql.VarChar(15), shipTo ? shipTo.substring(0, 15) : null)
+      insertRequest.input('note', sql.VarChar(100), note ? note.substring(0, 100) : null)
+      insertRequest.input('version', sql.VarChar(10), version ? version.substring(0, 10) : null)
+      
+      await insertRequest.query(`
+        INSERT INTO AKTBLPTSMAS (
+          TRANSFER_ID, DOCUMENT_NUMBER, DOCUMENT_DATE, SOURCE_GLN, DESTINATION_GLN,
+          ACTION_TYPE, SHIP_TO, NOTE, VERSION
+        ) VALUES (
+          @transferId, @documentNumber, @documentDate, @sourceGLN, @destinationGLN,
+          @actionType, @shipTo, @note, @version
+        )
+      `)
       
       // Ürünleri ve carrier hiyerarşisini kaydet
       if (products && products.length > 0) {
@@ -461,17 +414,17 @@ async function savePackageData(packageData) {
         
         for (const product of products) {
           const productRequest = new sql.Request(transaction)
-          productRequest.input('transferId', sql.NVarChar(50), transferIdStr)
-          productRequest.input('carrierLabel', sql.NVarChar(100), product.carrierLabel || null)
-          productRequest.input('parentCarrierLabel', sql.NVarChar(100), product.parentCarrierLabel || null)
-          productRequest.input('containerType', sql.NVarChar(10), product.containerType || null)
-          productRequest.input('carrierLevel', sql.Int, product.carrierLevel || null)
-          productRequest.input('gtin', sql.NVarChar(50), product.gtin || null)
-          productRequest.input('serialNumber', sql.NVarChar(100), product.serialNumber || null)
-          productRequest.input('lotNumber', sql.NVarChar(50), product.lotNumber || null)
+          productRequest.input('transferId', sql.BigInt, transferIdBigInt)
+          productRequest.input('carrierLabel', sql.VarChar(25), product.carrierLabel ? product.carrierLabel.substring(0, 25) : null)
+          productRequest.input('parentCarrierLabel', sql.VarChar(25), product.parentCarrierLabel ? product.parentCarrierLabel.substring(0, 25) : null)
+          productRequest.input('containerType', sql.VarChar(5), product.containerType ? product.containerType.substring(0, 5) : null)
+          productRequest.input('carrierLevel', sql.TinyInt, product.carrierLevel || null)
+          productRequest.input('gtin', sql.VarChar(14), product.gtin ? product.gtin.substring(0, 14) : null)
+          productRequest.input('serialNumber', sql.VarChar(25), product.serialNumber ? product.serialNumber.substring(0, 25) : null)
+          productRequest.input('lotNumber', sql.VarChar(15), product.lotNumber ? product.lotNumber.substring(0, 15) : null)
           productRequest.input('expirationDate', sql.Date, product.expirationDate ? new Date(product.expirationDate) : null)
           productRequest.input('productionDate', sql.Date, product.productionDate ? new Date(product.productionDate) : null)
-          productRequest.input('poNumber', sql.NVarChar(50), product.poNumber || null)
+          productRequest.input('poNumber', sql.VarChar(25), product.poNumber ? product.poNumber.substring(0, 25) : null)
           
           await productRequest.query(`
             INSERT INTO AKTBLPTSTRA (
@@ -489,13 +442,13 @@ async function savePackageData(packageData) {
       
       await transaction.commit()
       
-      console.log(`✅ Paket kaydedildi: ${transferIdStr} (${products?.length || 0} ürün)`)
+      console.log(`✅ Paket kaydedildi: ${transferIdBigInt} (${products?.length || 0} ürün)`)
       
       return {
         success: true,
-        message: `Paket kaydedildi: ${transferIdStr}`,
+        message: `Paket kaydedildi: ${transferIdBigInt}`,
         data: {
-          transferId: transferIdStr,
+          transferId: String(transferIdBigInt),
           productCount: products?.length || 0
         }
       }
@@ -528,7 +481,7 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     
     // Master kayıt kontrolü (NETSIS.AKTBLPTSMAS)
     const masterRequest = ptsPool.request()
-    masterRequest.input('transferId', sql.NVarChar(50), String(transferId))
+    masterRequest.input('transferId', sql.BigInt, BigInt(transferId))
     const masterResult = await masterRequest.query(`
       SELECT * FROM AKTBLPTSMAS WHERE TRANSFER_ID = @transferId
     `)
@@ -546,7 +499,7 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     
     // Ürün detaylarını getir (NETSIS.AKTBLPTSTRA)
     const productsRequest = ptsPool.request()
-    productsRequest.input('transferId', sql.NVarChar(50), String(transferId))
+    productsRequest.input('transferId', sql.BigInt, BigInt(transferId))
     const productsResult = await productsRequest.query(`
       SELECT * FROM AKTBLPTSTRA WHERE TRANSFER_ID = @transferId
     `)
@@ -794,7 +747,7 @@ async function getProductsByCarrierLabel(carrierLabel) {
     
     // Önce bu barkodun sistemde olup olmadığını kontrol et
     const checkRequest = pool.request()
-    checkRequest.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    checkRequest.input('carrierLabel', sql.VarChar(25), carrierLabel)
     
     const checkResult = await checkRequest.query(`
       SELECT TOP 1 
@@ -819,7 +772,7 @@ async function getProductsByCarrierLabel(carrierLabel) {
     
     // Recursive CTE ile tüm alt carrier'ları ve ürünleri bul
     const request = pool.request()
-    request.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    request.input('carrierLabel', sql.VarChar(25), carrierLabel)
     
     const result = await request.query(`
       WITH CarrierHierarchy AS (
@@ -978,13 +931,12 @@ async function getCarrierDetails(transferId, carrierLabel) {
     const pool = await getPTSConnection()
     
     const request = pool.request()
-    request.input('transferId', sql.NVarChar(50), transferId)
-    request.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    request.input('transferId', sql.BigInt, BigInt(transferId))
+    request.input('carrierLabel', sql.VarChar(25), carrierLabel)
     
     const result = await request.query(`
       WITH CarrierHierarchy AS (
         SELECT 
-          ID,
           TRANSFER_ID,
           CARRIER_LABEL,
           PARENT_CARRIER_LABEL,
@@ -1003,7 +955,6 @@ async function getCarrierDetails(transferId, carrierLabel) {
         UNION ALL
         
         SELECT 
-          t.ID,
           t.TRANSFER_ID,
           t.CARRIER_LABEL,
           t.PARENT_CARRIER_LABEL,
@@ -1021,7 +972,7 @@ async function getCarrierDetails(transferId, carrierLabel) {
           AND t.TRANSFER_ID = @transferId
       )
       SELECT * FROM CarrierHierarchy
-      ORDER BY DEPTH, CARRIER_LEVEL, ID
+      ORDER BY DEPTH, CARRIER_LEVEL
     `)
     
     return {
@@ -1093,7 +1044,7 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     `
     
     const maxTransferIdRequest = pool.request()
-    maxTransferIdRequest.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    maxTransferIdRequest.input('carrierLabel', sql.VarChar(25), carrierLabel)
     const maxTransferIdResult = await maxTransferIdRequest.query(maxTransferIdQuery)
     
     if (maxTransferIdResult.recordset.length === 0 || !maxTransferIdResult.recordset[0].MAX_TRANSFER_ID) {
@@ -1134,7 +1085,7 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     `
     
     const request = pool.request()
-    request.input('carrierLabel', sql.NVarChar(100), carrierLabel)
+    request.input('carrierLabel', sql.VarChar(25), carrierLabel)
     request.input('maxTransferId', maxTransferId)
     
     const result = await request.query(query)
