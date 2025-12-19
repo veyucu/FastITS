@@ -78,22 +78,22 @@ const PTSDetailPage = () => {
       accessorKey: 'gtin',
       header: 'GTIN',
       enableSorting: true,
-      cell: info => <span className="font-mono font-bold text-blue-900">{info.getValue()}</span>,
+      cell: info => <span className="font-mono font-bold text-primary-400">{info.getValue()}</span>,
       enableGrouping: true,
       aggregatedCell: ({ getValue, row }) => (
         <div className="flex items-center gap-2">
           <button
             onClick={row.getToggleExpandedHandler()}
-            className="p-1 hover:bg-blue-200 rounded transition-all duration-200"
+            className="p-1 hover:bg-dark-600 rounded transition-all duration-200"
           >
             {row.getIsExpanded() ? 
-              <ChevronDown className="w-4 h-4 text-blue-700" /> : 
-              <ChevronRight className="w-4 h-4 text-blue-700" />
+              <ChevronDown className="w-4 h-4 text-primary-400" /> : 
+              <ChevronRight className="w-4 h-4 text-primary-400" />
             }
           </button>
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold text-blue-900 text-sm">{getValue()}</span>
-            <span className="px-2 py-0.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-xs font-bold">
+            <span className="font-mono font-bold text-primary-400 text-sm">{getValue()}</span>
+            <span className="px-2 py-0.5 bg-primary-600/30 text-primary-400 border border-primary-500/30 rounded-full text-xs font-bold">
               {row.subRows.length} Adet
             </span>
           </div>
@@ -174,10 +174,10 @@ const PTSDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-dark-950">
         <div className="text-center">
-          <Package className="w-16 h-16 mx-auto mb-4 text-blue-600 animate-bounce" />
-          <p className="text-lg font-medium text-gray-700">Paket detayları yükleniyor...</p>
+          <Package className="w-16 h-16 mx-auto mb-4 text-primary-500 animate-bounce" />
+          <p className="text-lg font-medium text-slate-300">Paket detayları yükleniyor...</p>
         </div>
       </div>
     )
@@ -185,13 +185,13 @@ const PTSDetailPage = () => {
 
   if (!packageData) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex items-center justify-center h-screen bg-dark-950">
         <div className="text-center">
-          <Package className="w-16 h-16 mx-auto mb-4 text-red-600" />
-          <p className="text-lg font-medium text-gray-700">Paket bulunamadı</p>
+          <Package className="w-16 h-16 mx-auto mb-4 text-rose-500" />
+          <p className="text-lg font-medium text-slate-300">Paket bulunamadı</p>
           <button
             onClick={() => navigate('/pts')}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-500 shadow-lg shadow-primary-600/30"
           >
             Geri Dön
           </button>
@@ -201,44 +201,44 @@ const PTSDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header - Kompakt */}
-      <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg">
+    <div className="flex flex-col h-screen bg-dark-950">
+      {/* Header - Dark Theme */}
+      <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="px-6 py-3">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/pts')}
-              className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors flex-shrink-0"
+              className="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-6 h-6 text-slate-300" />
             </button>
             <div className="flex-1 flex items-center justify-between">
               <div>
-                <h1 className="text-xl font-bold">PTS Paket Detayı</h1>
-                <p className="text-blue-100 text-sm">Transfer ID: {transferId}</p>
+                <h1 className="text-xl font-bold text-slate-100">PTS Paket Detayı</h1>
+                <p className="text-slate-500 text-sm">Transfer ID: {transferId}</p>
               </div>
               <div className="flex items-center gap-4 text-sm">
-                <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold">Belge No:</span> {packageData.DOCUMENT_NUMBER || '-'}
+                <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold text-slate-400">Belge No:</span> <span className="text-slate-200">{packageData.DOCUMENT_NUMBER || '-'}</span>
                 </div>
-                <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold">Belge Tarihi:</span>{' '}
-                  {packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}
+                <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold text-slate-400">Belge Tarihi:</span>{' '}
+                  <span className="text-slate-200">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
                 </div>
-                <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold">Kaynak GLN:</span>{' '}
-                  <span className="font-mono">{packageData.SOURCE_GLN || '-'}</span>
+                <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold text-slate-400">Kaynak GLN:</span>{' '}
+                  <span className="font-mono text-slate-200">{packageData.SOURCE_GLN || '-'}</span>
                   {packageData.SOURCE_GLN_NAME && (
-                    <span className="ml-2 text-yellow-200">
+                    <span className="ml-2 text-amber-400">
                       ({packageData.SOURCE_GLN_NAME}
                       {packageData.SOURCE_GLN_ILCE && ` - ${packageData.SOURCE_GLN_ILCE}`}
                       {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`})
                     </span>
                   )}
                 </div>
-                <div className="bg-white/20 px-3 py-1.5 rounded-lg">
-                  <span className="font-semibold">Hedef GLN:</span>{' '}
-                  <span className="font-mono">{packageData.DESTINATION_GLN || '-'}</span>
+                <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded-lg">
+                  <span className="font-semibold text-slate-400">Hedef GLN:</span>{' '}
+                  <span className="font-mono text-slate-200">{packageData.DESTINATION_GLN || '-'}</span>
                 </div>
               </div>
             </div>
@@ -246,11 +246,11 @@ const PTSDetailPage = () => {
         </div>
       </div>
 
-      {/* TanStack Table */}
+      {/* TanStack Table - Dark Theme */}
       <div className="flex-1 px-6 py-4 overflow-auto table-container">
-        <div className="bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden">
+        <div className="bg-dark-800/60 rounded-xl border border-dark-700 overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white sticky top-0 z-10 shadow-md">
+            <thead className="bg-dark-900/80 text-slate-300 sticky top-0 z-10 border-b border-dark-700">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map(header => (
@@ -261,7 +261,7 @@ const PTSDetailPage = () => {
                       {header.isPlaceholder ? null : (
                         <div
                           className={`flex items-center gap-2 ${
-                            header.column.getCanSort() ? 'cursor-pointer select-none hover:text-yellow-200 transition-colors' : ''
+                            header.column.getCanSort() ? 'cursor-pointer select-none hover:text-primary-400 transition-colors' : ''
                           }`}
                           onClick={header.column.getToggleSortingHandler()}
                         >
@@ -269,9 +269,9 @@ const PTSDetailPage = () => {
                           {header.column.getCanSort() && (
                             <span className="flex flex-col">
                               {header.column.getIsSorted() === 'asc' ? (
-                                <ArrowUp className="w-4 h-4 text-yellow-300" />
+                                <ArrowUp className="w-4 h-4 text-primary-400" />
                               ) : header.column.getIsSorted() === 'desc' ? (
-                                <ArrowDown className="w-4 h-4 text-yellow-300" />
+                                <ArrowDown className="w-4 h-4 text-primary-400" />
                               ) : (
                                 <ArrowUpDown className="w-4 h-4 opacity-50" />
                               )}
@@ -284,16 +284,16 @@ const PTSDetailPage = () => {
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-dark-700">
               {table.getRowModel().rows.map(row => (
                 <tr
                   key={row.id}
                   className={`
                     ${row.getIsGrouped() 
-                      ? 'tanstack-table-row-group bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 border-l-4 border-blue-500' 
-                      : 'tanstack-table-row-detail hover:bg-gray-50 border-l-4 border-transparent hover:border-blue-300 hover:shadow-sm'
+                      ? 'tanstack-table-row-group bg-dark-700/50 hover:bg-dark-700 border-l-4 border-primary-500' 
+                      : 'tanstack-table-row-detail hover:bg-dark-700/30 border-l-4 border-transparent hover:border-primary-500/50'
                     }
-                    transition-all duration-200
+                    transition-all duration-200 text-slate-200
                   `}
                 >
                   {row.getVisibleCells().map((cell, index) => (
@@ -317,20 +317,20 @@ const PTSDetailPage = () => {
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gradient-to-r from-gray-100 to-gray-200 border-t-2 border-gray-300">
+            <tfoot className="bg-dark-900/80 border-t-2 border-primary-500/30">
               <tr>
                 <td colSpan={table.getVisibleFlatColumns().length} className="px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-6">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-700">Toplam Satır:</span>
-                        <span className="px-3 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full text-sm font-bold shadow-md">
+                        <span className="text-sm font-semibold text-slate-400">Toplam Satır:</span>
+                        <span className="px-3 py-1 bg-primary-500/20 text-primary-400 border border-primary-500/30 rounded-full text-sm font-bold">
                           {products.length}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-700">Kalem:</span>
-                        <span className="px-3 py-1 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-full text-sm font-bold shadow-md">
+                        <span className="text-sm font-semibold text-slate-400">Kalem:</span>
+                        <span className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-sm font-bold">
                           {new Set(products.map(p => p.gtin)).size}
                         </span>
                       </div>

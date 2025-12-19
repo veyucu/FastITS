@@ -48,14 +48,14 @@ const DocumentsPage = () => {
   const [serverStatus, setServerStatus] = useState('checking') // checking, online, offline
   const [isInitialLoad, setIsInitialLoad] = useState(true) // İlk yükleme kontrolü
 
-  // Belge Tipi Gösterimi
+  // Belge Tipi Gösterimi - Dark Theme
   const DocTypeRenderer = ({ value }) => {
     const types = {
-      '6': { text: 'Sipariş', color: 'bg-purple-100 text-purple-700' },
-      '1': { text: 'Satış Faturası', color: 'bg-green-100 text-green-700' },
-      '2': { text: 'Alış Faturası', color: 'bg-orange-100 text-orange-700' }
+      '6': { text: 'Sipariş', color: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' },
+      '1': { text: 'Satış Faturası', color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' },
+      '2': { text: 'Alış Faturası', color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' }
     }
-    const type = types[value] || { text: 'Bilinmeyen', color: 'bg-gray-100 text-gray-700' }
+    const type = types[value] || { text: 'Bilinmeyen', color: 'bg-slate-500/20 text-slate-400 border border-slate-500/30' }
     return (
       <span className={`px-2 py-0.5 rounded text-xs font-medium ${type.color}`}>
         {type.text}
@@ -63,20 +63,20 @@ const DocumentsPage = () => {
     )
   }
 
-  // Badge Renderer - Sayısal değerler için
+  // Badge Renderer - Dark Theme
   const BadgeRenderer = ({ value, type = 'default' }) => {
     const styles = {
-      kalem: 'bg-slate-100 text-slate-700 border border-slate-300',
-      miktar: 'bg-blue-100 text-blue-700 border border-blue-300',
-      okutulan: 'bg-green-100 text-green-700 border border-green-300',
-      kalan: 'bg-orange-100 text-orange-700 border border-orange-300',
-      default: 'bg-gray-100 text-gray-700 border border-gray-300'
+      kalem: 'bg-slate-500/20 text-slate-300 border border-slate-500/30',
+      miktar: 'bg-primary-500/20 text-primary-400 border border-primary-500/30',
+      okutulan: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+      kalan: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+      default: 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
     }
     
     // Kalan sütunu için özel gösterim
     if (type === 'kalan' && (value === 0 || value === '0')) {
       return (
-        <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-bold bg-green-100 text-green-700">
+        <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
           ✓
         </span>
       )
@@ -456,29 +456,29 @@ const DocumentsPage = () => {
   }, [rowData])
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header - Tek Satır */}
-      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
+    <div className="flex flex-col h-screen bg-dark-950">
+      {/* Header - Dark Theme */}
+      <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="px-6 py-3">
           <div className="flex items-center justify-between gap-4">
             {/* Sol - Başlık */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/')}
-                className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center hover:bg-gray-700 transition-colors shadow-lg hover:shadow-xl"
+                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
                 title="Ana Menü"
               >
-                <Home className="w-5 h-5 text-white" />
+                <Home className="w-5 h-5 text-slate-300" />
               </button>
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30">
                 <Package className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-lg font-bold text-gray-900">Ürün Hazırlama</h1>
+              <h1 className="text-lg font-bold text-slate-100">Ürün Hazırlama</h1>
             </div>
             
-            {/* Orta - İstatistikler (Küçük) */}
+            {/* Orta - İstatistikler */}
             <div className="flex items-center gap-2">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded px-3 py-1.5 text-white shadow-sm">
+              <div className="bg-primary-600/20 border border-primary-500/30 rounded px-3 py-1.5 text-primary-400">
                 <div className="flex items-center gap-2">
                   <Package className="w-3.5 h-3.5" />
                   <div className="flex items-baseline gap-1">
@@ -488,7 +488,7 @@ const DocumentsPage = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded px-3 py-1.5 text-white shadow-sm">
+              <div className="bg-emerald-600/20 border border-emerald-500/30 rounded px-3 py-1.5 text-emerald-400">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="w-3.5 h-3.5" />
                   <div className="flex items-baseline gap-1">
@@ -498,7 +498,7 @@ const DocumentsPage = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded px-3 py-1.5 text-white shadow-sm">
+              <div className="bg-violet-600/20 border border-violet-500/30 rounded px-3 py-1.5 text-violet-400">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-3.5 h-3.5" />
                   <div className="flex items-baseline gap-1">
@@ -508,7 +508,7 @@ const DocumentsPage = () => {
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-yellow-500 to-orange-500 rounded px-3 py-1.5 text-white shadow-sm">
+              <div className="bg-amber-600/20 border border-amber-500/30 rounded px-3 py-1.5 text-amber-400">
                 <div className="flex items-center gap-2">
                   <Clock className="w-3.5 h-3.5" />
                   <div className="flex items-baseline gap-1">
@@ -522,13 +522,13 @@ const DocumentsPage = () => {
             {/* Sağ - Server Status */}
             <div>
               {serverStatus === 'online' && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                <span className="flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-medium">
                   <Wifi className="w-3 h-3" />
                   Bağlı
                 </span>
               )}
               {serverStatus === 'offline' && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded text-xs font-medium">
+                <span className="flex items-center gap-1 px-2 py-1 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-xs font-medium">
                   <WifiOff className="w-3 h-3" />
                   Bağlantı Yok
                 </span>
@@ -538,115 +538,115 @@ const DocumentsPage = () => {
         </div>
       </div>
 
-      {/* Filters - Compact */}
-      <div className="px-6 py-2 bg-white border-b border-gray-200">
+      {/* Filters - Dark Theme */}
+      <div className="px-6 py-2 bg-dark-800/50 border-b border-dark-700">
         <div className="flex flex-wrap gap-2 items-center">
-          {/* Belge Tipi Filtreleri - Compact */}
+          {/* Belge Tipi Filtreleri */}
           <div className="flex gap-1">
             <button
               onClick={() => setDocTypeFilter('all')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold shadow-lg hover:shadow-xl transition-all ${
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
                 docTypeFilter === 'all'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
               }`}
             >
               Tümü
             </button>
             <button
               onClick={() => setDocTypeFilter('6')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold shadow-lg hover:shadow-xl transition-all ${
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
                 docTypeFilter === '6'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
               }`}
             >
               Sipariş
             </button>
             <button
               onClick={() => setDocTypeFilter('1')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold shadow-lg hover:shadow-xl transition-all ${
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
                 docTypeFilter === '1'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
               }`}
             >
               Satış
             </button>
             <button
               onClick={() => setDocTypeFilter('2')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold shadow-lg hover:shadow-xl transition-all ${
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
                 docTypeFilter === '2'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
               }`}
             >
               Alış
             </button>
           </div>
 
-          <div className="h-6 w-px bg-gray-300"></div>
+          <div className="h-6 w-px bg-dark-600"></div>
 
           {/* Okutulanları Gizle */}
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded cursor-pointer hover:bg-gray-100 transition-colors">
+          <label className="flex items-center gap-2 px-3 py-1.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600">
             <input
               type="checkbox"
               checked={hideCompleted}
               onChange={(e) => setHideCompleted(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              className="w-4 h-4 text-primary-600 rounded bg-dark-800 border-dark-500 focus:ring-2 focus:ring-primary-500"
             />
-            <span className="text-sm font-medium text-gray-700">Okutulanları Gizle</span>
+            <span className="text-sm font-medium text-slate-300">Okutulanları Gizle</span>
           </label>
 
-          <div className="h-6 w-px bg-gray-300"></div>
+          <div className="h-6 w-px bg-dark-600"></div>
 
           {/* Tarih Filtresi */}
           <div className="flex items-center gap-1">
             <button
               onClick={goToPreviousDate}
-              className="p-1.5 hover:bg-gray-100 rounded shadow-lg hover:shadow-xl transition-all"
+              className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
               title="Önceki Gün"
             >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
+              <ChevronLeft className="w-4 h-4 text-slate-400" />
             </button>
             
             <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               <input
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded shadow-lg focus:ring-1 focus:ring-blue-500 bg-white"
+                className="pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
 
             <button
               onClick={goToNextDate}
-              className="p-1.5 hover:bg-gray-100 rounded shadow-lg hover:shadow-xl transition-all"
+              className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
               title="Sonraki Gün"
             >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
+              <ChevronRight className="w-4 h-4 text-slate-400" />
             </button>
           </div>
 
-          <div className="h-6 w-px bg-gray-300"></div>
+          <div className="h-6 w-px bg-dark-600"></div>
 
           {/* Arama ve Diğer Filtreler */}
           <div className="flex flex-1 gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder="Belge no, cari, şehir ara..."
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded shadow-lg focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
               />
             </div>
 
             <button
               onClick={handleReset}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-600 text-white rounded shadow-lg hover:shadow-xl hover:bg-gray-700 transition-all"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-dark-700 text-slate-300 rounded hover:bg-dark-600 transition-all border border-dark-600"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               Sıfırla
@@ -655,7 +655,7 @@ const DocumentsPage = () => {
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded shadow-lg hover:shadow-xl hover:bg-green-700 transition-all disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               Yenile
@@ -663,7 +663,7 @@ const DocumentsPage = () => {
 
             <button
               onClick={onExportExcel}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg hover:shadow-xl hover:bg-emerald-700 transition-all"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all"
             >
               📊 Excel
             </button>
@@ -671,12 +671,12 @@ const DocumentsPage = () => {
         </div>
       </div>
 
-      {/* Loading & Error States */}
+      {/* Loading & Error States - Dark Theme */}
       {loading && rowData.length === 0 && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-gray-200 border-t-primary-600 rounded-full mx-auto mb-4" />
-            <p className="text-gray-600">Siparişler yükleniyor...</p>
+            <div className="animate-spin w-12 h-12 border-4 border-dark-700 border-t-primary-500 rounded-full mx-auto mb-4" />
+            <p className="text-slate-400">Siparişler yükleniyor...</p>
           </div>
         </div>
       )}
@@ -684,12 +684,12 @@ const DocumentsPage = () => {
       {error && !loading && (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center max-w-md">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Bağlantı Hatası</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-100 mb-2">Bağlantı Hatası</h3>
+            <p className="text-slate-400 mb-4">{error}</p>
             <button
               onClick={handleRefresh}
-              className="px-6 py-2 bg-primary-600 text-white rounded-lg shadow-lg hover:shadow-xl hover:bg-primary-700 transition-all"
+              className="px-6 py-2 bg-primary-600 text-white rounded-lg shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all"
             >
               Tekrar Dene
             </button>
@@ -697,10 +697,10 @@ const DocumentsPage = () => {
         </div>
       )}
 
-      {/* AG Grid */}
+      {/* AG Grid - Dark Theme */}
       {!loading && !error && (
-        <div className="flex-1 px-6 py-2 bg-gray-50">
-          <div className="ag-theme-alpine h-full rounded-lg shadow-lg overflow-hidden border border-gray-200">
+        <div className="flex-1 px-6 py-2">
+          <div className="ag-theme-alpine h-full rounded-xl shadow-dark-lg overflow-hidden border border-dark-700">
             <AgGridReact
               ref={gridRef}
               onGridReady={(params) => {
@@ -765,7 +765,7 @@ const DocumentsPage = () => {
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
             onRowClicked={onRowClicked}
-            rowClass="cursor-pointer hover:bg-gray-50"
+            rowClass="cursor-pointer"
             animateRows={true}
             enableCellTextSelection={true}
             suppressCellFocus={true}

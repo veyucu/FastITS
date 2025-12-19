@@ -47,49 +47,56 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-dark-950">
+      {/* Background Effects */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-radial from-primary-500/5 to-transparent rounded-full" />
+      </div>
+
+      <div className="relative max-w-md w-full space-y-8 animate-fadeIn">
         {/* Logo ve Başlık */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl shadow-xl mb-6 transform hover:scale-105 transition-transform">
-            <Package className="w-10 h-10 text-white" />
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary-500 to-cyan-600 rounded-2xl shadow-2xl shadow-primary-500/30 mb-6 transform hover:scale-105 transition-transform animate-glow">
+            <Package className="w-12 h-12 text-white" />
           </div>
-          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
-            AtakodITS
+          <h1 className="text-4xl font-extrabold text-white tracking-tight">
+            Atakod<span className="text-primary-400">ITS</span>
           </h1>
-          <p className="mt-3 text-lg text-gray-600">
+          <p className="mt-3 text-lg text-slate-400">
             Ürün Hazırlama Sistemi
           </p>
         </div>
 
         {/* Login Formu */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <div className="bg-dark-800/80 backdrop-blur-xl rounded-2xl shadow-dark-xl p-8 border border-dark-700/50">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Hata Mesajı */}
             {error && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg animate-shake">
+              <div className="bg-rose-500/10 border-l-4 border-rose-500 p-4 rounded-r-lg animate-shake">
                 <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
-                  <span className="text-sm font-medium text-red-800">{error}</span>
+                  <AlertCircle className="w-5 h-5 text-rose-400 mr-3 flex-shrink-0" />
+                  <span className="text-sm font-medium text-rose-300">{error}</span>
                 </div>
               </div>
             )}
 
             {/* Kullanıcı Adı */}
             <div>
-              <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="username" className="block text-sm font-semibold text-slate-300 mb-2">
                 Kullanıcı Adı
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+                  <User className="h-5 w-5 text-slate-500 group-focus-within:text-primary-400 transition-colors" />
                 </div>
                 <input
                   id="username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="block w-full pl-12 pr-4 py-3.5 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-12 pr-4 py-3.5 bg-dark-900/50 border-2 border-dark-600 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                   placeholder="admin"
                   autoComplete="username"
                   disabled={loading}
@@ -99,19 +106,19 @@ const LoginPage = () => {
 
             {/* Şifre */}
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-2">
                 Şifre
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+                  <Lock className="h-5 w-5 text-slate-500 group-focus-within:text-primary-400 transition-colors" />
                 </div>
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-12 pr-12 py-3.5 border-2 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="block w-full pl-12 pr-12 py-3.5 bg-dark-900/50 border-2 border-dark-600 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                   placeholder="••••••••"
                   autoComplete="current-password"
                   disabled={loading}
@@ -123,9 +130,9 @@ const LoginPage = () => {
                   disabled={loading}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <EyeOff className="h-5 w-5 text-slate-500 hover:text-slate-300" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    <Eye className="h-5 w-5 text-slate-500 hover:text-slate-300" />
                   )}
                 </button>
               </div>
@@ -135,7 +142,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full flex items-center justify-center gap-3 py-3.5 px-4 bg-gradient-to-r from-primary-600 to-cyan-600 hover:from-primary-500 hover:to-cyan-500 text-white font-semibold rounded-xl shadow-lg shadow-primary-600/30 hover:shadow-primary-500/40 transform hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? (
                 <>
@@ -153,7 +160,7 @@ const LoginPage = () => {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-gray-500 text-sm">
+        <p className="text-center text-slate-600 text-sm">
           © 2025 AtakodITS. Tüm hakları saklıdır.
         </p>
       </div>

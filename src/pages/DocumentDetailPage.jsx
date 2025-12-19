@@ -1974,55 +1974,55 @@ const DocumentDetailPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header - Ultra Compact */}
-      <div className="bg-gradient-to-r from-white to-gray-50 border-b border-primary-100 shadow-sm">
+    <div className="flex flex-col h-screen bg-dark-950">
+      {/* Header - Dark Theme */}
+      <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="px-4 py-1.5">
           <div className="flex items-center justify-between">
             {/* Left - Back Button & Document Info */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/documents')}
-                className="w-8 h-8 flex items-center justify-center rounded bg-gray-600 hover:bg-gray-700 transition-all shadow-lg hover:shadow-xl"
+                className="w-8 h-8 flex items-center justify-center rounded bg-dark-700 hover:bg-dark-600 transition-all border border-dark-600"
                 title="Geri Dön"
               >
-                <ArrowLeft className="w-5 h-5 text-white" />
+                <ArrowLeft className="w-5 h-5 text-slate-300" />
               </button>
-              <div className={`px-3 py-1 rounded-lg border shadow-sm ${
+              <div className={`px-3 py-1 rounded-lg border ${
                 order.docType === '6' 
-                  ? 'bg-purple-100 border-purple-300' 
+                  ? 'bg-violet-500/20 border-violet-500/30' 
                   : order.docType === '1' 
-                  ? 'bg-green-100 border-green-300' 
-                  : 'bg-orange-100 border-orange-300'
+                  ? 'bg-emerald-500/20 border-emerald-500/30' 
+                  : 'bg-amber-500/20 border-amber-500/30'
               }`}>
                 <p className={`text-[9px] font-medium leading-tight ${
                   order.docType === '6' 
-                    ? 'text-purple-700' 
+                    ? 'text-violet-400' 
                     : order.docType === '1' 
-                    ? 'text-green-700' 
-                    : 'text-orange-700'
+                    ? 'text-emerald-400' 
+                    : 'text-amber-400'
                 }`}>
                   {getDocumentTypeName(order.docType, order.tipi)}
                 </p>
                 <h1 className={`text-sm font-bold leading-tight ${
                   order.docType === '6' 
-                    ? 'text-purple-900' 
+                    ? 'text-violet-300' 
                     : order.docType === '1' 
-                    ? 'text-green-900' 
-                    : 'text-orange-900'
+                    ? 'text-emerald-300' 
+                    : 'text-amber-300'
                 }`}>{order.orderNo}</h1>
               </div>
             </div>
             
-            {/* Center - Customer Info Cards - Ultra Compact */}
+            {/* Center - Customer Info Cards - Dark Theme */}
             <div className="flex items-center gap-1.5">
               {/* 1. Tarih */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3 h-3 text-orange-600" />
+                  <Calendar className="w-3 h-3 text-amber-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Tarih</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                    <p className="text-[9px] text-slate-500 leading-tight">Tarih</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">
                       {order.orderDate ? new Date(order.orderDate).toLocaleDateString('tr-TR') : '-'}
                     </p>
                   </div>
@@ -2030,34 +2030,34 @@ const DocumentDetailPage = () => {
               </div>
 
               {/* 2. Cari Kodu */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <Hash className="w-3 h-3 text-purple-600" />
+                  <Hash className="w-3 h-3 text-violet-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Cari Kodu</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerCode}</p>
+                    <p className="text-[9px] text-slate-500 leading-tight">Cari Kodu</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">{order.customerCode}</p>
                   </div>
                 </div>
               </div>
 
               {/* 3. Cari İsim */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <User className="w-3 h-3 text-blue-600" />
+                  <User className="w-3 h-3 text-primary-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">Cari İsim</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">{order.customerName}</p>
+                    <p className="text-[9px] text-slate-500 leading-tight">Cari İsim</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">{order.customerName}</p>
                   </div>
                 </div>
               </div>
 
               {/* 4. İlçe/Şehir */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <MapPin className="w-3 h-3 text-green-600" />
+                  <MapPin className="w-3 h-3 text-emerald-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">İlçe / Şehir</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                    <p className="text-[9px] text-slate-500 leading-tight">İlçe / Şehir</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">
                       {order.district ? `${order.district} / ${order.city}` : order.city}
                     </p>
                   </div>
@@ -2065,12 +2065,12 @@ const DocumentDetailPage = () => {
               </div>
 
               {/* 5. GLN No */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <FileText className="w-3 h-3 text-teal-600" />
+                  <FileText className="w-3 h-3 text-cyan-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">GLN No</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                    <p className="text-[9px] text-slate-500 leading-tight">GLN No</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">
                       {order.email || '-'}
                     </p>
                   </div>
@@ -2078,12 +2078,12 @@ const DocumentDetailPage = () => {
               </div>
 
               {/* 6. UTS No */}
-              <div className="bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-sm">
+              <div className="bg-dark-800/80 px-2.5 py-1 rounded-lg border border-dark-700">
                 <div className="flex items-center gap-1.5">
-                  <FileText className="w-3 h-3 text-indigo-600" />
+                  <FileText className="w-3 h-3 text-indigo-400" />
                   <div>
-                    <p className="text-[9px] text-gray-500 leading-tight">UTS No</p>
-                    <p className="text-sm font-bold text-gray-900 leading-tight">
+                    <p className="text-[9px] text-slate-500 leading-tight">UTS No</p>
+                    <p className="text-sm font-bold text-slate-200 leading-tight">
                       {order.utsNo || '-'}
                     </p>
                   </div>
@@ -2091,13 +2091,13 @@ const DocumentDetailPage = () => {
               </div>
             </div>
             
-            {/* Right - Completion - Ultra Compact */}
-            <div className="bg-gradient-to-br from-primary-500 to-primary-600 px-3 py-1 rounded-lg shadow-md">
+            {/* Right - Completion */}
+            <div className="bg-primary-600/30 border border-primary-500/30 px-3 py-1 rounded-lg">
               <div className="flex items-center gap-2">
-                <div className="text-xl font-bold text-white leading-tight">{completionPercentage}%</div>
-                <div className="w-12 bg-white/20 rounded-full h-1.5 overflow-hidden">
+                <div className="text-xl font-bold text-primary-400 leading-tight">{completionPercentage}%</div>
+                <div className="w-12 bg-dark-700 rounded-full h-1.5 overflow-hidden">
                   <div 
-                    className="h-full bg-white transition-all duration-500"
+                    className="h-full bg-primary-500 transition-all duration-500"
                     style={{ width: `${completionPercentage}%` }}
                   />
                 </div>
@@ -2107,37 +2107,36 @@ const DocumentDetailPage = () => {
         </div>
       </div>
 
-      {/* Barcode Scanner - Enhanced & Prominent */}
-      <div className={`transition-all duration-300 ${
+      {/* Barcode Scanner - Dark Theme */}
+      <div className={`transition-all duration-300 border-b ${
         deleteMode && koliMode
-          ? 'bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600'
+          ? 'bg-gradient-to-r from-amber-600/30 via-orange-600/30 to-amber-600/30 border-amber-500/30'
           : deleteMode
-          ? 'bg-gradient-to-r from-red-500 via-red-600 to-red-700'
+          ? 'bg-gradient-to-r from-rose-600/30 via-red-600/30 to-rose-600/30 border-rose-500/30'
           : koliMode
-          ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600'
-          : 'bg-gradient-to-r from-primary-500 to-primary-600'
+          ? 'bg-gradient-to-r from-emerald-600/30 via-teal-600/30 to-emerald-600/30 border-emerald-500/30'
+          : 'bg-gradient-to-r from-primary-600/30 via-cyan-600/30 to-primary-600/30 border-primary-500/30'
       }`}>
         <div className="px-6 py-3">
           <form onSubmit={handleBarcodeScan}>
             <div className="flex gap-2 items-center">
               {/* Silme Modu Checkbox */}
               <div className="flex items-center">
-                <label className={`flex items-center gap-2 cursor-pointer backdrop-blur-sm px-3 py-1.5 rounded shadow-lg hover:shadow-xl transition-all ${
+                <label className={`flex items-center gap-2 cursor-pointer backdrop-blur-sm px-3 py-1.5 rounded transition-all border ${
                   deleteMode 
-                    ? 'bg-white text-red-600 ring-2 ring-white/50' 
-                    : 'bg-white/20 text-white hover:bg-white/30'
+                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 ring-2 ring-rose-500/30' 
+                    : 'bg-dark-700/50 text-slate-300 border-dark-600 hover:bg-dark-600/50'
                 }`}>
                   <input
                     type="checkbox"
                     checked={deleteMode}
                     onChange={(e) => {
                       setDeleteMode(e.target.checked)
-                      // Checkbox değiştikten sonra barkod input'una focus et
                       setTimeout(() => {
                         barcodeInputRef.current?.focus()
                       }, 0)
                     }}
-                    className="w-4 h-4 cursor-pointer accent-red-600"
+                    className="w-4 h-4 cursor-pointer accent-rose-500"
                   />
                   <span className="font-semibold text-sm">🗑️ Sil</span>
                 </label>
@@ -2145,22 +2144,21 @@ const DocumentDetailPage = () => {
               
               {/* Koli Modu Checkbox */}
               <div className="flex items-center">
-                <label className={`flex items-center gap-2 cursor-pointer backdrop-blur-sm px-3 py-1.5 rounded shadow-lg hover:shadow-xl transition-all ${
+                <label className={`flex items-center gap-2 cursor-pointer backdrop-blur-sm px-3 py-1.5 rounded transition-all border ${
                   koliMode 
-                    ? 'bg-white text-emerald-600 ring-2 ring-white/50' 
-                    : 'bg-white/20 text-white hover:bg-white/30'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 ring-2 ring-emerald-500/30' 
+                    : 'bg-dark-700/50 text-slate-300 border-dark-600 hover:bg-dark-600/50'
                 }`}>
                   <input
                     type="checkbox"
                     checked={koliMode}
                     onChange={(e) => {
                       setKoliMode(e.target.checked)
-                      // Checkbox değiştikten sonra barkod input'una focus et
                       setTimeout(() => {
                         barcodeInputRef.current?.focus()
                       }, 0)
                     }}
-                    className="w-4 h-4 cursor-pointer accent-emerald-600"
+                    className="w-4 h-4 cursor-pointer accent-emerald-500"
                   />
                   <span className="font-semibold text-sm">📦 Koli</span>
                 </label>
@@ -2169,12 +2167,12 @@ const DocumentDetailPage = () => {
               <div className="flex-1 relative">
                 <Barcode className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 transition-all ${
                   deleteMode && koliMode
-                    ? 'text-orange-600'
+                    ? 'text-amber-400'
                     : deleteMode
-                    ? 'text-red-600'
+                    ? 'text-rose-400'
                     : koliMode
-                    ? 'text-emerald-600'
-                    : 'text-gray-400'
+                    ? 'text-emerald-400'
+                    : 'text-slate-500'
                 }`} />
                 <input
                   ref={barcodeInputRef}
@@ -2190,14 +2188,14 @@ const DocumentDetailPage = () => {
                       ? "📦 Koli barkodu okutun..."
                       : "📱 Karekod veya barkod okutun..."
                   }
-                  className={`w-full pl-14 pr-4 py-2 text-xl font-mono font-bold rounded-lg shadow-2xl focus:outline-none transition-all ${
+                  className={`w-full pl-14 pr-4 py-2 text-xl font-mono font-bold rounded-lg focus:outline-none transition-all ${
                     deleteMode && koliMode
-                      ? 'bg-white text-orange-700 border-4 border-orange-500 placeholder-orange-400 focus:ring-4 focus:ring-orange-300'
+                      ? 'bg-dark-800 text-amber-300 border-2 border-amber-500/50 placeholder-amber-500/50 focus:ring-2 focus:ring-amber-500/30'
                       : deleteMode 
-                      ? 'bg-white text-red-700 border-4 border-red-500 placeholder-red-400 focus:ring-4 focus:ring-red-300'
+                      ? 'bg-dark-800 text-rose-300 border-2 border-rose-500/50 placeholder-rose-500/50 focus:ring-2 focus:ring-rose-500/30'
                       : koliMode
-                      ? 'bg-white text-emerald-700 border-4 border-emerald-500 placeholder-emerald-400 focus:ring-4 focus:ring-emerald-300'
-                      : 'bg-white text-gray-900 border-4 border-white placeholder-gray-400 focus:ring-4 focus:ring-blue-300'
+                      ? 'bg-dark-800 text-emerald-300 border-2 border-emerald-500/50 placeholder-emerald-500/50 focus:ring-2 focus:ring-emerald-500/30'
+                      : 'bg-dark-800 text-slate-100 border-2 border-dark-600 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500'
                   }`}
                   autoComplete="off"
                 />
@@ -2209,7 +2207,7 @@ const DocumentDetailPage = () => {
                 <button
                   type="button"
                   onClick={handleBarcodeScan}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-red-600 text-white hover:bg-red-700"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-rose-600 text-white hover:bg-rose-500 shadow-lg shadow-rose-600/30"
                 >
                   Sil
                 </button>
@@ -2218,7 +2216,7 @@ const DocumentDetailPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowBulkScanModal(true)}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-white/90 text-primary-600 hover:bg-white border-2 border-white/50"
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-dark-700 text-slate-200 hover:bg-dark-600 border border-dark-600"
                     title="Toplu ITS karekod okutma"
                   >
                     📋 Toplu Karekod
@@ -2226,7 +2224,7 @@ const DocumentDetailPage = () => {
                   <button
                     type="button"
                     onClick={fetchDocument}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-white/90 text-primary-600 hover:bg-white border-2 border-white/50"
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-dark-700 text-slate-200 hover:bg-dark-600 border border-dark-600"
                     title="Grid'i yenile"
                   >
                     🔄 Yenile
@@ -2237,25 +2235,41 @@ const DocumentDetailPage = () => {
           </form>
         </div>
         
-        {/* Message Strip - Enhanced with Mode Colors */}
-        <div className={`px-6 py-2 transition-all duration-300 shadow-inner ${
+        {/* Message Strip - Dark Theme */}
+        <div className={`px-6 py-2 transition-all duration-300 ${
           message 
             ? message.type === 'success' 
-              ? 'bg-green-600' 
+              ? 'bg-emerald-600/30 border-t border-emerald-500/30' 
               : message.type === 'error' 
-              ? 'bg-red-600' 
+              ? 'bg-rose-600/30 border-t border-rose-500/30' 
               : message.type === 'info'
-              ? 'bg-blue-600'
-              : 'bg-yellow-600'
+              ? 'bg-primary-600/30 border-t border-primary-500/30'
+              : 'bg-amber-600/30 border-t border-amber-500/30'
             : deleteMode && koliMode
-            ? 'bg-orange-600'
+            ? 'bg-amber-600/20 border-t border-amber-500/30'
             : deleteMode 
-            ? 'bg-red-700'
+            ? 'bg-rose-600/20 border-t border-rose-500/30'
             : koliMode
-            ? 'bg-emerald-700'
-            : 'bg-primary-700'
+            ? 'bg-emerald-600/20 border-t border-emerald-500/30'
+            : 'bg-dark-800/50 border-t border-dark-700'
         }`}>
-          <p className="text-white font-bold text-center text-base h-6 leading-6 overflow-hidden text-ellipsis whitespace-nowrap">
+          <p className={`font-bold text-center text-base h-6 leading-6 overflow-hidden text-ellipsis whitespace-nowrap ${
+            message 
+              ? message.type === 'success' 
+                ? 'text-emerald-400' 
+                : message.type === 'error' 
+                ? 'text-rose-400' 
+                : message.type === 'info'
+                ? 'text-primary-400'
+                : 'text-amber-400'
+              : deleteMode && koliMode
+              ? 'text-amber-400'
+              : deleteMode 
+              ? 'text-rose-400'
+              : koliMode
+              ? 'text-emerald-400'
+              : 'text-slate-400'
+          }`}>
             {message 
               ? message.text 
               : deleteMode && koliMode
@@ -2269,9 +2283,9 @@ const DocumentDetailPage = () => {
         </div>
       </div>
 
-      {/* AG Grid */}
+      {/* AG Grid - Dark Theme */}
       <div className="flex-1 px-6 py-4">
-        <div className="ag-theme-alpine h-full rounded-lg shadow-lg overflow-hidden border border-gray-200">
+        <div className="ag-theme-alpine h-full rounded-xl shadow-dark-lg overflow-hidden border border-dark-700">
           <AgGridReact
             rowData={items}
             columnDefs={columnDefs}

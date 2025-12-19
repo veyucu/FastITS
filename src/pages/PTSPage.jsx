@@ -6,12 +6,12 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import apiService from '../services/apiService'
 
-// Badge Renderer - Sayısal değerler için
+// Badge Renderer - Dark Theme
 const BadgeRenderer = ({ value, type = 'default' }) => {
   const styles = {
-    kalem: 'bg-blue-100 text-blue-700 border border-blue-300',
-    adet: 'bg-green-100 text-green-700 border border-green-300',
-    default: 'bg-gray-100 text-gray-700 border border-gray-300'
+    kalem: 'bg-primary-500/20 text-primary-400 border border-primary-500/30',
+    adet: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
+    default: 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
   }
   
   if (!value && value !== 0) return null
@@ -366,34 +366,34 @@ const PTSPage = () => {
   ], [])
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-gray-200">
+    <div className="flex flex-col h-screen bg-dark-950">
+      {/* Header - Dark Theme */}
+      <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="px-6 py-3">
           <div className="flex items-center gap-4">
             {/* Sol - Başlık ve Arama */}
             <div className="flex items-center gap-3">
               <button
                 onClick={() => navigate('/')}
-                className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center hover:bg-gray-700 transition-colors shadow-lg hover:shadow-xl"
+                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
                 title="Ana Menü"
               >
-                <Home className="w-5 h-5 text-white" />
+                <Home className="w-5 h-5 text-slate-300" />
               </button>
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center">
+              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30">
                 <Truck className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-lg font-bold text-gray-900">PTS</h1>
+              <h1 className="text-lg font-bold text-slate-100">PTS</h1>
               
               {/* Arama Input */}
               <div className="relative w-96 ml-4">
-                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Transfer ID, Belge No, Source GLN veya Cari İsim..."
-                  className="w-full pl-8 pr-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full pl-8 pr-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 />
               </div>
             </div>
@@ -406,7 +406,7 @@ const PTSPage = () => {
                 type="button"
                 onClick={handleSearchByDate}
                 disabled={loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded shadow-lg hover:shadow-xl hover:bg-green-700 transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
               >
                 📥 İndir
               </button>
@@ -417,15 +417,15 @@ const PTSPage = () => {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
-                <span className="text-gray-400 font-bold">→</span>
+                <span className="text-slate-500 font-bold">→</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
               </div>
@@ -434,7 +434,7 @@ const PTSPage = () => {
               <select
                 value={dateFilterType}
                 onChange={(e) => setDateFilterType(e.target.value)}
-                className="px-2 py-1.5 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 disabled={loading}
               >
                 <option value="created">Kayıt Tarihi</option>
@@ -446,7 +446,7 @@ const PTSPage = () => {
                 type="button"
                 onClick={handleListPackages}
                 disabled={loading}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded shadow-lg hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
               >
                 📋 Listele
               </button>
@@ -456,25 +456,25 @@ const PTSPage = () => {
       </div>
 
 
-      {/* Mesaj Alanı */}
+      {/* Mesaj Alanı - Dark Theme */}
       {message && (
         <div className="px-6 py-2">
-          <div className={`p-3 rounded-lg text-sm font-medium ${
-            message.type === 'success' ? 'bg-green-100 text-green-800' :
-            message.type === 'error' ? 'bg-red-100 text-red-800' :
-            message.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
-            'bg-blue-100 text-blue-800'
+          <div className={`p-3 rounded-lg text-sm font-medium border ${
+            message.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+            message.type === 'error' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+            message.type === 'warning' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+            'bg-primary-500/20 text-primary-400 border-primary-500/30'
           }`}>
             {message.text}
           </div>
         </div>
       )}
 
-      {/* Paket Listesi - AG Grid */}
+      {/* Paket Listesi - AG Grid Dark Theme */}
       <div className="flex-1 px-6 py-4 flex flex-col gap-4">
         {listData.length > 0 ? (
-          /* Liste Görünümü (Veritabanından Getirilen Kayıtlar) */
-          <div className="ag-theme-alpine" style={{ height: 'calc(100vh - 200px)' }}>
+          /* Liste Görünümü */
+          <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700" style={{ height: 'calc(100vh - 200px)' }}>
             <AgGridReact
               ref={gridRef}
               rowData={filteredData}

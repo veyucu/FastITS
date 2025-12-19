@@ -93,52 +93,52 @@ const SettingsPage = () => {
 
   const InputField = ({ label, field, placeholder, type = 'text', required = false }) => (
     <div className="mb-4">
-      <label className="block text-sm font-semibold text-gray-700 mb-2">
+      <label className="block text-sm font-semibold text-slate-300 mb-2">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="text-rose-400 ml-1">*</span>}
       </label>
       <input
         type={type}
         value={settings[field]}
         onChange={(e) => handleChange(field, e.target.value)}
         placeholder={placeholder}
-        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+        className="w-full px-4 py-2.5 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
       />
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-950">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg">
+      <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
+                className="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
               >
-                <Home className="w-6 h-6" />
+                <Home className="w-6 h-6 text-slate-300" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Settings className="w-7 h-7" />
+                <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
+                  <Settings className="w-7 h-7 text-primary-400" />
                   Sistem Ayarları
                 </h1>
-                <p className="text-purple-100 mt-1">ITS ve ERP entegrasyon ayarları</p>
+                <p className="text-slate-500 mt-1">ITS ve ERP entegrasyon ayarları</p>
               </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2"
+                className="px-4 py-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors flex items-center gap-2 text-slate-300 border border-dark-600"
               >
                 <RefreshCw className="w-4 h-4" />
                 Sıfırla
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors flex items-center gap-2"
+                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-500 transition-colors flex items-center gap-2 shadow-lg shadow-primary-600/30"
               >
                 <Save className="w-5 h-5" />
                 Kaydet
@@ -151,10 +151,10 @@ const SettingsPage = () => {
       {/* Message */}
       {message && (
         <div className="container mx-auto px-6 mt-4">
-          <div className={`p-4 rounded-lg ${
-            message.type === 'success' ? 'bg-green-100 text-green-800' :
-            message.type === 'error' ? 'bg-red-100 text-red-800' :
-            'bg-blue-100 text-blue-800'
+          <div className={`p-4 rounded-lg border ${
+            message.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+            message.type === 'error' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' :
+            'bg-primary-500/20 text-primary-400 border-primary-500/30'
           }`}>
             {message.text}
           </div>
@@ -164,14 +164,14 @@ const SettingsPage = () => {
       {/* Content */}
       <div className="container mx-auto px-6 py-6">
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-md mb-6">
-          <div className="flex border-b border-gray-200">
+        <div className="bg-dark-800/60 rounded-lg border border-dark-700 mb-6">
+          <div className="flex border-b border-dark-700">
             <button
               onClick={() => setActiveTab('its')}
               className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                 activeTab === 'its'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
+                  : 'text-slate-400 hover:bg-dark-700/30'
               }`}
             >
               🔐 ITS Ayarları
@@ -180,8 +180,8 @@ const SettingsPage = () => {
               onClick={() => setActiveTab('erp')}
               className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                 activeTab === 'erp'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
+                  : 'text-slate-400 hover:bg-dark-700/30'
               }`}
             >
               🖥️ ERP Ayarları
@@ -190,8 +190,8 @@ const SettingsPage = () => {
               onClick={() => setActiveTab('mapping')}
               className={`flex-1 px-6 py-4 font-semibold transition-colors ${
                 activeTab === 'mapping'
-                  ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50'
-                  : 'text-gray-600 hover:bg-gray-50'
+                  ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
+                  : 'text-slate-400 hover:bg-dark-700/30'
               }`}
             >
               🔗 Alan Eşleştirmeleri
@@ -200,11 +200,11 @@ const SettingsPage = () => {
         </div>
 
         {/* Tab Content */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-dark-800/60 rounded-lg border border-dark-700 p-6">
           {/* ITS Ayarları */}
           {activeTab === 'its' && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">ITS Web Servis Ayarları</h2>
+              <h2 className="text-xl font-bold text-slate-100 mb-6">ITS Web Servis Ayarları</h2>
               
               {/* Temel Bilgiler */}
               <div className="grid grid-cols-2 gap-6 mb-8">
@@ -224,8 +224,8 @@ const SettingsPage = () => {
 
               {/* Şifre */}
               <div className="mb-8">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  ITS Şifre <span className="text-red-500 ml-1">*</span>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
+                  ITS Şifre <span className="text-rose-400 ml-1">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -233,12 +233,12 @@ const SettingsPage = () => {
                     value={settings.itsPassword}
                     onChange={(e) => handleChange('itsPassword', e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full px-4 py-2.5 pr-12 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-300"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -256,7 +256,7 @@ const SettingsPage = () => {
               </div>
 
               {/* URL'ler */}
-              <h3 className="text-lg font-bold text-gray-900 mb-4 mt-8">Endpoint URL'leri</h3>
+              <h3 className="text-lg font-bold text-slate-200 mb-4 mt-8">Endpoint URL'leri</h3>
               <div className="grid grid-cols-2 gap-6">
                 <InputField label="Token URL" field="itsTokenUrl" placeholder="/token/app/token" />
                 <InputField label="Depo Satış URL" field="itsDepoSatisUrl" placeholder="/wholesale/app/dispatch" />
@@ -281,15 +281,15 @@ const SettingsPage = () => {
           {/* ERP Ayarları */}
           {activeTab === 'erp' && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">ERP Entegrasyon Ayarları</h2>
+              <h2 className="text-xl font-bold text-slate-100 mb-6">ERP Entegrasyon Ayarları</h2>
               <InputField
                 label="ERP Web Servis Adresi"
                 field="erpWebServiceUrl"
                 placeholder="http://localhost:5000"
                 required
               />
-              <p className="text-sm text-gray-600 mt-2">
-                💡 Backend API'nizin çalıştığı adres. Genellikle <code className="bg-gray-100 px-2 py-1 rounded">http://localhost:5000</code>
+              <p className="text-sm text-slate-500 mt-2">
+                💡 Backend API'nizin çalıştığı adres. Genellikle <code className="bg-dark-700 px-2 py-1 rounded text-primary-400">http://localhost:5000</code>
               </p>
             </div>
           )}
@@ -297,35 +297,35 @@ const SettingsPage = () => {
           {/* Alan Eşleştirmeleri */}
           {activeTab === 'mapping' && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-6">Veritabanı Alan Eşleştirmeleri</h2>
+              <h2 className="text-xl font-bold text-slate-100 mb-6">Veritabanı Alan Eşleştirmeleri</h2>
               
               {/* Ürün Ayarları */}
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
                   📦 Ürün Bilgileri
                 </h3>
-                <div className="space-y-4 bg-blue-50 p-4 rounded-lg">
+                <div className="space-y-4 bg-primary-500/10 border border-primary-500/20 p-4 rounded-lg">
                   <InputField
                     label="Ürün Barkod Bilgisi (Kolon Adı)"
                     field="urunBarkodBilgisi"
                     placeholder="STOK_KODU"
                   />
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-slate-500">
                     TBLSTSABIT tablosundaki barkod bilgisinin bulunduğu kolon
                   </p>
                 </div>
               </div>
 
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">ITS/UTS Tanımlama</h3>
-                <div className="space-y-4 bg-green-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4">ITS/UTS Tanımlama</h3>
+                <div className="space-y-4 bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-lg">
                   <div>
                     <InputField
                       label="Ürün ITS Bilgisi (SQL Koşulu)"
                       field="urunItsBilgisi"
                       placeholder="TBLSTSABIT.KOD_5='BESERI'"
                     />
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       ITS takibi gereken ürünleri belirleyen SQL koşulu (TBLSTSABIT veya TBLSTSABITEK)
                     </p>
                   </div>
@@ -336,7 +336,7 @@ const SettingsPage = () => {
                       field="urunUtsBilgisi"
                       placeholder="TBLSTSABIT.KOD_5='UTS'"
                     />
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       UTS takibi gereken ürünleri belirleyen SQL koşulu (TBLSTSABIT veya TBLSTSABITEK)
                     </p>
                   </div>
@@ -345,17 +345,17 @@ const SettingsPage = () => {
 
               {/* Cari Ayarları */}
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center gap-2">
                   👤 Cari Bilgileri
                 </h3>
-                <div className="space-y-4 bg-purple-50 p-4 rounded-lg">
+                <div className="space-y-4 bg-violet-500/10 border border-violet-500/20 p-4 rounded-lg">
                   <div>
                     <InputField
                       label="Cari GLN Bilgisi (Tablo.Kolon)"
                       field="cariGlnBilgisi"
                       placeholder="TBLCASABIT.EMAIL"
                     />
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       Cari GLN numarasının bulunduğu alan (TBLCASABIT veya TBLCASABITEK)
                     </p>
                   </div>
@@ -366,15 +366,15 @@ const SettingsPage = () => {
                       field="cariUtsBilgisi"
                       placeholder="TBLCASABITEK.KULL3S"
                     />
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-slate-500">
                       Cari UTS numarasının bulunduğu alan (TBLCASABIT veya TBLCASABITEK)
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-                <p className="text-sm text-yellow-800">
+              <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded">
+                <p className="text-sm text-amber-400">
                   <strong>⚠️ Dikkat:</strong> Bu ayarlar değiştirildiğinde backend'in yeniden başlatılması gerekebilir.
                 </p>
               </div>
@@ -387,6 +387,3 @@ const SettingsPage = () => {
 }
 
 export default SettingsPage
-
-
-
