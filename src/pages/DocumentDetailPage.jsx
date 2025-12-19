@@ -2306,33 +2306,33 @@ const DocumentDetailPage = () => {
         </div>
       </div>
 
-      {/* UTS Kayıtları Modal */}
+      {/* UTS Kayıtları Modal - Dark Theme */}
       {showUTSModal && selectedUTSItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleCloseUTSModal}>
-          <div className="bg-white rounded-xl shadow-2xl w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleCloseUTSModal}>
+          <div className="bg-dark-800 rounded-xl shadow-dark-xl border border-dark-700 w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 text-white">
+            <div className="bg-gradient-to-r from-rose-600/30 to-rose-500/30 border-b border-rose-500/30 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">UTS Kayıtları</h2>
-                  <p className="text-sm text-red-100">{selectedUTSItem.productName}</p>
+                  <h2 className="text-xl font-bold text-slate-100">UTS Kayıtları</h2>
+                  <p className="text-sm text-rose-300">{selectedUTSItem.productName}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-xs text-red-100">Beklenen / Okutulan / Kalan</p>
-                    <p className="text-2xl font-bold">
-                      <span className="text-red-100">{selectedUTSItem.quantity}</span>
+                    <p className="text-xs text-slate-400">Beklenen / Okutulan / Kalan</p>
+                    <p className="text-2xl font-bold text-slate-100">
+                      <span className="text-slate-400">{selectedUTSItem.quantity}</span>
                       {' / '}
                       <span>{utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)}</span>
                       {' / '}
-                      <span className={utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0) >= selectedUTSItem.quantity ? 'text-green-300' : 'text-yellow-300'}>
+                      <span className={utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0) >= selectedUTSItem.quantity ? 'text-emerald-400' : 'text-amber-400'}>
                         {selectedUTSItem.quantity - utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)}
                       </span>
                     </p>
                   </div>
                   <button
                     onClick={handleCloseUTSModal}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -2344,24 +2344,24 @@ const DocumentDetailPage = () => {
             <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
               {/* UTS Modal Toast Message */}
               {utsModalMessage && (
-                <div className={`mb-4 px-4 py-3 rounded-lg shadow-lg border-l-4 animate-pulse ${
+                <div className={`mb-4 px-4 py-3 rounded-lg border-l-4 ${
                   utsModalMessage.type === 'success' 
-                    ? 'bg-green-50 border-green-500 text-green-800' 
+                    ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' 
                     : utsModalMessage.type === 'error' 
-                    ? 'bg-red-50 border-red-500 text-red-800'
-                    : 'bg-yellow-50 border-yellow-500 text-yellow-800'
+                    ? 'bg-rose-500/20 border-rose-500 text-rose-400'
+                    : 'bg-amber-500/20 border-amber-500 text-amber-400'
                 }`}>
                   <p className="font-semibold">{utsModalMessage.text}</p>
                 </div>
               )}
               
               {/* UTS Records Grid */}
-              <div className="ag-theme-alpine flex-1 mb-4">
+              <div className="ag-theme-alpine flex-1 mb-4 rounded-lg overflow-hidden border border-dark-700">
                 {utsLoading ? (
-                  <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center justify-center h-full bg-dark-900/50">
                     <div className="text-center">
-                      <div className="animate-spin w-8 h-8 border-3 border-gray-200 border-t-red-600 rounded-full mx-auto mb-2" />
-                      <p className="text-gray-600 text-sm">Yükleniyor...</p>
+                      <div className="animate-spin w-8 h-8 border-3 border-dark-600 border-t-rose-500 rounded-full mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">Yükleniyor...</p>
                     </div>
                   </div>
                 ) : (
@@ -2375,7 +2375,6 @@ const DocumentDetailPage = () => {
                     suppressRowClickSelection={true}
                     onSelectionChanged={(event) => {
                       const selected = event.api.getSelectedRows()
-                      // Benzersiz ID, Seri No, Lot No ve Sira No kombinasyonunu sakla
                       setSelectedUTSRecords(selected.map(r => ({
                         id: r.id,
                         siraNo: r.siraNo,
@@ -2384,11 +2383,10 @@ const DocumentDetailPage = () => {
                       })))
                     }}
                     onCellValueChanged={(event) => {
-                      // Hücre değiştiğinde state'i güncelle (toplamlar için)
                       const allRows = []
                       event.api.forEachNode(node => allRows.push(node.data))
                       setUtsRecords([...allRows])
-                      setUtsHasChanges(true) // Değişiklik yapıldı
+                      setUtsHasChanges(true)
                     }}
                     animateRows={true}
                     enableCellTextSelection={true}
@@ -2398,36 +2396,36 @@ const DocumentDetailPage = () => {
                 )}
               </div>
 
-              {/* Action Bar - Fixed at Bottom */}
-              <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+              {/* Action Bar */}
+              <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
                 <button
                   onClick={handleAddNewUTSRow}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-green-600 text-white hover:bg-green-700"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
                 >
                   ➕ Yeni Satır Ekle
                 </button>
                 <button
                   onClick={handleSaveAllUTSRecords}
-                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-blue-600 text-white hover:bg-blue-700 ${utsHasChanges ? 'animate-pulse-save' : ''}`}
+                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30 ${utsHasChanges ? 'animate-pulse-save' : ''}`}
                 >
                   💾 Kaydet
                 </button>
                 <button
                   onClick={handleDeleteUTSRecords}
                   disabled={selectedUTSRecords.length === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-rose-600 text-white hover:bg-rose-500 shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   🗑️ Seçilenleri Sil
                 </button>
                 <div className="flex-1" />
                 {selectedUTSRecords.length > 0 && (
-                  <span className="text-sm text-gray-600 font-semibold">
+                  <span className="text-sm text-slate-400 font-semibold">
                     {selectedUTSRecords.length} kayıt seçildi
                   </span>
                 )}
                 <div className="text-right">
-                  <p className="text-xs text-gray-500">Toplam Miktar</p>
-                  <p className="text-lg font-bold text-blue-600">
+                  <p className="text-xs text-slate-500">Toplam Miktar</p>
+                  <p className="text-lg font-bold text-primary-400">
                     {utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)} / {selectedUTSItem.quantity}
                   </p>
                 </div>
@@ -2437,25 +2435,25 @@ const DocumentDetailPage = () => {
         </div>
       )}
 
-      {/* ITS Karekod Detay Modal */}
+      {/* ITS Karekod Detay Modal - Dark Theme */}
       {showITSModal && selectedItem && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={handleCloseITSModal}>
-          <div className="bg-white rounded-xl shadow-2xl w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleCloseITSModal}>
+          <div className="bg-dark-800 rounded-xl shadow-dark-xl border border-dark-700 w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-6 py-4 text-white">
+            <div className="bg-gradient-to-r from-primary-600/30 to-cyan-600/30 border-b border-primary-500/30 px-6 py-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-bold">ITS Karekod Detayları</h2>
-                  <p className="text-sm text-primary-100">{selectedItem.productName}</p>
+                  <h2 className="text-xl font-bold text-slate-100">ITS Karekod Detayları</h2>
+                  <p className="text-sm text-primary-300">{selectedItem.productName}</p>
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <p className="text-xs text-primary-100">Toplam Okutulan</p>
-                    <p className="text-2xl font-bold">{itsRecords.length}</p>
+                    <p className="text-xs text-slate-400">Toplam Okutulan</p>
+                    <p className="text-2xl font-bold text-primary-400">{itsRecords.length}</p>
                   </div>
                   <button
                     onClick={handleCloseITSModal}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
                   >
                     <XCircle className="w-5 h-5" />
                   </button>
@@ -2468,12 +2466,12 @@ const DocumentDetailPage = () => {
               {itsModalView === 'grid' ? (
                 <>
                   {/* ITS Records Grid */}
-                  <div className="ag-theme-alpine flex-1 mb-4">
+                  <div className="ag-theme-alpine flex-1 mb-4 rounded-lg overflow-hidden border border-dark-700">
                     {itsLoading ? (
-                      <div className="flex items-center justify-center h-full">
+                      <div className="flex items-center justify-center h-full bg-dark-900/50">
                         <div className="text-center">
-                          <div className="animate-spin w-8 h-8 border-3 border-gray-200 border-t-primary-600 rounded-full mx-auto mb-2" />
-                          <p className="text-gray-600 text-sm">Yükleniyor...</p>
+                          <div className="animate-spin w-8 h-8 border-3 border-dark-600 border-t-primary-500 rounded-full mx-auto mb-2" />
+                          <p className="text-slate-400 text-sm">Yükleniyor...</p>
                         </div>
                       </div>
                     ) : (
@@ -2493,23 +2491,23 @@ const DocumentDetailPage = () => {
                     )}
                   </div>
 
-                  {/* Action Bar - Fixed at Bottom */}
-                  <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+                  {/* Action Bar */}
+                  <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
                     <button
                       onClick={handleDeleteITSRecords}
                       disabled={selectedRecords.length === 0}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-rose-600 text-white hover:bg-rose-500 shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Seçilenleri Sil
                     </button>
                     <button
                       onClick={() => setItsModalView('text')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-blue-600 text-white hover:bg-blue-700"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30"
                     >
                       📄 Karekodları Göster
                     </button>
                     {selectedRecords.length > 0 && (
-                      <span className="text-sm text-gray-600 font-semibold">
+                      <span className="text-sm text-slate-400 font-semibold">
                         {selectedRecords.length} kayıt seçildi
                       </span>
                     )}
@@ -2520,36 +2518,36 @@ const DocumentDetailPage = () => {
                   {/* ITS Karekod Text View */}
                   <div className="flex-1 mb-4 flex flex-col">
                     <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-gray-900">
+                      <h3 className="text-lg font-bold text-slate-100">
                         Karekod Text Formatı
                       </h3>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-slate-400">
                         {itsRecords.length} kayıt
                       </span>
                     </div>
                     <textarea
                       value={generateITSBarcodeTexts()}
                       readOnly
-                      className="flex-1 w-full p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 w-full p-4 font-mono text-sm bg-dark-900 border border-dark-600 rounded-lg text-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50"
                       style={{ minHeight: '400px' }}
                     />
                   </div>
 
-                  {/* Action Bar - Fixed at Bottom */}
-                  <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
+                  {/* Action Bar */}
+                  <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
                     <button
                       onClick={() => setItsModalView('grid')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-gray-600 text-white hover:bg-gray-700"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-dark-600 text-slate-200 hover:bg-dark-500 border border-dark-500"
                     >
                       ← Tabloya Dön
                     </button>
                     <button
                       onClick={handleCopyAllBarcodes}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-green-600 text-white hover:bg-green-700"
+                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
                     >
                       📋 Tümünü Kopyala
                     </button>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-slate-500">
                       Format: 010BARKOD21SERİNO17MİAD10LOT
                     </span>
                   </div>
@@ -2560,19 +2558,19 @@ const DocumentDetailPage = () => {
         </div>
       )}
 
-      {/* Toplu Okutma Modal */}
+      {/* Toplu Okutma Modal - Dark Theme */}
       {showBulkScanModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-dark-800 rounded-2xl shadow-dark-xl border border-dark-700 w-full max-w-2xl max-h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-primary-600 to-primary-700 rounded-t-2xl">
+            <div className="px-6 py-4 border-b border-primary-500/30 flex items-center justify-between bg-gradient-to-r from-primary-600/30 to-cyan-600/30 rounded-t-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Barcode className="w-6 h-6 text-white" />
+                <div className="w-10 h-10 bg-primary-500/20 border border-primary-500/30 rounded-lg flex items-center justify-center">
+                  <Barcode className="w-6 h-6 text-primary-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-white">Toplu ITS Karekod Okutma</h2>
-                  <p className="text-xs text-white/80">Her satıra bir ITS karekod (2D) yazın</p>
+                  <h2 className="text-xl font-bold text-slate-100">Toplu ITS Karekod Okutma</h2>
+                  <p className="text-xs text-slate-400">Her satıra bir ITS karekod (2D) yazın</p>
                 </div>
               </div>
               <button
@@ -2581,10 +2579,10 @@ const DocumentDetailPage = () => {
                   setBulkBarcodeText('')
                   setBulkScanResults(null)
                 }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
                 disabled={bulkScanLoading}
               >
-                <XCircle className="w-5 h-5 text-white" />
+                <XCircle className="w-5 h-5" />
               </button>
             </div>
 
@@ -2592,15 +2590,15 @@ const DocumentDetailPage = () => {
             <div className="p-6 flex-1 flex flex-col gap-4 overflow-y-auto">
               {/* Textarea with Line Numbers */}
               <div className="flex-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-slate-300 mb-2">
                   ITS Karekod Listesi
-                  <span className="text-gray-500 font-normal ml-2">(Her satıra bir ITS karekod)</span>
+                  <span className="text-slate-500 font-normal ml-2">(Her satıra bir ITS karekod)</span>
                 </label>
-                <div className="flex border-2 border-gray-300 rounded-lg focus-within:border-primary-500 overflow-hidden" style={{ height: '256px' }}>
+                <div className="flex border border-dark-600 rounded-lg focus-within:border-primary-500 overflow-hidden" style={{ height: '256px' }}>
                   {/* Line Numbers */}
                   <div 
                     ref={bulkLineNumbersRef}
-                    className="bg-gray-100 px-3 py-3 font-mono text-sm text-gray-500 text-right select-none border-r border-gray-300 overflow-hidden" 
+                    className="bg-dark-900 px-3 py-3 font-mono text-sm text-slate-500 text-right select-none border-r border-dark-600 overflow-hidden" 
                     style={{ minWidth: '50px', maxHeight: '256px', overflowY: 'hidden' }}
                   >
                     {bulkBarcodeText.split('\n').map((_, index) => (
@@ -2616,42 +2614,42 @@ const DocumentDetailPage = () => {
                     value={bulkBarcodeText}
                     onChange={(e) => setBulkBarcodeText(e.target.value)}
                     onScroll={handleBulkTextareaScroll}
-                    className="flex-1 px-4 py-3 border-0 focus:outline-none font-mono text-sm resize-none"
+                    className="flex-1 px-4 py-3 border-0 focus:outline-none font-mono text-sm resize-none bg-dark-900 text-slate-200 placeholder-slate-500"
                     placeholder="010867978996572117081600001234&#10;010867978996572117081600005678&#10;010867978996572117081600009999"
                     disabled={bulkScanLoading}
                     autoFocus
                     style={{ height: '256px', lineHeight: '24px' }}
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   💡 Sadece ITS karekod (2D barkod, 01... ile başlayan) desteklenir
                 </p>
               </div>
 
               {/* Results */}
               {bulkScanResults && (
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <h3 className="font-semibold text-gray-900 mb-3">İşlem Sonuçları</h3>
+                <div className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
+                  <h3 className="font-semibold text-slate-200 mb-3">İşlem Sonuçları</h3>
                   <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="bg-white rounded-lg p-3 text-center border border-gray-200">
-                      <p className="text-2xl font-bold text-gray-900">{bulkScanResults.total}</p>
-                      <p className="text-xs text-gray-600">Toplam</p>
+                    <div className="bg-dark-800 rounded-lg p-3 text-center border border-dark-600">
+                      <p className="text-2xl font-bold text-slate-200">{bulkScanResults.total}</p>
+                      <p className="text-xs text-slate-500">Toplam</p>
                     </div>
-                    <div className="bg-green-50 rounded-lg p-3 text-center border border-green-200">
-                      <p className="text-2xl font-bold text-green-700">{bulkScanResults.success}</p>
-                      <p className="text-xs text-green-600">Başarılı</p>
+                    <div className="bg-emerald-500/20 rounded-lg p-3 text-center border border-emerald-500/30">
+                      <p className="text-2xl font-bold text-emerald-400">{bulkScanResults.success}</p>
+                      <p className="text-xs text-emerald-500">Başarılı</p>
                     </div>
-                    <div className="bg-red-50 rounded-lg p-3 text-center border border-red-200">
-                      <p className="text-2xl font-bold text-red-700">{bulkScanResults.failed}</p>
-                      <p className="text-xs text-red-600">Başarısız</p>
+                    <div className="bg-rose-500/20 rounded-lg p-3 text-center border border-rose-500/30">
+                      <p className="text-2xl font-bold text-rose-400">{bulkScanResults.failed}</p>
+                      <p className="text-xs text-rose-500">Başarısız</p>
                     </div>
                   </div>
                   
                   {bulkScanResults.errors.length > 0 && (
                     <div className="max-h-32 overflow-y-auto">
-                      <p className="text-xs font-semibold text-red-700 mb-2">Hatalar:</p>
+                      <p className="text-xs font-semibold text-rose-400 mb-2">Hatalar:</p>
                       {bulkScanResults.errors.map((error, index) => (
-                        <p key={index} className="text-xs text-red-600 mb-1">• {error}</p>
+                        <p key={index} className="text-xs text-rose-400 mb-1">• {error}</p>
                       ))}
                     </div>
                   )}
@@ -2660,21 +2658,21 @@ const DocumentDetailPage = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+            <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
               <button
                 onClick={() => {
                   setShowBulkScanModal(false)
                   setBulkBarcodeText('')
                   setBulkScanResults(null)
                 }}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all border border-dark-600 text-slate-300 hover:bg-dark-600"
                 disabled={bulkScanLoading}
               >
                 İptal
               </button>
               <button
                 onClick={handleBulkScan}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded shadow-lg hover:shadow-xl transition-all bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={bulkScanLoading || !bulkBarcodeText.trim()}
               >
                 {bulkScanLoading ? (
