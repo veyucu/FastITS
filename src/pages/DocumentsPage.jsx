@@ -9,7 +9,7 @@ import apiService from '../services/apiService'
 const DocumentsPage = () => {
   const navigate = useNavigate()
   const gridRef = useRef(null)
-  
+
   // LocalStorage'dan filtreleri yükle
   const loadFilters = () => {
     try {
@@ -35,7 +35,7 @@ const DocumentsPage = () => {
   }
 
   const savedFilters = loadFilters()
-  
+
   const [searchText, setSearchText] = useState(savedFilters.searchText)
   const [statusFilter, setStatusFilter] = useState('all')
   const [docTypeFilter, setDocTypeFilter] = useState(savedFilters.docTypeFilter)
@@ -72,7 +72,7 @@ const DocumentsPage = () => {
       kalan: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
       default: 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
     }
-    
+
     // Kalan sütunu için özel gösterim
     if (type === 'kalan' && (value === 0 || value === '0')) {
       return (
@@ -81,7 +81,7 @@ const DocumentsPage = () => {
         </span>
       )
     }
-    
+
     return (
       <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-bold ${styles[type]}`}>
         {value || 0}
@@ -117,8 +117,8 @@ const DocumentsPage = () => {
         try {
           const date = new Date(params.value);
           if (isNaN(date.getTime())) return '';
-          return date.toLocaleTimeString('tr-TR', { 
-            hour: '2-digit', 
+          return date.toLocaleTimeString('tr-TR', {
+            hour: '2-digit',
             minute: '2-digit'
           });
         } catch (error) {
@@ -129,39 +129,26 @@ const DocumentsPage = () => {
       autoHeaderHeight: true
     },
     {
-      headerName: 'Cari Kodu',
-      field: 'customerCode',
-      width: 120,
-      wrapHeaderText: true,
-      autoHeaderHeight: true
-    },
-    {
       headerName: 'Cari İsim',
       field: 'customerName',
-      width: 220,
+      width: 250,
       wrapHeaderText: true,
-      autoHeaderHeight: true
-    },
-    {
-      headerName: 'İlçe',
-      field: 'district',
-      width: 120,
-      wrapHeaderText: true,
-      autoHeaderHeight: true
-    },
-    {
-      headerName: 'Şehir',
-      field: 'city',
-      width: 110,
-      wrapHeaderText: true,
-      autoHeaderHeight: true
-    },
-    {
-      headerName: 'Telefon',
-      field: 'phone',
-      width: 130,
-      wrapHeaderText: true,
-      autoHeaderHeight: true
+      autoHeaderHeight: true,
+      cellRenderer: (params) => {
+        const { customerName, district, city } = params.data
+        const location = district ? `${district} / ${city}` : city || ''
+        return (
+          <div className="flex items-center gap-2 w-full">
+            <span className="truncate font-medium">{customerName}</span>
+            {location && (
+              <>
+                <span className="text-slate-600">•</span>
+                <span className="text-xs text-slate-400 shrink-0">{location}</span>
+              </>
+            )}
+          </div>
+        )
+      }
     },
     {
       headerName: 'Kalem',
@@ -173,7 +160,7 @@ const DocumentsPage = () => {
       cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
       cellRenderer: (params) => {
         const { itsCount, utsCount, dgrCount } = params.data
-        
+
         return (
           <div className="flex items-center justify-center gap-1">
             {itsCount > 0 && (
@@ -202,6 +189,7 @@ const DocumentsPage = () => {
       cellClass: 'text-center',
       wrapHeaderText: true,
       autoHeaderHeight: true,
+      cellStyle: { justifyContent: 'center' },
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="miktar" />
     },
     {
@@ -211,6 +199,7 @@ const DocumentsPage = () => {
       cellClass: 'text-center',
       wrapHeaderText: true,
       autoHeaderHeight: true,
+      cellStyle: { justifyContent: 'center' },
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="okutulan" />
     },
     {
@@ -220,6 +209,7 @@ const DocumentsPage = () => {
       cellClass: 'text-center',
       wrapHeaderText: true,
       autoHeaderHeight: true,
+      cellStyle: { justifyContent: 'center' },
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalan" />
     }
   ], [])
@@ -234,11 +224,11 @@ const DocumentsPage = () => {
   // Excel Export
   const onExportExcel = useCallback(() => {
     if (!gridRef.current) return
-    
+
     const params = {
       fileName: `Urun_Hazirlama_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.xlsx`,
       sheetName: 'Ürün Hazırlama',
-      columnKeys: ['docType', 'orderNo', 'kayitTarihi', 'customerCode', 'customerName', 'district', 'city', 'phone', 'totalItems', 'miktar', 'okutulan', 'kalan'],
+      columnKeys: ['docType', 'orderNo', 'kayitTarihi', 'customerName', 'customerCode', 'district', 'city', 'phone', 'totalItems', 'miktar', 'okutulan', 'kalan'],
       processCellCallback: (params) => {
         // Belge tipi için text'e çevir
         if (params.column.colId === 'docType') {
@@ -274,8 +264,8 @@ const DocumentsPage = () => {
     gridRef.current.api.exportDataAsExcel(params)
   }, [])
 
-  // Row Click Handler
-  const onRowClicked = useCallback((event) => {
+  // Row Double Click Handler
+  const onRowDoubleClicked = useCallback((event) => {
     navigate(`/documents/${event.data.id}`)
   }, [navigate])
 
@@ -284,12 +274,12 @@ const DocumentsPage = () => {
     try {
       setLoading(true)
       setError(null)
-      
+
       // Tarih zorunlu
       const date = dateFilter || new Date().toISOString().split('T')[0]
-      
+
       const response = await apiService.getDocuments(date)
-      
+
       if (response.success && response.data) {
         setAllOrders(response.data)
         // İlk yüklemede filtreleme yapma, tüm veriyi göster
@@ -322,10 +312,10 @@ const DocumentsPage = () => {
   // Initial load
   useEffect(() => {
     fetchDocuments()
-    
+
     // Her 30 saniyede bir sunucu durumunu kontrol et
     const healthCheckInterval = setInterval(checkServerHealth, 30000)
-    
+
     return () => clearInterval(healthCheckInterval)
   }, [])
 
@@ -347,7 +337,7 @@ const DocumentsPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFilter])
-  
+
   // Diğer filtreler değiştiğinde client-side filtrele
   useEffect(() => {
     if (!isInitialLoad && allOrders.length > 0) {
@@ -378,7 +368,7 @@ const DocumentsPage = () => {
     // Arama filtresi
     if (searchText) {
       const search = searchText.toLowerCase()
-      filtered = filtered.filter(order => 
+      filtered = filtered.filter(order =>
         order.orderNo?.toLowerCase().includes(search) ||
         order.customerName?.toLowerCase().includes(search) ||
         order.customerCode?.toLowerCase().includes(search) ||
@@ -402,7 +392,7 @@ const DocumentsPage = () => {
       } else {
         baseDate = new Date()
       }
-      
+
       baseDate.setDate(baseDate.getDate() + days)
       const newDate = baseDate.toISOString().split('T')[0]
       setDateFilter(newDate)
@@ -426,12 +416,12 @@ const DocumentsPage = () => {
     const today = new Date().toISOString().split('T')[0]
     setDateFilter(today) // Bugüne sıfırla
     setRowData(allOrders)
-    
+
     // LocalStorage'ı temizle
     localStorage.removeItem('documentsPageFilters')
     localStorage.removeItem('documentsGridColumnState')
     localStorage.removeItem('documentsGridPage')
-    
+
     // Grid'i varsayılan haline getir
     if (gridRef.current) {
       gridRef.current.api.resetColumnState()
@@ -451,7 +441,7 @@ const DocumentsPage = () => {
     const completed = rowData.filter(o => o.kalan === 0).length // Tamamlanan (kalan = 0)
     const partial = rowData.filter(o => o.okutulan > 0 && o.kalan > 0).length // Yarım (okutulan > 0 ve kalan > 0)
     const pending = rowData.filter(o => o.okutulan === 0).length // Bekleyen (okutulan = 0)
-    
+
     return { total, completed, partial, pending }
   }, [rowData])
 
@@ -475,7 +465,7 @@ const DocumentsPage = () => {
               </div>
               <h1 className="text-lg font-bold text-slate-100">Ürün Hazırlama</h1>
             </div>
-            
+
             {/* Orta - İstatistikler */}
             <div className="flex items-center gap-2">
               <div className="bg-primary-600/20 border border-primary-500/30 rounded px-3 py-1.5 text-primary-400">
@@ -545,41 +535,37 @@ const DocumentsPage = () => {
           <div className="flex gap-1">
             <button
               onClick={() => setDocTypeFilter('all')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
-                docTypeFilter === 'all'
-                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
-                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === 'all'
+                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                }`}
             >
               Tümü
             </button>
             <button
               onClick={() => setDocTypeFilter('6')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
-                docTypeFilter === '6'
-                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
-                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '6'
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
+                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                }`}
             >
               Sipariş
             </button>
             <button
               onClick={() => setDocTypeFilter('1')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
-                docTypeFilter === '1'
-                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '1'
+                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                }`}
             >
               Satış
             </button>
             <button
               onClick={() => setDocTypeFilter('2')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${
-                docTypeFilter === '2'
-                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
-                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-              }`}
+              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '2'
+                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                }`}
             >
               Alış
             </button>
@@ -609,7 +595,7 @@ const DocumentsPage = () => {
             >
               <ChevronLeft className="w-4 h-4 text-slate-400" />
             </button>
-            
+
             <div className="relative">
               <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
               <input
@@ -705,7 +691,7 @@ const DocumentsPage = () => {
               ref={gridRef}
               onGridReady={(params) => {
                 gridRef.current = params
-                
+
                 // Kaydedilmiş grid durumunu yükle
                 try {
                   const savedColumnState = localStorage.getItem('documentsGridColumnState')
@@ -761,28 +747,28 @@ const DocumentsPage = () => {
                   console.error('Sayfa yükleme hatası:', error)
                 }
               }}
-            rowData={rowData}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            onRowClicked={onRowClicked}
-            rowClass="cursor-pointer"
-            animateRows={true}
-            enableCellTextSelection={true}
-            suppressCellFocus={true}
-            localeText={{
-              page: 'Sayfa',
-              to: '-',
-              of: '/',
-              next: 'Sonraki',
-              last: 'Son',
-              first: 'İlk',
-              previous: 'Önceki',
-              loadingOoo: 'Yükleniyor...',
-              noRowsToShow: 'Gösterilecek sipariş yok'
-            }}
-          />
+              rowData={rowData}
+              columnDefs={columnDefs}
+              defaultColDef={defaultColDef}
+              onRowDoubleClicked={onRowDoubleClicked}
+              rowClass="cursor-pointer"
+              animateRows={true}
+              enableCellTextSelection={true}
+              suppressCellFocus={true}
+              localeText={{
+                page: 'Sayfa',
+                to: '-',
+                of: '/',
+                next: 'Sonraki',
+                last: 'Son',
+                first: 'İlk',
+                previous: 'Önceki',
+                loadingOoo: 'Yükleniyor...',
+                noRowsToShow: 'Gösterilecek sipariş yok'
+              }}
+            />
+          </div>
         </div>
-      </div>
       )}
     </div>
   )
