@@ -6,9 +6,7 @@ import ptsRouter from './routes/pts.js';
 import itsRouter from './routes/its.js';
 import settingsRouter from './routes/settings.js';
 import authRouter from './routes/authRoutes.js';
-import * as ptsDbService from './services/ptsDbService.js';
-import * as itsDbService from './services/itsDbService.js';
-import * as authDbService from './services/authDbService.js';
+import dbInitService from './services/dbInitService.js';
 
 dotenv.config();
 
@@ -67,34 +65,12 @@ app.use((err, req, res, next) => {
 // Server başlatma ve tabloları hazırlama
 async function startServer() {
   try {
-    // PTS tablolarını oluştur (varsa kontrol et)
-    console.log('📋 PTS tabloları kontrol ediliyor...');
-    const ptsTablesResult = await ptsDbService.createTablesIfNotExists();
+    // Veritabanı başlatma (tüm tablolar tek servis ile)
+    console.log('📋 Veritabanı tabloları kontrol ediliyor...');
+    const dbResult = await dbInitService.initializeDatabase();
 
-    if (ptsTablesResult.success) {
-      console.log('✅ PTS tabloları hazır');
-    } else {
-      console.error('⚠️ PTS tabloları oluşturulamadı:', ptsTablesResult.error);
-    }
-
-    // ITS tablolarını oluştur (varsa kontrol et)
-    console.log('📋 ITS tabloları kontrol ediliyor...');
-    const itsTablesResult = await itsDbService.createTablesIfNotExists();
-
-    if (itsTablesResult.success) {
-      console.log('✅ ITS tabloları hazır');
-    } else {
-      console.error('⚠️ ITS tabloları oluşturulamadı:', itsTablesResult.error);
-    }
-
-    // Auth tablolarını oluştur (AKTBLKULLANICI, AKTBLAYAR)
-    console.log('📋 Auth tabloları kontrol ediliyor...');
-    const authTablesResult = await authDbService.createTablesIfNotExists();
-
-    if (authTablesResult.success) {
-      console.log('✅ Auth tabloları hazır');
-    } else {
-      console.error('⚠️ Auth tabloları oluşturulamadı:', authTablesResult.error);
+    if (!dbResult.success) {
+      console.error('⚠️ Veritabanı başlatma hatası:', dbResult.error);
     }
 
     // Server'ı başlat
@@ -109,3 +85,4 @@ async function startServer() {
 }
 
 startServer();
+

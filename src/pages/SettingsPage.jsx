@@ -28,6 +28,7 @@ const DEFAULT_SETTINGS = {
   itsDogrulamaUrl: '/reference/app/verification',
 
   // UTS Ayarları
+  utsNo: '',
   utsId: '',
   utsWebServiceUrl: 'https://utsuygulama.saglik.gov.tr',
   utsVermeBildirimiUrl: '/UTS/uh/rest/bildirim/verme/ekle',
@@ -319,6 +320,19 @@ const SettingsPage = () => {
           {activeTab === 'uts' && (
             <div>
               <h2 className="text-xl font-bold text-slate-100 mb-6">UTS Web Servis Ayarları</h2>
+
+              {/* UTS No */}
+              <div className="mb-8">
+                <InputField
+                  label="UTS No"
+                  field="utsNo"
+                  placeholder="8680001084524"
+                  required
+                />
+                <p className="text-sm text-slate-500 mt-1">
+                  Firmanın Sağlık Bakanlığı'ndan aldığı UTS numarası
+                </p>
+              </div>
 
               {/* UTS ID */}
               <div className="mb-8">

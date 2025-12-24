@@ -115,6 +115,45 @@ router.get('/:documentId/its-all-records', async (req, res) => {
   }
 })
 
+// GET /api/documents/:documentId/uts-all-records - Belgedeki Tüm UTS Kayıtlarını Getir
+router.get('/:documentId/uts-all-records', async (req, res) => {
+  try {
+    const { documentId } = req.params
+    const { cariKodu } = req.query
+
+    // Document ID parse et
+    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+
+    if (!cariKodu) {
+      return res.status(400).json({
+        success: false,
+        message: 'cariKodu parametresi zorunludur'
+      })
+    }
+
+    const records = await documentService.getAllUTSRecordsForDocument(
+      subeKodu,
+      fatirs_no,
+      ftirsip,
+      cariKodu
+    )
+
+    res.json({
+      success: true,
+      data: records,
+      count: records.length
+    })
+
+  } catch (error) {
+    console.error('❌ Tüm UTS Kayıtları Getirme Hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: 'UTS kayıtları alınamadı',
+      error: error.message
+    })
+  }
+})
+
 // GET /api/documents/:documentId/item/:itemId/its-records - ITS Kayıtlarını Getir
 router.get('/:documentId/item/:itemId/its-records', async (req, res) => {
   try {

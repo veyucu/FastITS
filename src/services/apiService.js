@@ -789,6 +789,96 @@ const apiService = {
     }
   },
 
+  // ITS Alış Bildirimi
+  itsAlisBildirimi: async (documentId, products, settings = null) => {
+    try {
+      log('📥 ITS Alış Bildirimi gönderiliyor:', { documentId, productCount: products?.length })
+      const response = await apiClient.post(`/documents/${documentId}/its-alis-bildirimi`, {
+        products,
+        settings
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ ITS Alış Bildirimi hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Alış bildirimi gönderilemedi'
+      }
+    }
+  },
+
+  // ITS Alış İptal Bildirimi
+  itsAlisIptalBildirimi: async (documentId, products, settings = null) => {
+    try {
+      log('🔴 ITS Alış İptal gönderiliyor:', { documentId, productCount: products?.length })
+      const response = await apiClient.post(`/documents/${documentId}/its-alis-iptal`, {
+        products,
+        settings
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ ITS Alış İptal hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Alış iptal bildirimi gönderilemedi'
+      }
+    }
+  },
+
+  // ==================== UTS BİLDİRİM İŞLEMLERİ ====================
+
+  // Belgedeki Tüm UTS Kayıtlarını Getir
+  getAllUTSRecordsForDocument: async (documentId, cariKodu) => {
+    try {
+      log('📋 Belgedeki tüm UTS kayıtları getiriliyor:', documentId, cariKodu)
+      const response = await apiClient.get(`/documents/${documentId}/uts-all-records?cariKodu=${encodeURIComponent(cariKodu)}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ UTS kayıtları getirme hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'UTS kayıtları alınamadı',
+        data: []
+      }
+    }
+  },
+
+  // UTS Verme Bildirimi
+  utsVermeBildirimi: async (documentId, products, settings = null) => {
+    try {
+      log('📤 UTS Verme Bildirimi gönderiliyor:', { documentId, productCount: products?.length })
+      const response = await apiClient.post(`/documents/${documentId}/uts-verme-bildirimi`, {
+        products,
+        settings
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ UTS Verme Bildirimi hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'UTS verme bildirimi gönderilemedi'
+      }
+    }
+  },
+
+  // UTS Verme İptal Bildirimi
+  utsVermeIptalBildirimi: async (documentId, products, settings = null) => {
+    try {
+      log('🔴 UTS Verme İptal gönderiliyor:', { documentId, productCount: products?.length })
+      const response = await apiClient.post(`/documents/${documentId}/uts-verme-iptal`, {
+        products,
+        settings
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ UTS Verme İptal hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'UTS verme iptal bildirimi gönderilemedi'
+      }
+    }
+  },
+
   // ==================== MESAJ KODLARI ====================
 
   // Tüm mesaj kodlarını getir

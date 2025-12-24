@@ -45,7 +45,8 @@ const documentService = {
           V.MIKTAR - ISNULL(V.OKUTULAN,0) AS KALAN,
           V.ITS_COUNT,
           V.UTS_COUNT,
-          V.DGR_COUNT
+          V.DGR_COUNT,
+          V.ITS_DURUM
         FROM
         (
           SELECT 
@@ -62,7 +63,8 @@ const documentService = {
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN,
             (SELECT COUNT(*) FROM TBLSIPATRA H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND S.KOD_5='BESERI') AS ITS_COUNT,
             (SELECT COUNT(*) FROM TBLSIPATRA H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND S.KOD_5='UTS') AS UTS_COUNT,
-            (SELECT COUNT(*) FROM TBLSIPATRA H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND (S.KOD_5 IS NULL OR S.KOD_5 NOT IN ('BESERI','UTS'))) AS DGR_COUNT
+            (SELECT COUNT(*) FROM TBLSIPATRA H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND (S.KOD_5 IS NULL OR S.KOD_5 NOT IN ('BESERI','UTS'))) AS DGR_COUNT,
+            A.ITS_DURUM
           FROM 
             TBLSIPAMAS A WITH (NOLOCK)
           WHERE FTIRSIP='6' ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
@@ -83,7 +85,8 @@ const documentService = {
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN,
             (SELECT COUNT(*) FROM TBLSTHAR H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND S.KOD_5='BESERI') AS ITS_COUNT,
             (SELECT COUNT(*) FROM TBLSTHAR H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND S.KOD_5='UTS') AS UTS_COUNT,
-            (SELECT COUNT(*) FROM TBLSTHAR H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND (S.KOD_5 IS NULL OR S.KOD_5 NOT IN ('BESERI','UTS'))) AS DGR_COUNT
+            (SELECT COUNT(*) FROM TBLSTHAR H WITH (NOLOCK) INNER JOIN TBLSTSABIT S WITH (NOLOCK) ON H.STOK_KODU=S.STOK_KODU WHERE H.FISNO=A.FATIRS_NO AND H.SUBE_KODU=A.SUBE_KODU AND H.STHAR_ACIKLAMA=A.CARI_KODU AND H.STHAR_FTIRSIP=A.FTIRSIP AND (S.KOD_5 IS NULL OR S.KOD_5 NOT IN ('BESERI','UTS'))) AS DGR_COUNT,
+            A.ITS_DURUM
           FROM 
             TBLFATUIRS A WITH (NOLOCK)
           WHERE A.FTIRSIP IN ('1','2') ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
@@ -130,7 +133,8 @@ const documentService = {
           KALAN: row.KALAN,
           ITS_COUNT: row.ITS_COUNT || 0,
           UTS_COUNT: row.UTS_COUNT || 0,
-          DGR_COUNT: row.DGR_COUNT || 0
+          DGR_COUNT: row.DGR_COUNT || 0,
+          ITS_DURUM: row.ITS_DURUM || ''
         }
 
 
@@ -159,7 +163,8 @@ const documentService = {
           kalan: fixedRow.KALAN || 0,
           preparedItems: fixedRow.OKUTULAN || 0,
           status: fixedRow.OKUTULAN === 0 ? 'pending' :
-            fixedRow.OKUTULAN < fixedRow.MIKTAR ? 'preparing' : 'completed'
+            fixedRow.OKUTULAN < fixedRow.MIKTAR ? 'preparing' : 'completed',
+          itsDurum: fixedRow.ITS_DURUM || ''
         }
 
         return doc
@@ -1966,6 +1971,60 @@ const documentService = {
       return records
     } catch (error) {
       console.error('❌ ITS Kayıtları Getirme Hatası:', error)
+      throw error
+    }
+  },
+
+  // Belgedeki tüm UTS kayıtlarını getir
+  async getAllUTSRecordsForDocument(subeKodu, fatirs_no, ftirsip, cariKodu) {
+    try {
+      const pool = await getConnection()
+
+      const query = `
+      SELECT
+        A.RECNO,
+        A.STOK_KODU,
+        A.SERI_NO,
+        A.GTIN,
+        A.LOT_NO,
+        A.MIKTAR,
+        A.URETIM_TARIHI,
+        A.DURUM,
+        A.BILDIRIM_TARIHI,
+        S.STOK_ADI
+      FROM AKTBLITSUTS A WITH (NOLOCK)
+      LEFT JOIN TBLSTSABIT S WITH (NOLOCK) ON A.STOK_KODU = S.STOK_KODU
+      WHERE A.FATIRS_NO = @fatirs_no
+        AND A.FTIRSIP = @ftirsip
+        AND A.CARI_KODU = @cariKodu
+        AND A.TURU = 'U'
+      ORDER BY A.KAYIT_TARIHI ASC
+    `
+
+      const request = pool.request()
+      request.input('fatirs_no', fatirs_no)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
+
+      const result = await request.query(query)
+
+      const records = result.recordset.map(row => ({
+        recNo: row.RECNO,
+        stokKodu: row.STOK_KODU,
+        stokAdi: fixTurkishChars(row.STOK_ADI),
+        seriNo: row.SERI_NO,
+        gtin: row.GTIN,
+        lotNo: row.LOT_NO,
+        miktar: row.MIKTAR,
+        uretimTarihi: row.URETIM_TARIHI,
+        durum: row.DURUM,
+        bildirimTarihi: row.BILDIRIM_TARIHI
+      }))
+
+      log('📋 UTS kayıtları alındı:', records.length)
+      return records
+    } catch (error) {
+      console.error('❌ UTS Kayıtları Getirme Hatası:', error)
       throw error
     }
   },

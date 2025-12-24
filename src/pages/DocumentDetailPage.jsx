@@ -14,6 +14,7 @@ import { useSound } from '../hooks/useSound'
 import { parseITSBarcode } from '../utils/barcodeParser'
 import PTSModal from '../components/modals/PTSModal'
 import ITSBildirimModal from '../components/modals/ITSBildirimModal'
+import UTSBildirimModal from '../components/modals/UTSBildirimModal'
 
 const DocumentDetailPage = () => {
   const { id } = useParams()
@@ -65,6 +66,9 @@ const DocumentDetailPage = () => {
 
   // ITS Bildirim Modal State'i
   const [showITSBildirimModal, setShowITSBildirimModal] = useState(false)
+
+  // UTS Bildirim Modal State'i
+  const [showUTSBildirimModal, setShowUTSBildirimModal] = useState(false)
 
   // Belge tipini belirle
   const getDocumentTypeName = (docType, tipi) => {
@@ -2182,14 +2186,28 @@ const DocumentDetailPage = () => {
                   >
                     ITS
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowPTSModal(true)}
-                    className="w-9 h-9 flex items-center justify-center rounded transition-all bg-dark-700 text-slate-200 hover:bg-dark-600 border border-dark-600"
-                    title="PTS Gönderimi"
-                  >
-                    PTS
-                  </button>
+                  {/* UTS butonu sadece Satış Faturası için */}
+                  {order?.docType === '1' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowUTSBildirimModal(true)}
+                      className="w-9 h-9 flex items-center justify-center rounded transition-all bg-dark-700 text-slate-200 hover:bg-dark-600 border border-dark-600"
+                      title="UTS Bildirim"
+                    >
+                      UTS
+                    </button>
+                  )}
+                  {/* PTS butonu sadece Satış Faturası için (Alış Faturası'nda gizli) */}
+                  {order?.docType !== '2' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPTSModal(true)}
+                      className="w-9 h-9 flex items-center justify-center rounded transition-all bg-dark-700 text-slate-200 hover:bg-dark-600 border border-dark-600"
+                      title="PTS Gönderimi"
+                    >
+                      PTS
+                    </button>
+                  )}
                 </>
               )}
             </form>
@@ -2658,6 +2676,16 @@ const DocumentDetailPage = () => {
       <ITSBildirimModal
         isOpen={showITSBildirimModal}
         onClose={() => setShowITSBildirimModal(false)}
+        order={order}
+        docType={order?.docType}
+        playSuccessSound={playSuccessSound}
+        playErrorSound={playErrorSound}
+      />
+
+      {/* UTS Bildirim Modal */}
+      <UTSBildirimModal
+        isOpen={showUTSBildirimModal}
+        onClose={() => setShowUTSBildirimModal(false)}
         order={order}
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}

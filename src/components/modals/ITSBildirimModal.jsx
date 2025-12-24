@@ -14,6 +14,7 @@ const ITSBildirimModal = ({
     isOpen,
     onClose,
     order,
+    docType,
     playSuccessSound,
     playErrorSound
 }) => {
@@ -209,6 +210,8 @@ const ITSBildirimModal = ({
         const actionNames = {
             'satis': 'Satış Bildirimi',
             'satis-iptal': 'Satış İptal Bildirimi',
+            'alis': 'Alış Bildirimi',
+            'alis-iptal': 'Alış İptal Bildirimi',
             'dogrulama': 'Doğrulama',
             'basarisiz-sorgula': 'Başarısız Ürün Sorgulama'
         }
@@ -256,6 +259,16 @@ const ITSBildirimModal = ({
                         return
                     }
                     result = await apiService.itsSatisIptalBildirimi(order.id, glnNoIptal, products, settings)
+                    break
+
+                case 'alis':
+                    // Alış bildirimi - TODO: Backend API'si eklenince güncellenecek
+                    result = await apiService.itsAlisBildirimi(order.id, products, settings)
+                    break
+
+                case 'alis-iptal':
+                    // Alış iptal bildirimi - TODO: Backend API'si eklenince güncellenecek
+                    result = await apiService.itsAlisIptalBildirimi(order.id, products, settings)
                     break
 
                 case 'dogrulama':
@@ -459,23 +472,49 @@ const ITSBildirimModal = ({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 px-3 py-2 border-t border-dark-700 shrink-0 bg-dark-800/50 flex-wrap">
-                    {/* Bildirim Butonları */}
-                    <button
-                        onClick={() => handleAction('satis')}
-                        disabled={actionLoading || records.length === 0}
-                        className="px-3 py-1.5 rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                        <Send className="w-4 h-4" />
-                        Satış Bildirimi
-                    </button>
-                    <button
-                        onClick={() => handleAction('satis-iptal')}
-                        disabled={actionLoading || records.length === 0}
-                        className="px-3 py-1.5 rounded-lg text-white bg-rose-600 hover:bg-rose-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                        <X className="w-4 h-4" />
-                        Satış İptal
-                    </button>
+                    {/* Satış Faturasurı için Satış Butonları */}
+                    {docType !== '2' && (
+                        <>
+                            <button
+                                onClick={() => handleAction('satis')}
+                                disabled={actionLoading || records.length === 0}
+                                className="px-3 py-1.5 rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                <Send className="w-4 h-4" />
+                                Satış Bildirimi
+                            </button>
+                            <button
+                                onClick={() => handleAction('satis-iptal')}
+                                disabled={actionLoading || records.length === 0}
+                                className="px-3 py-1.5 rounded-lg text-white bg-rose-600 hover:bg-rose-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                <X className="w-4 h-4" />
+                                Satış İptal
+                            </button>
+                        </>
+                    )}
+                    {/* Alış Faturası için Alış Butonları */}
+                    {docType === '2' && (
+                        <>
+                            <button
+                                onClick={() => handleAction('alis')}
+                                disabled={actionLoading || records.length === 0}
+                                className="px-3 py-1.5 rounded-lg text-white bg-emerald-600 hover:bg-emerald-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                <Send className="w-4 h-4" />
+                                Alış Bildirimi
+                            </button>
+                            <button
+                                onClick={() => handleAction('alis-iptal')}
+                                disabled={actionLoading || records.length === 0}
+                                className="px-3 py-1.5 rounded-lg text-white bg-rose-600 hover:bg-rose-500 transition-all font-semibold flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                            >
+                                <X className="w-4 h-4" />
+                                Alış İptal
+                            </button>
+                        </>
+                    )}
+                    {/* Ortak Butonlar */}
                     <button
                         onClick={() => handleAction('dogrulama')}
                         disabled={actionLoading || records.length === 0}

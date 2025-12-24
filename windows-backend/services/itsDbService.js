@@ -44,36 +44,6 @@ function fixObjectStrings(obj) {
 }
 
 /**
- * ITS tablosunu ve indexlerini oluşturur
- */
-export async function createTablesIfNotExists() {
-  try {
-    log('📋 ITS tabloları kontrol ediliyor...')
-
-    const pool = await getConnection()
-
-    // SQL scriptini oku ve çalıştır
-    const sqlScriptPath = path.join(__dirname, '../sql/create-its-tables.sql')
-    const sqlScript = fs.readFileSync(sqlScriptPath, 'utf8')
-
-    // SQL scriptini batch'lere ayır (GO statement'larına göre)
-    const batches = sqlScript.split(/\bGO\b/gi).filter(batch => batch.trim())
-
-    for (const batch of batches) {
-      if (batch.trim()) {
-        await pool.request().query(batch)
-      }
-    }
-
-    log('✅ ITS tabloları hazır')
-    return { success: true }
-  } catch (error) {
-    console.error('❌ ITS tabloları oluşturma hatası:', error)
-    throw error
-  }
-}
-
-/**
  * ITS kaydı ekler
  */
 export async function addITSRecord(data) {
@@ -437,7 +407,6 @@ export async function getITSStatistics(filters = {}) {
 }
 
 export default {
-  createTablesIfNotExists,
   addITSRecord,
   listITSRecords,
   getITSRecord,

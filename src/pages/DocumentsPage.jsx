@@ -213,6 +213,31 @@ const DocumentsPage = () => {
       autoHeaderHeight: true,
       cellStyle: { justifyContent: 'center' },
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalan" />
+    },
+    {
+      headerName: 'ITS',
+      field: 'itsDurum',
+      width: 70,
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      cellRenderer: (params) => {
+        const durum = params.value
+        if (durum === 'OK') {
+          return (
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="ITS Bildirimi Yapıldı">
+              ✓
+            </span>
+          )
+        }
+        // NOK veya boş ise
+        return (
+          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-500/20 text-slate-400 border border-slate-500/30" title="ITS Bildirimi Yapılmadı">
+            -
+          </span>
+        )
+      }
     }
   ], [])
 
