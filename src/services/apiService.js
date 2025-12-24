@@ -1,7 +1,19 @@
 import axios from 'axios'
 import { log } from '../utils/debug'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+// Dinamik API URL - Frontend hangi IP/hostname'den açılırsa ona bağlanır
+const getApiBaseUrl = () => {
+  // Önce environment variable'ı kontrol et
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL
+  }
+  // Yoksa mevcut hostname'i kullan (aynı sunucuda backend varsayımı)
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+  return `${protocol}//${hostname}:5000/api`
+}
+
+const API_BASE_URL = getApiBaseUrl()
 
 // Axios instance oluştur
 const apiClient = axios.create({

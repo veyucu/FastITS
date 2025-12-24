@@ -1,62 +1,60 @@
 # AtakodITS Kurulum Script'i
-# PowerShell ile çalıştırın
+# PowerShell ile calistirin
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  AtakodITS Kurulum Başlıyor..." -ForegroundColor Cyan
+Write-Host "  AtakodITS Kurulum Basliyor..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Node.js kontrolü
+# 1. Node.js kontrolu
 Write-Host "[1/6] Node.js kontrol ediliyor..." -ForegroundColor Yellow
 $nodeVersion = node -v 2>$null
-if ($nodeVersion) {
-    Write-Host "  ✓ Node.js $nodeVersion yüklü" -ForegroundColor Green
-} else {
-    Write-Host "  ✗ Node.js yüklü değil! Lütfen https://nodejs.org adresinden yükleyin." -ForegroundColor Red
+if ($nodeVersion)
+{
+    Write-Host "  OK - Node.js $nodeVersion yuklu" -ForegroundColor Green
+}
+else
+{
+    Write-Host "  HATA - Node.js yuklu degil!" -ForegroundColor Red
     exit 1
 }
 
-# 2. Logs klasörü oluştur
-Write-Host "[2/6] Logs klasörü oluşturuluyor..." -ForegroundColor Yellow
-if (!(Test-Path -Path ".\logs")) {
+# 2. Logs klasoru olustur
+Write-Host "[2/6] Logs klasoru olusturuluyor..." -ForegroundColor Yellow
+if (-not (Test-Path -Path ".\logs"))
+{
     New-Item -ItemType Directory -Path ".\logs" | Out-Null
 }
-Write-Host "  ✓ Logs klasörü hazır" -ForegroundColor Green
+Write-Host "  OK - Logs klasoru hazir" -ForegroundColor Green
 
-# 3. Backend bağımlılıkları
-Write-Host "[3/6] Backend bağımlılıkları yükleniyor..." -ForegroundColor Yellow
-Set-Location -Path ".\windows-backend"
+# 3. Backend bagimliliklari
+Write-Host "[3/6] Backend bagimliliklari yukleniyor..." -ForegroundColor Yellow
+Push-Location ".\windows-backend"
 npm install --production 2>&1 | Out-Null
-Set-Location -Path ".."
-Write-Host "  ✓ Backend bağımlılıkları yüklendi" -ForegroundColor Green
+Pop-Location
+Write-Host "  OK - Backend bagimliliklari yuklendi" -ForegroundColor Green
 
-# 4. Frontend bağımlılıkları
-Write-Host "[4/6] Frontend bağımlılıkları yükleniyor..." -ForegroundColor Yellow
+# 4. Frontend bagimliliklari
+Write-Host "[4/6] Frontend bagimliliklari yukleniyor..." -ForegroundColor Yellow
 npm install --production 2>&1 | Out-Null
-Write-Host "  ✓ Frontend bağımlılıkları yüklendi" -ForegroundColor Green
+Write-Host "  OK - Frontend bagimliliklari yuklendi" -ForegroundColor Green
 
 # 5. PM2 ve serve global kurulum
-Write-Host "[5/6] PM2 ve serve yükleniyor..." -ForegroundColor Yellow
+Write-Host "[5/6] PM2 ve serve yukleniyor..." -ForegroundColor Yellow
 npm install -g pm2 serve 2>&1 | Out-Null
-Write-Host "  ✓ PM2 ve serve yüklendi" -ForegroundColor Green
+Write-Host "  OK - PM2 ve serve yuklendi" -ForegroundColor Green
 
-# 6. Servisleri başlat
-Write-Host "[6/6] Servisler başlatılıyor..." -ForegroundColor Yellow
+# 6. Servisleri baslat
+Write-Host "[6/6] Servisler baslatiliyor..." -ForegroundColor Yellow
 pm2 start ecosystem.config.cjs
 pm2 save
-Write-Host "  ✓ Servisler başlatıldı" -ForegroundColor Green
+Write-Host "  OK - Servisler baslatildi" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  Kurulum Tamamlandı!" -ForegroundColor Green
+Write-Host "  Kurulum Tamamlandi!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  Backend:  http://localhost:5000" -ForegroundColor White
 Write-Host "  Frontend: http://localhost:3000" -ForegroundColor White
-Write-Host ""
-Write-Host "  PM2 Komutları:" -ForegroundColor Yellow
-Write-Host "    pm2 list          - Servisleri listele" -ForegroundColor Gray
-Write-Host "    pm2 logs          - Logları görüntüle" -ForegroundColor Gray
-Write-Host "    pm2 restart all   - Tümünü yeniden başlat" -ForegroundColor Gray
-Write-Host "    pm2 stop all      - Tümünü durdur" -ForegroundColor Gray
 Write-Host ""
