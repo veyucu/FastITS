@@ -408,7 +408,7 @@ const apiService = {
 
   // Tarih aralığındaki paketleri toplu indir ve veritabanına kaydet
   // SSE ile real-time progress
-  downloadBulkPackagesStream: async (startDate, endDate, onProgress, settings = null) => {
+  downloadBulkPackagesStream: async (startDate, endDate, onProgress, settings = null, kullanici = null) => {
     return new Promise((resolve, reject) => {
       try {
         const url = `${API_BASE_URL}/pts/download-bulk-stream`
@@ -420,7 +420,7 @@ const apiService = {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ startDate, endDate, settings })
+          body: JSON.stringify({ startDate, endDate, settings, kullanici })
         }).then(response => {
           const reader = response.body.getReader()
           const decoder = new TextDecoder()

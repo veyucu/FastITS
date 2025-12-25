@@ -66,6 +66,16 @@ const PTSPage = () => {
   ) // Arama metni
   const [initialLoadDone, setInitialLoadDone] = useState(false) // İlk yükleme kontrolü
   const [hideNotified, setHideNotified] = useState(false) // Bildirilenleri gizle filtresi
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // Mobil görünüm kontrolü
+
+  // Ekran boyutu değişikliği dinleyicisi
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // İndirme modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false)
@@ -285,6 +295,10 @@ const PTSPage = () => {
       }))
 
       // SSE ile real-time progress
+      // Kullanıcı bilgisini localStorage'dan al
+      const storedUser = localStorage.getItem('user')
+      const kullanici = storedUser ? JSON.parse(storedUser)?.username : null
+
       await apiService.downloadBulkPackagesStream(
         startDate,
         endDate,
@@ -298,7 +312,9 @@ const PTSPage = () => {
             failed: progressData.failed || 0,
             status: progressData.status
           })
-        }
+        },
+        null, // settings
+        kullanici
       )
 
       // Mesaj kaldırıldı - modal'da zaten gösteriliyor
@@ -380,128 +396,156 @@ const PTSPage = () => {
   // Liste görünümü için kolon tanımları
   const listColumnDefs = useMemo(() => [
     {
-      headerName: 'Transfer ID',
+      headerName: isMobile ? 'ID' : 'Transfer ID',
       field: 'TRANSFER_ID',
-      width: 180,
+      width: isMobile ? 65 : 180,
+      wrapText: isMobile,
+      autoHeight: isMobile,
       cellClass: 'font-mono font-bold text-blue-600',
-      filter: 'agTextColumnFilter'
+      cellStyle: isMobile ? { whiteSpace: 'normal', wordBreak: 'break-all', lineHeight: '1.3' } : null
     },
     {
-      headerName: 'Belge Tarihi',
-      field: 'DOCUMENT_DATE',
-      width: 130,
-      cellClass: 'text-center',
-      valueFormatter: (params) => {
-        if (!params.value) return ''
-        const date = new Date(params.value)
-        return date.toLocaleDateString('tr-TR')
-      },
-      filter: 'agDateColumnFilter'
-    },
-    {
-      headerName: 'Belge No',
+      headerName: isMobile ? 'Belge' : 'Belge No / Tarih',
       field: 'DOCUMENT_NUMBER',
-      width: 150,
-      cellClass: 'font-semibold',
-      filter: 'agTextColumnFilter'
-    },
-    {
-      headerName: 'Source GLN',
-      field: 'SOURCE_GLN',
-      width: 160,
-      cellClass: 'font-mono text-sm',
-      filter: 'agTextColumnFilter'
-    },
-    {
-      headerName: 'Cari İsim',
-      field: 'SOURCE_GLN_NAME',
-      width: 200,
-      cellClass: 'font-semibold',
-      filter: 'agTextColumnFilter'
-    },
-    {
-      headerName: 'Kalem',
-      field: 'UNIQUE_GTIN_COUNT',
-      width: 110,
-      cellClass: 'text-center',
-      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
-      filter: 'agNumberColumnFilter',
-      cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalem" />
-    },
-    {
-      headerName: 'Adet',
-      field: 'TOTAL_PRODUCT_COUNT',
-      width: 110,
-      cellClass: 'text-center',
-      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
-      filter: 'agNumberColumnFilter',
-      cellRenderer: (params) => <BadgeRenderer value={params.value} type="adet" />
-    },
-    {
-      headerName: 'Kayıt Tarihi',
-      field: 'CREATED_DATE',
-      width: 150,
-      cellClass: 'text-center text-gray-600',
-      valueFormatter: (params) => {
-        if (!params.value) return ''
-        const date = new Date(params.value)
-        return date.toLocaleString('tr-TR')
-      },
-      filter: 'agDateColumnFilter'
-    },
-    {
-      headerName: 'Bildirim',
-      field: 'DURUM',
-      width: 100,
-      cellClass: 'text-center',
-      filter: 'agTextColumnFilter',
+      width: isMobile ? 70 : 160,
       cellRenderer: (params) => {
-        const value = params.value
-        if (value === 'OK') {
-          return <CheckCircle className="w-5 h-5 text-emerald-500 mx-auto" />
-        }
-        // NOK veya boş ise daire (onaysız) göster
+        const date = params.data?.DOCUMENT_DATE
+        const dateStr = date ? new Date(date).toLocaleDateString('tr-TR') : ''
         return (
-          <div className="w-5 h-5 mx-auto rounded-full border-2 border-slate-500" />
+          <div className="flex flex-col leading-tight py-1">
+            <span className="font-semibold text-slate-200">{params.value || '-'}</span>
+            <span className="text-xs text-slate-400">{dateStr}</span>
+          </div>
         )
       }
     },
     {
-      headerName: 'Bildirim Tarihi',
-      field: 'BILDIRIM_TARIHI',
-      width: 150,
-      cellClass: 'text-center text-gray-600',
-      valueFormatter: (params) => {
-        if (!params.value) return ''
-        const date = new Date(params.value)
-        return date.toLocaleString('tr-TR')
-      },
-      filter: 'agDateColumnFilter'
+      headerName: isMobile ? 'Cari' : 'GLN / Cari',
+      field: 'SOURCE_GLN_NAME',
+      width: isMobile ? 185 : 220,
+      cellRenderer: (params) => {
+        const gln = params.data?.SOURCE_GLN || ''
+        return (
+          <div className="flex flex-col leading-tight py-1">
+            <span className="font-mono text-xs text-slate-400">{gln}</span>
+            <span className="font-semibold text-slate-200 truncate">{params.value || '-'}</span>
+          </div>
+        )
+      }
     },
     {
-      headerName: 'Aksiyon Tipi',
-      field: 'ACTION_TYPE',
-      width: 120,
+      headerName: isMobile ? 'Adet' : 'Kalem/Adet',
+      field: 'UNIQUE_GTIN_COUNT',
+      width: isMobile ? 70 : 100,
       cellClass: 'text-center',
-      filter: 'agTextColumnFilter'
+      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
+      cellRenderer: (params) => {
+        const kalem = params.value || 0
+        const adet = params.data?.TOTAL_PRODUCT_COUNT || 0
+        return (
+          <span className="px-2 py-1 rounded bg-blue-600/20 text-blue-400 font-medium text-sm">
+            {kalem}/{adet}
+          </span>
+        )
+      }
+    },
+    {
+      headerName: 'Bildirim',
+      field: 'BILDIRIM',
+      width: 200,
+      cellRenderer: (params) => {
+        const value = params.value
+        const tarih = params.data?.BILDIRIM_TARIHI
+        const kullanici = params.data?.BILDIRIM_KULLANICI
+        const tarihStr = tarih ? new Date(tarih).toLocaleString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : ''
+
+        if (value === 'OK') {
+          return (
+            <div className="flex items-center gap-2 py-1">
+              <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                <CheckCircle className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs text-slate-300">{tarihStr}</span>
+                {kullanici && <span className="text-xs text-slate-500">{kullanici}</span>}
+              </div>
+            </div>
+          )
+        }
+
+        if (value === 'NOK') {
+          return (
+            <div className="flex items-center gap-2 py-1">
+              <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-xs text-slate-300">{tarihStr}</span>
+                {kullanici && <span className="text-xs text-slate-500">{kullanici}</span>}
+              </div>
+            </div>
+          )
+        }
+
+        // Boş veya diğer durumlar
+        return (
+          <div className="flex items-center gap-2 py-1">
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+              <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+            </div>
+            <span className="text-xs text-slate-500">-</span>
+          </div>
+        )
+      }
+    },
+    {
+      headerName: 'Kayıt',
+      field: 'KAYIT_TARIHI',
+      width: 150,
+      cellClass: 'text-center',
+      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
+      cellRenderer: (params) => {
+        const tarih = params.value
+        const kullanici = params.data?.KAYIT_KULLANICI
+        const tarihStr = tarih ? new Date(tarih).toLocaleString('tr-TR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : '-'
+
+        return (
+          <div className="flex flex-col items-center justify-center leading-tight py-1">
+            <span className="text-xs text-slate-400">{tarihStr}</span>
+            {kullanici && <span className="text-xs text-slate-500">{kullanici}</span>}
+          </div>
+        )
+      }
     },
     {
       headerName: 'Note',
       field: 'NOTE',
       width: 200,
-      cellClass: 'text-sm text-gray-600',
-      filter: 'agTextColumnFilter'
+      cellClass: 'text-sm text-gray-600'
     }
-  ], [])
+  ], [isMobile])
 
   return (
     <div className="flex flex-col h-screen bg-dark-950">
-      {/* Header - Dark Theme */}
+      {/* Header - Dark Theme - Mobile Responsive */}
       <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-        <div className="px-6 py-3">
-          <div className="flex items-center gap-4">
-            {/* Sol - Başlık ve Arama */}
-            <div className="flex items-center gap-3 flex-1">
+        <div className="px-3 md:px-6 py-2 md:py-3">
+          {/* Üst Satır - Logo, Başlık, İşlem Butonları */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Sol - Başlık (PTS ikonu ve başlığı sadece desktop) */}
+            <div className="flex items-center gap-2 md:gap-3">
               <button
                 onClick={() => navigate('/')}
                 className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0"
@@ -509,25 +553,29 @@ const PTSPage = () => {
               >
                 <Home className="w-5 h-5 text-slate-300" />
               </button>
-              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
+              {/* PTS ikonu ve başlığı sadece desktop'ta görünür */}
+              <div className="hidden md:flex w-8 h-8 bg-primary-600 rounded items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
                 <Truck className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS</h1>
+            </div>
 
-              {/* Arama Input */}
-              <div className="relative flex-1 ml-4 mr-4">
+            {/* Orta - Arama (Desktop'ta) + İşlem Butonları */}
+            <div className="flex items-center gap-2 flex-1 justify-end md:justify-start">
+              {/* Arama Input - Sadece Desktop için üst satırda */}
+              <div className="hidden md:block relative flex-1 max-w-md">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
-                  placeholder="Transfer ID, Belge No, Source GLN veya Cari İsim..."
+                  placeholder="Transfer ID, Belge No, GLN, Cari..."
                   className="w-full pl-8 pr-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 />
               </div>
 
-              {/* Bildirilenleri Gizle Checkbox */}
-              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-slate-100 transition-colors flex-shrink-0">
+              {/* Bildirilenleri Gizle Checkbox - Sadece desktop, indir butonunun solunda */}
+              <label className="hidden md:flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-slate-100 transition-colors flex-shrink-0">
                 <input
                   type="checkbox"
                   checked={hideNotified}
@@ -536,46 +584,42 @@ const PTSPage = () => {
                 />
                 <span>Bildirilenleri Gizle</span>
               </label>
-            </div>
-
-            {/* Sağ - İşlem Butonları ve Filtreler */}
-            <div className="flex items-center gap-3 flex-shrink-0">
 
               {/* İndir Butonu */}
               <button
                 type="button"
                 onClick={handleSearchByDate}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1.5 text-xs md:text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
               >
                 <Download className={`w-3.5 h-3.5 ${loading ? 'animate-bounce' : ''}`} />
-                İndir
+                <span className="hidden sm:inline">İndir</span>
               </button>
 
               {/* Tarih Aralığı */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <input
                   type="date"
                   value={startDate}
                   onChange={handleStartDateChange}
-                  className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                  className="w-[100px] md:w-auto px-1 md:px-2 py-1.5 text-xs md:text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
-                <span className="text-slate-500 font-bold">→</span>
+                <span className="text-slate-500 font-bold text-xs">→</span>
                 <input
                   type="date"
                   value={endDate}
                   onChange={handleEndDateChange}
-                  className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                  className="w-[100px] md:w-auto px-1 md:px-2 py-1.5 text-xs md:text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                   disabled={loading}
                 />
               </div>
 
-              {/* Tarih Tipi Seçimi */}
+              {/* Tarih Tipi Seçimi - Sadece desktop */}
               <select
                 value={dateFilterType}
                 onChange={(e) => setDateFilterType(e.target.value)}
-                className="px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                className="hidden md:block px-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 disabled={loading}
               >
                 <option value="created">Kayıt Tarihi</option>
@@ -587,18 +631,53 @@ const PTSPage = () => {
                 type="button"
                 onClick={handleListPackages}
                 disabled={loading}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1.5 text-xs md:text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Listele
+                <span className="hidden sm:inline">Listele</span>
               </button>
+            </div>
+          </div>
+
+          {/* Alt Satır - Arama (Mobil için) */}
+          <div className="flex md:hidden items-center gap-2 mt-2">
+            {/* Arama Input */}
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                placeholder="Transfer ID, Belge No, GLN, Cari..."
+                className="w-full pl-8 pr-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+              />
+            </div>
+            {/* Mobil Filtreler */}
+            <div className="flex md:hidden items-center gap-2">
+              <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={hideNotified}
+                  onChange={(e) => setHideNotified(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-dark-600 bg-dark-800 text-primary-500"
+                />
+                <span>Gizle</span>
+              </label>
+              <select
+                value={dateFilterType}
+                onChange={(e) => setDateFilterType(e.target.value)}
+                className="px-1.5 py-1 text-xs bg-dark-800 border border-dark-600 rounded text-slate-100"
+                disabled={loading}
+              >
+                <option value="created">Kayıt T.</option>
+                <option value="document">Belge T.</option>
+              </select>
             </div>
           </div>
         </div>
       </div>
 
 
-      {/* Toast Notification - Sağ Üst Köşe */}
       {message && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl border backdrop-blur-sm min-w-[300px] max-w-[450px] ${message.type === 'success' ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50' :
@@ -628,7 +707,7 @@ const PTSPage = () => {
       )}
 
       {/* Paket Listesi - AG Grid Dark Theme */}
-      <div className="flex-1 px-6 py-4 flex flex-col min-h-0">
+      <div className="flex-1 px-2 md:px-6 py-2 md:py-4 flex flex-col min-h-0">
         {listData.length > 0 ? (
           /* Liste Görünümü */
           <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700 flex-1 relative">
@@ -638,14 +717,15 @@ const PTSPage = () => {
               columnDefs={listColumnDefs}
               defaultColDef={{
                 sortable: true,
-                filter: true,
                 resizable: true,
                 headerClass: 'ag-header-cell-center'
               }}
+              enableCellTextSelection={true}
+              ensureDomOrder={true}
               rowClass="cursor-pointer hover:bg-dark-700/50"
               animateRows={true}
-              rowHeight={50}
-              headerHeight={48}
+              rowHeight={isMobile ? 40 : 50}
+              headerHeight={isMobile ? 32 : 48}
               pagination={true}
               paginationPageSize={100}
               paginationPageSizeSelector={[25, 50, 100, 200]}
@@ -675,8 +755,8 @@ const PTSPage = () => {
                 }
               }}
             />
-            {/* Pagination içinde sol tarafa bilgi mesajı */}
-            <div className="absolute bottom-0 left-0 h-[48px] flex items-center px-4 text-xs text-slate-500 gap-1.5 pointer-events-none">
+            {/* Pagination içinde sol tarafa bilgi mesajı - Sadece desktop */}
+            <div className="hidden md:flex absolute bottom-0 left-0 h-[48px] items-center px-4 text-xs text-slate-500 gap-1.5 pointer-events-none">
               <Info className="w-3.5 h-3.5" />
               <span>PTS içeriği için satıra çift tıklayın</span>
             </div>

@@ -26,8 +26,8 @@ const utsService = {
           FTIRSIP,
           CARI_KODU,
           KAYIT_TARIHI,
-          DURUM,
-          KULLANICI
+          BILDIRIM,
+          KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
@@ -55,8 +55,8 @@ const utsService = {
         ftirsip: row.FTIRSIP,
         cariKodu: row.CARI_KODU,
         kayitTarihi: row.KAYIT_TARIHI,
-        durum: row.DURUM,
-        kullanici: row.KULLANICI
+        bildirim: row.BILDIRIM,
+        kayitKullanici: row.KAYIT_KULLANICI
       }))
 
       return records
@@ -127,7 +127,7 @@ const utsService = {
             INSERT INTO AKTBLITSUTS (
               SERI_NO, LOT_NO, MIKTAR, STOK_KODU, GTIN,
               URETIM_TARIHI, HAR_RECNO, FATIRS_NO, FTIRSIP,
-              CARI_KODU, TURU, KAYIT_TARIHI, DURUM, KULLANICI
+              CARI_KODU, TURU, KAYIT_TARIHI, BILDIRIM, KAYIT_KULLANICI
             ) VALUES (
               @seriNo, @lot, @miktar, @stokKodu, @gtin,
               @uretimTarihi, @harRecno, @belgeNo, @ftirsip,
@@ -157,7 +157,7 @@ const utsService = {
                 LOT_NO = @lot,
                 MIKTAR = @miktar,
                 URETIM_TARIHI = @uretimTarihi,
-                KULLANICI = @kullanici
+                KAYIT_KULLANICI = @kullanici
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @harRecno
               AND RECNO = @recno

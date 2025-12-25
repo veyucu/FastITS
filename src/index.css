@@ -341,6 +341,69 @@
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
 
+/* AG Grid Pagination - Mobile Responsive */
+.ag-theme-alpine .ag-paging-panel {
+  background-color: #0f172a !important;
+  border-top: 1px solid #334155 !important;
+  padding: 8px 12px !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.ag-theme-alpine .ag-paging-page-size {
+  order: 1 !important;
+}
+
+.ag-theme-alpine .ag-paging-row-summary-panel {
+  order: 2 !important;
+}
+
+.ag-theme-alpine .ag-paging-page-summary-panel {
+  order: 3 !important;
+}
+
+@media (max-width: 767px) {
+  .ag-theme-alpine .ag-paging-panel {
+    padding: 4px 8px !important;
+    font-size: 10px !important;
+    height: auto !important;
+    min-height: 36px !important;
+  }
+
+  .ag-theme-alpine .ag-paging-row-summary-panel {
+    display: none !important;
+  }
+
+  .ag-theme-alpine .ag-paging-page-size {
+    margin-right: auto !important;
+  }
+
+  .ag-theme-alpine .ag-paging-page-summary-panel {
+    margin-left: auto !important;
+    gap: 2px !important;
+  }
+
+  .ag-theme-alpine .ag-paging-button {
+    padding: 2px 4px !important;
+    min-width: 24px !important;
+  }
+
+  .ag-theme-alpine .ag-paging-number {
+    font-size: 10px !important;
+  }
+
+  .ag-theme-alpine .ag-picker-field-wrapper {
+    min-width: 45px !important;
+    height: 24px !important;
+  }
+
+  .ag-theme-alpine .ag-picker-field-display {
+    font-size: 10px !important;
+  }
+}
+
 /* ========================================
    ANIMATIONS
    ======================================== */

@@ -58,7 +58,7 @@ router.post('/search', async (req, res) => {
 // SSE ile real-time progress güncellemesi
 router.post('/download-bulk-stream', async (req, res) => {
   try {
-    const { startDate, endDate, settings } = req.body
+    const { startDate, endDate, settings, kullanici } = req.body
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -171,6 +171,8 @@ router.post('/download-bulk-stream', async (req, res) => {
         const downloadResult = await ptsService.downloadPackage(transferIdStr, settings)
 
         if (downloadResult.success) {
+          // Kullanıcı bilgisini ekle
+          downloadResult.data.kayitKullanici = kullanici || null
           const saveResult = await ptsDbService.savePackageData(downloadResult.data)
 
           if (saveResult.success) {
@@ -279,7 +281,7 @@ router.post('/download-bulk-stream', async (req, res) => {
 // Eski endpoint (yedek - non-streaming) - Artık kullanılmıyor
 router.post('/download-bulk-old', async (req, res) => {
   try {
-    const { startDate, endDate, settings } = req.body
+    const { startDate, endDate, settings, kullanici } = req.body
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -331,6 +333,8 @@ router.post('/download-bulk-old', async (req, res) => {
         const downloadResult = await ptsService.downloadPackage(transferIdStr, settings)
 
         if (downloadResult.success) {
+          // Kullanıcı bilgisini ekle
+          downloadResult.data.kayitKullanici = kullanici || null
           const saveResult = await ptsDbService.savePackageData(downloadResult.data)
           if (saveResult.success) results.downloaded++
           else results.failed++

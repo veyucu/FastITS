@@ -225,19 +225,20 @@ async function createPTSTables() {
         SHIP_TO VARCHAR(15) NULL,
         NOTE VARCHAR(100) NULL,
         VERSION VARCHAR(10) NULL,
-        DURUM VARCHAR(3) NULL,
+        BILDIRIM VARCHAR(3) NULL,
         BILDIRIM_TARIHI DATETIME NULL,
-        CREATED_DATE DATETIME DEFAULT GETDATE(),
-        UPDATED_DATE DATETIME NULL,
+        BILDIRIM_KULLANICI VARCHAR(35) NULL,
+        KAYIT_TARIHI DATETIME DEFAULT GETDATE(),
+        KAYIT_KULLANICI VARCHAR(35) NULL,
         KALEM_SAYISI INT NULL DEFAULT 0,
-        URUN_ADEDI INT NULL DEFAULT 0
+        URUN_ADEDI INT NULL DEFAULT 0       
       )
     `)
 
     await pool.request().query(`CREATE INDEX IX_AKTBLPTSMAS_DOCUMENT_DATE ON AKTBLPTSMAS(DOCUMENT_DATE)`)
     await pool.request().query(`CREATE INDEX IX_AKTBLPTSMAS_SOURCE_GLN ON AKTBLPTSMAS(SOURCE_GLN)`)
     await pool.request().query(`CREATE INDEX IX_AKTBLPTSMAS_BILDIRIM_TARIHI ON AKTBLPTSMAS(BILDIRIM_TARIHI)`)
-    await pool.request().query(`CREATE INDEX IX_AKTBLPTSMAS_CREATED_DATE ON AKTBLPTSMAS(CREATED_DATE)`)
+    await pool.request().query(`CREATE INDEX IX_AKTBLPTSMAS_KAYIT_TARIHI ON AKTBLPTSMAS(KAYIT_TARIHI)`)
 
     log('✅ AKTBLPTSMAS tablosu oluşturuldu')
   } else {
@@ -245,10 +246,12 @@ async function createPTSTables() {
 
     // Migration: Eksik kolonları ekle
     const kolonlar = [
-      { name: 'DURUM', type: 'VARCHAR(3) NULL' },
+      { name: 'BILDIRIM', type: 'VARCHAR(3) NULL' },
       { name: 'BILDIRIM_TARIHI', type: 'DATETIME NULL' },
+      { name: 'BILDIRIM_KULLANICI', type: 'VARCHAR(35) NULL' },
       { name: 'KALEM_SAYISI', type: 'INT NULL DEFAULT 0' },
-      { name: 'URUN_ADEDI', type: 'INT NULL DEFAULT 0' }
+      { name: 'URUN_ADEDI', type: 'INT NULL DEFAULT 0' },
+      { name: 'KAYIT_KULLANICI', type: 'VARCHAR(35) NULL' }
     ]
 
     for (const kolon of kolonlar) {
@@ -280,9 +283,9 @@ async function createPTSTables() {
         EXPIRATION_DATE DATE NULL,
         PRODUCTION_DATE DATE NULL,
         PO_NUMBER VARCHAR(25) NULL,
-        DURUM VARCHAR(20) NULL,
+        BILDIRIM VARCHAR(20) NULL,
         BILDIRIM_TARIHI DATETIME NULL,
-        CREATED_DATE DATETIME DEFAULT GETDATE(),
+        BILDIRIM_KULLANICI VARCHAR(35) NULL,
         CONSTRAINT FK_AKTBLPTSTRA_TRANSFER_ID FOREIGN KEY (TRANSFER_ID) REFERENCES AKTBLPTSMAS(TRANSFER_ID) ON DELETE CASCADE
       )
     `)
@@ -300,8 +303,9 @@ async function createPTSTables() {
     // Migration: Eksik kolonları ekle
     const kolonlar = [
       { name: 'ID', type: 'BIGINT IDENTITY(1,1)', special: true },
-      { name: 'DURUM', type: 'VARCHAR(20) NULL' },
+      { name: 'BILDIRIM', type: 'VARCHAR(20) NULL' },
       { name: 'BILDIRIM_TARIHI', type: 'DATETIME NULL' },
+      { name: 'BILDIRIM_KULLANICI', type: 'VARCHAR(35) NULL' },
       { name: 'PARENT_CARRIER_LABEL', type: 'VARCHAR(25) NULL' },
       { name: 'CARRIER_LEVEL', type: 'TINYINT NULL' }
     ]
@@ -359,19 +363,19 @@ async function createITSTables() {
         URETIM_TARIHI DATE,
         CARRIER_LABEL VARCHAR(25),
         CONTAINER_TYPE CHAR(1),
-        DURUM VARCHAR(20),
+        BILDIRIM VARCHAR(20),
         BILDIRIM_ID VARCHAR(36),
         BILDIRIM_TARIHI DATETIME,
         KAYIT_TARIHI DATETIME DEFAULT GETDATE(),
-        KULLANICI VARCHAR(35)
+        KAYIT_KULLANICI VARCHAR(35)
       )
     `)
 
     // Index'ler
     await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_GTIN ON AKTBLITSUTS(GTIN) INCLUDE (SERI_NO, LOT_NO, MIAD)`)
-    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_SERI_NO ON AKTBLITSUTS(SERI_NO) INCLUDE (GTIN, DURUM)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_SERI_NO ON AKTBLITSUTS(SERI_NO) INCLUDE (GTIN, BILDIRIM)`)
     await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_FATIRS_NO ON AKTBLITSUTS(FATIRS_NO, FTIRSIP) INCLUDE (CARI_KODU)`)
-    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_CARI_STOK ON AKTBLITSUTS(CARI_KODU, STOK_KODU) INCLUDE (GTIN, SERI_NO, DURUM)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_CARI_STOK ON AKTBLITSUTS(CARI_KODU, STOK_KODU) INCLUDE (GTIN, SERI_NO, BILDIRIM)`)
 
     log('✅ AKTBLITSUTS tablosu oluşturuldu')
   } else {

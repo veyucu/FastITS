@@ -374,18 +374,8 @@ async function downloadPackage(transferId, settings = null) {
       productCount: packageInfo.products.length
     })
 
-    // Veritabanına kaydet (XML_CONTENT artık tabloda tutulmuyor - optimize edildi)
-    try {
-      const saveResult = await ptsDbService.savePackageData(packageInfo)
-      if (saveResult.success) {
-        console.log(`💾 Paket veritabanına kaydedildi: ${transferId}`)
-      } else {
-        console.error(`❌ Veritabanına kaydetme hatası: ${saveResult.message}`)
-      }
-    } catch (dbError) {
-      console.error('❌ Veritabanı kayıt hatası:', dbError.message)
-      // Veritabanı hatası olsa bile paket verisini döndür
-    }
+    // NOT: Veritabanına kaydetme işlemi route'da yapılıyor (kayitKullanici bilgisiyle birlikte)
+    // Bu fonksiyon sadece paketi indirip parse ediyor
 
     return {
       success: true,

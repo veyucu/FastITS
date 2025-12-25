@@ -44,6 +44,17 @@ const PTSDetailPage = () => {
   const [statusFilter, setStatusFilter] = useState('all') // Durum filtresi
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState(null) // {type: 'success'|'error', text: '...'}
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768) // Mobil görünüm kontrolü
+  const [showTooltip, setShowTooltip] = useState(false) // Transfer ID tooltip
+
+  // Ekran boyutu değişikliği dinleyicisi
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Bildirim popup state
   const [bildirimModal, setBildirimModal] = useState({
@@ -539,10 +550,10 @@ const PTSDetailPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-dark-950 overflow-hidden">
-      {/* Header - Sabit - Kompakt */}
+      {/* Header - Sabit - Kompakt - Mobile Responsive */}
       <div className="flex-shrink-0 bg-dark-900/80 backdrop-blur-sm border-b border-dark-700 z-20">
-        <div className="px-3 py-1.5">
-          <div className="flex items-center gap-3">
+        <div className="px-2 md:px-3 py-1.5">
+          <div className="flex items-center gap-2 md:gap-3">
             {/* Sol - Geri butonu */}
             <button
               onClick={() => navigate('/pts')}
@@ -551,105 +562,177 @@ const PTSDetailPage = () => {
               <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
             </button>
 
-            {/* Transfer ID - Badge */}
-            <div className="bg-primary-500/10 border border-primary-500/30 rounded px-2 py-0.5 flex flex-col items-center">
-              <span className="text-[9px] text-primary-400/70 uppercase">Transfer</span>
-              <span className="text-primary-400 text-xs font-bold font-mono">#{transferId}</span>
-            </div>
-
-            {/* Belge No - Badge */}
-            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
-              <span className="text-[9px] text-slate-500 uppercase">Belge No</span>
-              <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_NUMBER || '-'}</span>
-            </div>
-
-            {/* Tarih - Badge */}
-            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
-              <span className="text-[9px] text-slate-500 uppercase">Tarih</span>
-              <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
-            </div>
-
-            {/* GLN - Badge */}
-            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
-              <span className="text-[9px] text-slate-500 uppercase">GLN</span>
-              <span className="text-slate-200 text-xs font-mono">{packageData.SOURCE_GLN || '-'}</span>
-            </div>
-
-            {/* Cari - Badge */}
-            {packageData.SOURCE_GLN_NAME && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5 flex flex-col items-center">
-                <span className="text-[9px] text-amber-400/70 uppercase">Cari</span>
-                <span className="text-amber-400 text-xs font-medium truncate max-w-[180px]">
-                  {packageData.SOURCE_GLN_NAME}
-                  {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
-                </span>
+            {/* Transfer ID - Badge with Tooltip for Mobile */}
+            <div className="relative">
+              <div
+                className="bg-primary-500/10 border border-primary-500/30 rounded px-2 py-0.5 flex flex-col items-center cursor-pointer"
+                onClick={() => isMobile && setShowTooltip(!showTooltip)}
+                onMouseEnter={() => !isMobile && setShowTooltip(true)}
+                onMouseLeave={() => !isMobile && setShowTooltip(false)}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="text-[9px] text-primary-400/70 uppercase">Transfer</span>
+                  {isMobile && <Info className="w-2.5 h-2.5 text-primary-400/50" />}
+                </div>
+                <span className="text-primary-400 text-xs font-bold font-mono">#{transferId}</span>
               </div>
+
+              {/* Tooltip - Belge bilgileri */}
+              {showTooltip && (
+                <div className="absolute top-full left-0 mt-1 z-50 bg-dark-800 border border-dark-600 rounded-lg shadow-xl p-3 min-w-[200px]">
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Belge No:</span>
+                      <span className="text-slate-200 font-medium">{packageData.DOCUMENT_NUMBER || '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Tarih:</span>
+                      <span className="text-slate-200">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">GLN:</span>
+                      <span className="text-slate-200 font-mono text-[10px]">{packageData.SOURCE_GLN || '-'}</span>
+                    </div>
+                    {packageData.SOURCE_GLN_NAME && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Cari:</span>
+                        <span className="text-amber-400 font-medium truncate max-w-[120px]">{packageData.SOURCE_GLN_NAME}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Desktop - Badge'ler */}
+            {!isMobile && (
+              <>
+                {/* Belge No - Badge */}
+                <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+                  <span className="text-[9px] text-slate-500 uppercase">Belge No</span>
+                  <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_NUMBER || '-'}</span>
+                </div>
+
+                {/* Tarih - Badge */}
+                <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+                  <span className="text-[9px] text-slate-500 uppercase">Tarih</span>
+                  <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
+                </div>
+
+                {/* GLN - Badge */}
+                <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+                  <span className="text-[9px] text-slate-500 uppercase">GLN</span>
+                  <span className="text-slate-200 text-xs font-mono">{packageData.SOURCE_GLN || '-'}</span>
+                </div>
+
+                {/* Cari - Badge */}
+                {packageData.SOURCE_GLN_NAME && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5 flex flex-col items-center">
+                    <span className="text-[9px] text-amber-400/70 uppercase">Cari</span>
+                    <span className="text-amber-400 text-xs font-medium truncate max-w-[180px]">
+                      {packageData.SOURCE_GLN_NAME}
+                      {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Sağ - Aksiyon Butonları */}
-            <div className="flex items-center gap-2 ml-auto">
-              {/* Durum Filtresi */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="bg-dark-800 border border-dark-600 text-slate-200 text-xs rounded px-1.5 py-0.5 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-w-[120px]"
-              >
-                <option value="all">Tümü ({products.length})</option>
-                {statusStats.map(([durum, count]) => (
-                  <option key={durum} value={durum}>
-                    {durum} ({count})
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-1.5 md:gap-2 ml-auto">
+              {/* Durum Filtresi - Sadece Desktop */}
+              {!isMobile && (
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-dark-800 border border-dark-600 text-slate-200 text-xs rounded px-1.5 py-0.5 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-w-[120px]"
+                >
+                  <option value="all">Tümü ({products.length})</option>
+                  {statusStats.map(([durum, count]) => (
+                    <option key={durum} value={durum}>
+                      {durum} ({count})
+                    </option>
+                  ))}
+                </select>
+              )}
 
-              {/* Aksiyon Butonları */}
+              {/* Aksiyon Butonları - Mobilde daha büyük touch hedefleri */}
               <button
                 type="button"
                 onClick={handleAlimBildirimi}
                 disabled={actionLoading || filteredProducts.length === 0}
-                className="flex items-center gap-1 px-2 py-0.5 text-xs bg-emerald-600 text-white rounded shadow-sm hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 md:px-2 py-1.5 md:py-0.5 text-xs md:text-xs bg-emerald-600 text-white rounded shadow-sm hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-3 h-3" />
+                  <Send className="w-3.5 h-3.5" />
                 )}
-                <span>Alım Bildirimi</span>
+                <span className="hidden sm:inline">Alım</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleAlimIadeBildirimi}
                 disabled={actionLoading || filteredProducts.length === 0}
-                className="flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-600 text-white rounded shadow-sm hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-3 md:px-2 py-1.5 md:py-0.5 text-xs md:text-xs bg-amber-600 text-white rounded shadow-sm hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed ml-1"
               >
                 {actionLoading ? (
-                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="w-3.5 h-3.5" />
                 )}
-                <span>İade Bildirimi</span>
+                <span className="hidden sm:inline">İade</span>
               </button>
 
-              {/* ITS Durum + Bildirim Tarihi */}
-              {(() => {
-                const durumValue = packageData.DURUM
-                const isOK = durumValue === 'OK'
-                return (
-                  <div className="flex items-center gap-2">
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${isOK ? 'bg-emerald-500/30 border border-emerald-500/50' : 'bg-amber-500/20 border border-amber-500/40'}`}>
-                      <span className={isOK ? 'text-emerald-300' : 'text-amber-300'}>ITS</span>
-                      {isOK ? (
-                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
-                      ) : (
-                        <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-400" />
-                      )}
+              {/* Bildirim Durumu - Desktop için */}
+              {!isMobile && (() => {
+                const bildirimValue = packageData.BILDIRIM
+                const bildirimTarihi = packageData.BILDIRIM_TARIHI
+                const bildirimKullanici = packageData.BILDIRIM_KULLANICI
+                const tarihStr = bildirimTarihi ? new Date(bildirimTarihi).toLocaleString('tr-TR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : ''
+
+                if (bildirimValue === 'OK') {
+                  return (
+                    <div className="flex items-center gap-2" title="ITS Bildirimi">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      </div>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-slate-300">{tarihStr}</span>
+                        {bildirimKullanici && <span className="text-xs text-slate-500">{bildirimKullanici}</span>}
+                      </div>
                     </div>
-                    {packageData.BILDIRIM_TARIHI && (
-                      <span className="text-[10px] text-slate-400">
-                        {new Date(packageData.BILDIRIM_TARIHI).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
-                      </span>
-                    )}
+                  )
+                }
+
+                if (bildirimValue === 'NOK') {
+                  return (
+                    <div className="flex items-center gap-2" title="ITS Bildirimi">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/20 border border-red-500/40">
+                        <AlertCircle className="w-5 h-5 text-red-400" />
+                      </div>
+                      <div className="flex flex-col leading-tight">
+                        <span className="text-xs text-slate-300">{tarihStr}</span>
+                        {bildirimKullanici && <span className="text-xs text-slate-500">{bildirimKullanici}</span>}
+                      </div>
+                    </div>
+                  )
+                }
+
+                // Boş veya diğer durumlar
+                return (
+                  <div className="flex items-center gap-2" title="ITS Bildirimi">
+                    <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700/50 border border-slate-600">
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-slate-500" />
+                    </div>
+                    <span className="text-xs text-slate-500">Bildirilmedi</span>
                   </div>
                 )
               })()}
@@ -659,28 +742,30 @@ const PTSDetailPage = () => {
       </div>
 
       {/* Mesaj Gösterimi */}
-      {message && (
-        <div className={`mx-6 mt-4 px-4 py-3 rounded-lg flex items-center gap-3 ${message.type === 'success'
-          ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
-          : 'bg-rose-500/20 border border-rose-500/30 text-rose-400'
-          }`}>
-          {message.type === 'success' ? (
-            <CheckCircle className="w-5 h-5 flex-shrink-0" />
-          ) : (
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          )}
-          <span className="font-medium">{message.text}</span>
-          <button
-            onClick={() => setMessage(null)}
-            className="ml-auto text-current opacity-60 hover:opacity-100 transition-opacity"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+      {
+        message && (
+          <div className={`mx-6 mt-4 px-4 py-3 rounded-lg flex items-center gap-3 ${message.type === 'success'
+            ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+            : 'bg-rose-500/20 border border-rose-500/30 text-rose-400'
+            }`}>
+            {message.type === 'success' ? (
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <span className="font-medium">{message.text}</span>
+            <button
+              onClick={() => setMessage(null)}
+              className="ml-auto text-current opacity-60 hover:opacity-100 transition-opacity"
+            >
+              ✕
+            </button>
+          </div>
+        )
+      }
 
       {/* TanStack Table - Scrollable Area */}
-      <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
+      <div className="flex-1 flex flex-col min-h-0 px-2 md:px-6 py-2 md:py-4">
         <div className="flex-1 flex flex-col min-h-0 bg-dark-800/60 rounded-xl border border-dark-700 overflow-hidden shadow-xl shadow-dark-950/50">
           {/* Table with scroll */}
           <div className="flex-1 overflow-auto">
@@ -691,8 +776,8 @@ const PTSDetailPage = () => {
                     {headerGroup.headers.map(header => (
                       <th
                         key={header.id}
-                        className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider relative group"
-                        style={{ width: header.getSize() }}
+                        className={`px-2 md:px-4 py-2 md:py-3.5 text-left text-[10px] md:text-xs font-bold uppercase tracking-wider relative group`}
+                        style={{ width: isMobile ? 'auto' : header.getSize() }}
                       >
                         {header.isPlaceholder ? null : (
                           <div
@@ -779,123 +864,126 @@ const PTSDetailPage = () => {
               </tbody>
             </table>
           </div>
-          {/* Footer - Sabit */}
-          <div className="flex-shrink-0 bg-gradient-to-r from-dark-900 to-dark-800 border-t border-dark-600 px-5 py-3">
+          {/* Footer - Sabit - Mobile Responsive */}
+          <div className="flex-shrink-0 bg-gradient-to-r from-dark-900 to-dark-800 border-t border-dark-600 px-2 md:px-5 py-1.5 md:py-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-slate-500" />
-                  <span className="text-sm text-slate-400">Gösterilen:</span>
-                  <span className="px-2.5 py-1 bg-primary-500/20 text-primary-400 border border-primary-500/30 rounded-lg text-sm font-bold">
+              <div className="flex items-center gap-2 md:gap-4">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <Package className="w-3.5 md:w-4 h-3.5 md:h-4 text-slate-500" />
+                  <span className="text-[10px] md:text-sm text-slate-400">Gösterilen:</span>
+                  <span className="px-1.5 md:px-2.5 py-0.5 md:py-1 bg-primary-500/20 text-primary-400 border border-primary-500/30 rounded-lg text-[10px] md:text-sm font-bold">
                     {filteredProducts.length}
                   </span>
                   {statusFilter !== 'all' && (
                     <>
                       <span className="text-slate-500">/</span>
-                      <span className="text-sm text-slate-400">{products.length} toplam</span>
+                      <span className="text-[10px] md:text-sm text-slate-400">{products.length}</span>
                     </>
                   )}
                 </div>
-                <div className="w-px h-5 bg-dark-600" />
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">Kalem:</span>
-                  <span className="px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-sm font-bold">
+                <div className="hidden md:block w-px h-5 bg-dark-600" />
+                <div className="flex items-center gap-1 md:gap-2">
+                  <span className="text-[10px] md:text-sm text-slate-400">Kalem:</span>
+                  <span className="px-1.5 md:px-2.5 py-0.5 md:py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] md:text-sm font-bold">
                     {new Set(filteredProducts.map(p => p.gtin)).size}
                   </span>
                 </div>
-                <div className="w-px h-5 bg-dark-600" />
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-400">Koli:</span>
-                  <span className="px-2.5 py-1 bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded-lg text-sm font-bold">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <span className="text-[10px] md:text-sm text-slate-400">Koli:</span>
+                  <span className="px-1.5 md:px-2.5 py-0.5 md:py-1 bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded-lg text-[10px] md:text-sm font-bold">
                     {new Set(filteredProducts.filter(p => p.carrierLabel).map(p => p.carrierLabel)).size}
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <Info className="w-3.5 h-3.5" />
-                <span>Grupları genişletmek/daraltmak için satıra tıklayın</span>
-              </div>
+              {!isMobile && (
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <Info className="w-3.5 h-3.5" />
+                  <span>Grupları genişletmek/daraltmak için satıra tıklayın</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       {/* Bildirim Modal Popup */}
-      {bildirimModal.show && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
-            {/* İkon */}
-            <div className="flex justify-center mb-6">
-              {bildirimModal.status === 'loading' && (
-                <div className="w-16 h-16 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
-              )}
-              {bildirimModal.status === 'success' && (
-                <div className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center">
-                  <CheckCircle className="w-10 h-10 text-emerald-400" />
+      {
+        bildirimModal.show && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+              {/* İkon */}
+              <div className="flex justify-center mb-6">
+                {bildirimModal.status === 'loading' && (
+                  <div className="w-16 h-16 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+                )}
+                {bildirimModal.status === 'success' && (
+                  <div className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-10 h-10 text-emerald-400" />
+                  </div>
+                )}
+                {bildirimModal.status === 'error' && (
+                  <div className="w-16 h-16 bg-rose-500/20 border-2 border-rose-500 rounded-full flex items-center justify-center">
+                    <XCircle className="w-10 h-10 text-rose-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* Başlık */}
+              <h3 className="text-xl font-bold text-center text-slate-100 mb-2">
+                {bildirimModal.type === 'alim' ? 'Alım Bildirimi' : 'İade Bildirimi'}
+              </h3>
+
+              {/* Ürün Sayısı */}
+              <p className="text-center text-slate-400 text-sm mb-4">
+                {bildirimModal.productCount} ürün işleniyor
+              </p>
+
+              {/* Mesaj */}
+              <p className={`text-center text-lg font-medium mb-6 ${bildirimModal.status === 'success' ? 'text-emerald-400' :
+                bildirimModal.status === 'error' ? 'text-rose-400' :
+                  'text-slate-300'
+                }`}>
+                {bildirimModal.message}
+              </p>
+
+              {/* Sonuç Detayları */}
+              {bildirimModal.results?.length > 0 && bildirimModal.status !== 'loading' && (
+                <div className="bg-dark-900/50 border border-dark-600 rounded-lg p-4 mb-6 max-h-48 overflow-y-auto">
+                  <div className="space-y-2">
+                    {bildirimModal.results.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-slate-300 flex-1 truncate mr-2">{item.message}</span>
+                        <span className={`font-bold px-2 py-0.5 rounded ${item.message.includes('0') || item.message.toLowerCase().includes('başar')
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/20 text-rose-400'
+                          }`}>
+                          ({item.count})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
-              {bildirimModal.status === 'error' && (
-                <div className="w-16 h-16 bg-rose-500/20 border-2 border-rose-500 rounded-full flex items-center justify-center">
-                  <XCircle className="w-10 h-10 text-rose-400" />
+
+              {/* Kapat Butonu (sadece success veya error durumunda) */}
+              {bildirimModal.status !== 'loading' && (
+                <div className="flex justify-center">
+                  <button
+                    onClick={() => setBildirimModal(prev => ({ ...prev, show: false }))}
+                    className={`px-6 py-2.5 rounded-lg font-medium transition-all ${bildirimModal.status === 'success'
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                      : 'bg-rose-600 hover:bg-rose-500 text-white'
+                      }`}
+                  >
+                    Tamam
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Başlık */}
-            <h3 className="text-xl font-bold text-center text-slate-100 mb-2">
-              {bildirimModal.type === 'alim' ? 'Alım Bildirimi' : 'İade Bildirimi'}
-            </h3>
-
-            {/* Ürün Sayısı */}
-            <p className="text-center text-slate-400 text-sm mb-4">
-              {bildirimModal.productCount} ürün işleniyor
-            </p>
-
-            {/* Mesaj */}
-            <p className={`text-center text-lg font-medium mb-6 ${bildirimModal.status === 'success' ? 'text-emerald-400' :
-              bildirimModal.status === 'error' ? 'text-rose-400' :
-                'text-slate-300'
-              }`}>
-              {bildirimModal.message}
-            </p>
-
-            {/* Sonuç Detayları */}
-            {bildirimModal.results?.length > 0 && bildirimModal.status !== 'loading' && (
-              <div className="bg-dark-900/50 border border-dark-600 rounded-lg p-4 mb-6 max-h-48 overflow-y-auto">
-                <div className="space-y-2">
-                  {bildirimModal.results.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-sm">
-                      <span className="text-slate-300 flex-1 truncate mr-2">{item.message}</span>
-                      <span className={`font-bold px-2 py-0.5 rounded ${item.message.includes('0') || item.message.toLowerCase().includes('başar')
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-rose-500/20 text-rose-400'
-                        }`}>
-                        ({item.count})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Kapat Butonu (sadece success veya error durumunda) */}
-            {bildirimModal.status !== 'loading' && (
-              <div className="flex justify-center">
-                <button
-                  onClick={() => setBildirimModal(prev => ({ ...prev, show: false }))}
-                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${bildirimModal.status === 'success'
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white'
-                    }`}
-                >
-                  Tamam
-                </button>
-              </div>
-            )}
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 

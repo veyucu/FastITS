@@ -63,15 +63,15 @@ export async function addITSRecord(data) {
       .input('LOT_NO', sql.VarChar(35), data.LOT_NO)
       .input('URETIM_TARIHI', sql.Date, data.URETIM_TARIHI ? new Date(data.URETIM_TARIHI) : null)
       .input('CARRIER_LABEL', sql.VarChar(25), data.CARRIER_LABEL)
-      .input('DURUM', sql.VarChar(20), data.DURUM || 'BEKLEMEDE')
-      .input('KULLANICI', sql.VarChar(35), data.KULLANICI)
+      .input('BILDIRIM', sql.VarChar(20), data.BILDIRIM || 'BEKLEMEDE')
+      .input('KAYIT_KULLANICI', sql.VarChar(35), data.KAYIT_KULLANICI)
       .query(`
         INSERT INTO AKTBLITSUTS (
           HAR_RECNO, TURU, FTIRSIP, FATIRS_NO, CARI_KODU, STOK_KODU, GTIN, SERI_NO,
-          MIAD, LOT_NO, URETIM_TARIHI, CARRIER_LABEL, DURUM, KULLANICI, KAYIT_TARIHI
+          MIAD, LOT_NO, URETIM_TARIHI, CARRIER_LABEL, BILDIRIM, KAYIT_KULLANICI, KAYIT_TARIHI
         ) VALUES (
           @HAR_RECNO, @TURU, @FTIRSIP, @FATIRS_NO, @CARI_KODU, @STOK_KODU, @GTIN, @SERI_NO,
-          @MIAD, @LOT_NO, @URETIM_TARIHI, @CARRIER_LABEL, @DURUM, @KULLANICI, GETDATE()
+          @MIAD, @LOT_NO, @URETIM_TARIHI, @CARRIER_LABEL, @BILDIRIM, @KAYIT_KULLANICI, GETDATE()
         );
         SELECT SCOPE_IDENTITY() AS RECNO;
       `)
@@ -109,11 +109,11 @@ export async function listITSRecords(filters = {}) {
         LOT_NO,
         URETIM_TARIHI,
         CARRIER_LABEL,
-        DURUM,
+        BILDIRIM,
         BILDIRIM_ID,
         BILDIRIM_TARIHI,
         KAYIT_TARIHI,
-        KULLANICI
+        KAYIT_KULLANICI
       FROM AKTBLITSUTS WITH (NOLOCK)
       WHERE 1=1
     `
@@ -127,7 +127,7 @@ export async function listITSRecords(filters = {}) {
 
     if (filters.durum) {
       request.input('durum', sql.VarChar(20), filters.durum)
-      query += ` AND DURUM = @durum`
+      query += ` AND BILDIRIM = @durum`
     }
 
     if (filters.fatirsNo) {
@@ -152,7 +152,7 @@ export async function listITSRecords(filters = {}) {
 
     if (filters.kullanici) {
       request.input('kullanici', sql.VarChar(35), filters.kullanici)
-      query += ` AND KULLANICI = @kullanici`
+      query += ` AND KAYIT_KULLANICI = @kullanici`
     }
 
     query += ` ORDER BY KAYIT_TARIHI DESC`
@@ -197,11 +197,11 @@ export async function getITSRecord(recno) {
           LOT_NO,
           URETIM_TARIHI,
           CARRIER_LABEL,
-          DURUM,
+          BILDIRIM,
           BILDIRIM_ID,
           BILDIRIM_TARIHI,
           KAYIT_TARIHI,
-          KULLANICI
+          KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE RECNO = @recno
       `)
@@ -280,9 +280,9 @@ export async function updateITSRecord(recno, data) {
       request.input('CARRIER_LABEL', sql.VarChar(25), data.CARRIER_LABEL)
       updateFields.push('CARRIER_LABEL = @CARRIER_LABEL')
     }
-    if (data.DURUM !== undefined) {
-      request.input('DURUM', sql.VarChar(20), data.DURUM)
-      updateFields.push('DURUM = @DURUM')
+    if (data.BILDIRIM !== undefined) {
+      request.input('BILDIRIM', sql.VarChar(20), data.BILDIRIM)
+      updateFields.push('BILDIRIM = @BILDIRIM')
     }
     if (data.BILDIRIM_ID !== undefined) {
       request.input('BILDIRIM_ID', sql.VarChar(36), data.BILDIRIM_ID)
@@ -292,9 +292,9 @@ export async function updateITSRecord(recno, data) {
       request.input('BILDIRIM_TARIHI', sql.DateTime, data.BILDIRIM_TARIHI)
       updateFields.push('BILDIRIM_TARIHI = @BILDIRIM_TARIHI')
     }
-    if (data.KULLANICI !== undefined) {
-      request.input('KULLANICI', sql.VarChar(35), data.KULLANICI)
-      updateFields.push('KULLANICI = @KULLANICI')
+    if (data.KAYIT_KULLANICI !== undefined) {
+      request.input('KAYIT_KULLANICI', sql.VarChar(35), data.KAYIT_KULLANICI)
+      updateFields.push('KAYIT_KULLANICI = @KAYIT_KULLANICI')
     }
 
     if (updateFields.length === 0) {
@@ -354,7 +354,7 @@ export async function updateBulkNotificationStatus(recnos, bildirimId, bildirimT
         SET 
           BILDIRIM_ID = @bildirimId,
           BILDIRIM_TARIHI = @bildirimTarihi,
-          DURUM = @durum,
+          BILDIRIM = @durum,
           KAYIT_TARIHI = GETDATE()
         WHERE RECNO IN (SELECT value FROM STRING_SPLIT(@recnos, ','))
       `)
@@ -388,9 +388,9 @@ export async function getITSStatistics(filters = {}) {
         COUNT(DISTINCT GTIN) as FARKLI_URUN,
         COUNT(DISTINCT FATIRS_NO) as FARKLI_FATURA,
         COUNT(DISTINCT CARI_KODU) as FARKLI_CARI,
-        SUM(CASE WHEN DURUM = 'BEKLEMEDE' THEN 1 ELSE 0 END) as BEKLEMEDE,
-        SUM(CASE WHEN DURUM = 'BILDIRILDI' THEN 1 ELSE 0 END) as BILDIRILDI,
-        SUM(CASE WHEN DURUM = 'HATA' THEN 1 ELSE 0 END) as HATA,
+        SUM(CASE WHEN BILDIRIM = 'BEKLEMEDE' THEN 1 ELSE 0 END) as BEKLEMEDE,
+        SUM(CASE WHEN BILDIRIM = 'BILDIRILDI' THEN 1 ELSE 0 END) as BILDIRILDI,
+        SUM(CASE WHEN BILDIRIM = 'HATA' THEN 1 ELSE 0 END) as HATA,
         SUM(CASE WHEN BILDIRIM_ID IS NOT NULL THEN 1 ELSE 0 END) as BILDIRIM_YAPILAN
       FROM AKTBLITSUTS WITH (NOLOCK)
       ${whereClause}

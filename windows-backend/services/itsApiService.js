@@ -618,7 +618,7 @@ export const updateBildirimDurum = async (results) => {
 
             const query = `
         UPDATE AKTBLITSUTS
-        SET DURUM = @durum,
+        SET BILDIRIM = @durum,
             BILDIRIM_TARIHI = GETDATE()
         WHERE RECNO = @recNo
       `
@@ -699,7 +699,7 @@ export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu
 
 /**
  * PTS Bildirim Durumunu Güncelle
- * AKTBLPTSTRA tablosunda her ürün için DURUM ve BILDIRIM_TARIHI günceller
+ * AKTBLPTSTRA tablosunda her ürün için BILDIRIM ve BILDIRIM_TARIHI günceller
  * AKTBLPTSMAS tablosunda genel durum (OK/NOK) ve BILDIRIM_TARIHI günceller
  * 
  * @param {string} transferId - Transfer ID (AKTBLPTSMAS.ID)
@@ -749,7 +749,7 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili) =
                         request.input('maxId', maxId)
                         const updateQuery = `
                             UPDATE AKTBLPTSTRA
-                            SET DURUM = @durum,
+                            SET BILDIRIM = @durum,
                                 BILDIRIM_TARIHI = GETDATE()
                             WHERE TRANSFER_ID = @transferId
                               AND ID BETWEEN @minId AND @maxId
@@ -768,7 +768,7 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili) =
                             request.input('transferId', transferId)
                             const updateQuery = `
                                 UPDATE AKTBLPTSTRA
-                                SET DURUM = @durum,
+                                SET BILDIRIM = @durum,
                                     BILDIRIM_TARIHI = GETDATE()
                                 WHERE TRANSFER_ID = @transferId
                                   AND ID IN (${idList})
@@ -792,7 +792,7 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili) =
         const masDurum = tumBasarili ? 'OK' : 'NOK'
         const masQuery = `
             UPDATE AKTBLPTSMAS
-            SET DURUM = @durum,
+            SET BILDIRIM = @durum,
                 BILDIRIM_TARIHI = GETDATE()
             WHERE TRANSFER_ID = @transferId
         `

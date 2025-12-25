@@ -490,8 +490,8 @@ const documentService = {
           FTIRSIP,
           CARI_KODU,
           KAYIT_TARIHI,
-          DURUM,
-          KULLANICI
+          BILDIRIM,
+          KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
@@ -518,8 +518,8 @@ const documentService = {
         ftirsip: row.FTIRSIP,
         cariKodu: row.CARI_KODU,
         kayitTarihi: row.KAYIT_TARIHI,
-        durum: row.DURUM,
-        kullanici: row.KULLANICI
+        bildirim: row.BILDIRIM,
+        kayitKullanici: row.KAYIT_KULLANICI
       }))
 
       // Debug: MIAD değerlerini logla
@@ -551,8 +551,8 @@ const documentService = {
           FTIRSIP,
           CARI_KODU,
           KAYIT_TARIHI,
-          DURUM,
-          KULLANICI
+          BILDIRIM,
+          KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
@@ -580,8 +580,8 @@ const documentService = {
         ftirsip: row.FTIRSIP,
         cariKodu: row.CARI_KODU,
         kayitTarihi: row.KAYIT_TARIHI,
-        durum: row.DURUM,
-        kullanici: row.KULLANICI
+        bildirim: row.BILDIRIM,
+        kayitKullanici: row.KAYIT_KULLANICI
       }))
 
       return records

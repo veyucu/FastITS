@@ -64,7 +64,7 @@ async function savePackageData(packageData) {
 
     try {
       const { transferId, documentNumber, documentDate, sourceGLN, destinationGLN,
-        actionType, shipTo, note, version, products, _rawXML } = packageData
+        actionType, shipTo, note, version, products, _rawXML, kayitKullanici } = packageData
 
       // transferId'yi BIGINT'e dönüştür
       const transferIdBigInt = BigInt(transferId)
@@ -108,14 +108,15 @@ async function savePackageData(packageData) {
       insertRequest.input('version', sql.VarChar(10), version ? version.substring(0, 10) : null)
       insertRequest.input('kalemSayisi', sql.Int, kalemSayisi)
       insertRequest.input('urunAdedi', sql.Int, urunAdedi)
+      insertRequest.input('kayitKullanici', sql.VarChar(35), kayitKullanici || null)
 
       await insertRequest.query(`
         INSERT INTO AKTBLPTSMAS (
           TRANSFER_ID, DOCUMENT_NUMBER, DOCUMENT_DATE, SOURCE_GLN, DESTINATION_GLN,
-          ACTION_TYPE, SHIP_TO, NOTE, VERSION, KALEM_SAYISI, URUN_ADEDI
+          ACTION_TYPE, SHIP_TO, NOTE, VERSION, KALEM_SAYISI, URUN_ADEDI, KAYIT_KULLANICI
         ) VALUES (
           @transferId, @documentNumber, @documentDate, @sourceGLN, @destinationGLN,
-          @actionType, @shipTo, @note, @version, @kalemSayisi, @urunAdedi
+          @actionType, @shipTo, @note, @version, @kalemSayisi, @urunAdedi, @kayitKullanici
         )
       `)
 
@@ -222,7 +223,7 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
         m.MESAJ AS DURUM_MESAJI,
         s.STOK_ADI
       FROM AKTBLPTSTRA p WITH (NOLOCK)
-      LEFT JOIN AKTBLITSMESAJ m WITH (NOLOCK) ON TRY_CAST(p.DURUM AS INT) = m.ID
+      LEFT JOIN AKTBLITSMESAJ m WITH (NOLOCK) ON TRY_CAST(p.BILDIRIM AS INT) = m.ID
       LEFT JOIN ${mainDbName}.dbo.TBLSTSABIT s WITH (NOLOCK) ON '0'+s.STOK_KODU = p.GTIN
       WHERE p.TRANSFER_ID = @transferId
     `)
@@ -305,7 +306,7 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
     const ptsRequest = ptsPool.request()
 
     // Tarih filtresi tipine göre sorgu oluştur
-    const dateColumn = dateFilterType === 'document' ? 'DOCUMENT_DATE' : 'CREATED_DATE'
+    const dateColumn = dateFilterType === 'document' ? 'DOCUMENT_DATE' : 'KAYIT_TARIHI'
 
     // Database adını config'den al (dinamik)
     const mainDbName = db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
@@ -332,7 +333,7 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
       ptsRequest.input('endDate', sql.Date, new Date(endDate))
     }
 
-    query += ' ORDER BY p.CREATED_DATE DESC'
+    query += ' ORDER BY p.KAYIT_TARIHI DESC'
 
     log('📋 Paket listesi sorgusu (TEST - kolon bazlı):', { startDate, endDate, dateFilterType, dateColumn })
 
@@ -645,7 +646,7 @@ export async function getAllTransfers() {
       TRANSFER_ID: row.TRANSFER_ID,
       GONDERICI_GLN: row.GONDERICI_GLN,
       ALICI_GLN: row.ALICI_GLN,
-      DURUM: row.DURUM,
+      BILDIRIM: row.BILDIRIM,
       KAYIT_TARIHI: row.KAYIT_TARIHI,
       GUNCELLEME_TARIHI: row.GUNCELLEME_TARIHI
     }))
