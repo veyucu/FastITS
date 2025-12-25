@@ -7,6 +7,7 @@ import itsRouter from './routes/its.js';
 import settingsRouter from './routes/settings.js';
 import authRouter from './routes/authRoutes.js';
 import dbInitService from './services/dbInitService.js';
+import settingsService from './services/settingsService.js';
 
 dotenv.config();
 
@@ -72,6 +73,10 @@ async function startServer() {
     if (!dbResult.success) {
       console.error('⚠️ Veritabanı başlatma hatası:', dbResult.error);
     }
+
+    // Ayarları yükle ve cache'le (bir seferlik)
+    console.log('⚙️ Ayarlar yükleniyor...');
+    await settingsService.loadSettings();
 
     // Server'ı başlat
     app.listen(PORT, () => {

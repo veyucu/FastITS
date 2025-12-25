@@ -2,6 +2,7 @@ import db, { getPTSConnection, getConnection } from '../config/database.js'
 import sql from 'mssql'
 import iconv from 'iconv-lite'
 import { log } from '../utils/logger.js'
+import settingsService from './settingsService.js'
 
 /**
  * Türkçe karakter düzeltme fonksiyonu - SQL Server CP1254 to UTF-8
@@ -207,28 +208,28 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     const masterData = masterResult.recordset[0]
     console.log(`✅ Paket bulundu: ${transferId}`)
 
-    // Ürün detaylarını getir - AKTBLITSMESAJ ve TBLSTSABIT ile cross-database join
+    // Ürün detaylarını getir - AKTBLITSMESAJ ve TBLSTSABIT ile join (tek sorgu)
     // Database adını config'den al (dinamik)
     const mainDbName = db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
 
     const productsRequest = ptsPool.request()
     productsRequest.input('transferId', sql.BigInt, BigInt(transferId))
+
+    // Tek sorgu: Ürünler + Durum mesajı + Stok adı (cross-database join)
     const productsResult = await productsRequest.query(`
       SELECT 
         p.*,
         m.MESAJ AS DURUM_MESAJI,
         s.STOK_ADI
-      FROM AKTBLPTSTRA p
-      LEFT JOIN AKTBLITSMESAJ m ON TRY_CAST(p.DURUM AS INT) = m.ID
-      LEFT JOIN ${mainDbName}.dbo.TBLSTSABIT s ON 
-        s.STOK_KODU = SUBSTRING(p.GTIN, PATINDEX('%[^0]%', p.GTIN + '0'), LEN(p.GTIN))
-        OR s.STOK_KODU = p.GTIN
+      FROM AKTBLPTSTRA p WITH (NOLOCK)
+      LEFT JOIN AKTBLITSMESAJ m WITH (NOLOCK) ON TRY_CAST(p.DURUM AS INT) = m.ID
+      LEFT JOIN ${mainDbName}.dbo.TBLSTSABIT s WITH (NOLOCK) ON '0'+s.STOK_KODU = p.GTIN
       WHERE p.TRANSFER_ID = @transferId
     `)
 
     console.log(`✅ ${productsResult.recordset.length} ürün bulundu`)
 
-    // MUHASEBE2025 bağlantısı
+    // MUHASEBE2025 bağlantısı (sadece cari için)
     const mainPool = await getConnection()
 
     // Cari bilgisini getir (eğer SOURCE_GLN varsa)
@@ -248,7 +249,7 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
       }
     }
 
-    // Ürünlere Türkçe karakter düzeltmesi uygula (STOK_ADI ve DURUM_MESAJI için)
+    // Ürünlere Türkçe karakter düzeltmesi uygula
     const enrichedProducts = productsResult.recordset.map(p => {
       return {
         ...p,
@@ -261,7 +262,7 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     log('🔍 GTIN olan ilk 3 ürün:')
     const productsWithGtin = enrichedProducts.filter(p => p.GTIN)
     productsWithGtin.slice(0, 3).forEach(p => {
-      console.log(`  GTIN: ${p.GTIN} -> Clean: ${p.CLEAN_GTIN} -> STOK_ADI: ${p.STOK_ADI || 'NULL'}`)
+      console.log(`  GTIN: ${p.GTIN} -> STOK_ADI: ${p.STOK_ADI || 'NULL'}`)
     })
 
     // GTIN olmayan ürün sayısı
@@ -309,20 +310,20 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
     // Database adını config'den al (dinamik)
     const mainDbName = db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
 
+    // Cari GLN kolon bilgisini ayarlardan al (cache'den senkron)
+    const cariGlnBilgisi = settingsService.getSetting('cariGlnBilgisi') || 'EMAIL'
+    const { column: glnColumn } = settingsService.parseColumnInfo(cariGlnBilgisi)
+
     // OPTİMİZE EDİLMİŞ: KALEM/ADET değerleri AKTBLPTSMAS tablosundan okunuyor
-    // Bu sayede her listede hesaplama yapılmıyor, PTS indirme sırasında hesaplanıp kaydediliyor
+    // Cari ismi doğrudan LEFT JOIN ile geliyor (GLN kolonu ayarlardan)
     let query = `
       SELECT 
         p.*,
         ISNULL(p.KALEM_SAYISI, 0) AS UNIQUE_GTIN_COUNT,
         ISNULL(p.URUN_ADEDI, 0) AS TOTAL_PRODUCT_COUNT,
-        cari.CARI_ISIM AS SOURCE_GLN_NAME
+        c.CARI_ISIM AS SOURCE_GLN_NAME
       FROM AKTBLPTSMAS p WITH (NOLOCK)
-      OUTER APPLY (
-        SELECT TOP 1 CARI_ISIM 
-        FROM ${mainDbName}.dbo.TBLCASABIT WITH (NOLOCK)
-        WHERE EMAIL = p.SOURCE_GLN
-      ) cari
+      LEFT JOIN ${mainDbName}.dbo.TBLCASABIT c WITH (NOLOCK) ON c.${glnColumn} = p.SOURCE_GLN
     `
 
     if (startDate && endDate) {

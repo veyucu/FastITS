@@ -65,6 +65,7 @@ const PTSPage = () => {
     fromDashboard ? '' : getStoredValue('pts_searchText', '')
   ) // Arama metni
   const [initialLoadDone, setInitialLoadDone] = useState(false) // İlk yükleme kontrolü
+  const [hideNotified, setHideNotified] = useState(false) // Bildirilenleri gizle filtresi
 
   // İndirme modal state
   const [showDownloadModal, setShowDownloadModal] = useState(false)
@@ -323,13 +324,20 @@ const PTSPage = () => {
     }
   }, [handleListPackages]) // handleListPackages değiştiğinde çalış
 
-  // Arama filtresi uygula - Tüm alanlarda ara
+  // Arama filtresi uygula - Tüm alanlarda ara + Bildirilenleri gizle
   const filteredData = useMemo(() => {
-    if (!searchText.trim()) return listData
+    let data = listData
+
+    // Bildirilenleri gizle filtresi (sadece OK olanları gizle)
+    if (hideNotified) {
+      data = data.filter(item => item.DURUM !== 'OK')
+    }
+
+    if (!searchText.trim()) return data
 
     const searchLower = searchText.toLowerCase().trim()
 
-    return listData.filter(item => {
+    return data.filter(item => {
       // Transfer ID, Belge No, Source GLN ve Cari İsim'de ara
       const transferId = (item.TRANSFER_ID || '').toString().toLowerCase()
       const documentNumber = (item.DOCUMENT_NUMBER || '').toString().toLowerCase()
@@ -341,7 +349,7 @@ const PTSPage = () => {
         sourceGln.includes(searchLower) ||
         cariIsim.includes(searchLower)
     })
-  }, [listData, searchText])
+  }, [listData, searchText, hideNotified])
 
   // Column State Yönetimi
   const saveColumnState = useCallback(() => {
@@ -375,7 +383,7 @@ const PTSPage = () => {
       headerName: 'Transfer ID',
       field: 'TRANSFER_ID',
       width: 180,
-      cellClass: 'font-mono font-bold text-blue-600 cursor-pointer',
+      cellClass: 'font-mono font-bold text-blue-600',
       filter: 'agTextColumnFilter'
     },
     {
@@ -416,6 +424,7 @@ const PTSPage = () => {
       field: 'UNIQUE_GTIN_COUNT',
       width: 110,
       cellClass: 'text-center',
+      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
       filter: 'agNumberColumnFilter',
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalem" />
     },
@@ -424,6 +433,7 @@ const PTSPage = () => {
       field: 'TOTAL_PRODUCT_COUNT',
       width: 110,
       cellClass: 'text-center',
+      cellStyle: { display: 'flex', justifyContent: 'center', alignItems: 'center' },
       filter: 'agNumberColumnFilter',
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="adet" />
     },
@@ -440,11 +450,21 @@ const PTSPage = () => {
       filter: 'agDateColumnFilter'
     },
     {
-      headerName: 'Durum',
+      headerName: 'Bildirim',
       field: 'DURUM',
-      width: 120,
-      cellClass: 'text-center font-semibold',
-      filter: 'agTextColumnFilter'
+      width: 100,
+      cellClass: 'text-center',
+      filter: 'agTextColumnFilter',
+      cellRenderer: (params) => {
+        const value = params.value
+        if (value === 'OK') {
+          return <CheckCircle className="w-5 h-5 text-emerald-500 mx-auto" />
+        }
+        // NOK veya boş ise daire (onaysız) göster
+        return (
+          <div className="w-5 h-5 mx-auto rounded-full border-2 border-slate-500" />
+        )
+      }
     },
     {
       headerName: 'Bildirim Tarihi',
@@ -495,7 +515,7 @@ const PTSPage = () => {
               <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS</h1>
 
               {/* Arama Input */}
-              <div className="relative flex-1 ml-4 mr-6">
+              <div className="relative flex-1 ml-4 mr-4">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
@@ -505,6 +525,17 @@ const PTSPage = () => {
                   className="w-full pl-8 pr-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 />
               </div>
+
+              {/* Bildirilenleri Gizle Checkbox */}
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-slate-100 transition-colors flex-shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hideNotified}
+                  onChange={(e) => setHideNotified(e.target.checked)}
+                  className="w-4 h-4 rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500/50 focus:ring-offset-0"
+                />
+                <span>Bildirilenleri Gizle</span>
+              </label>
             </div>
 
             {/* Sağ - İşlem Butonları ve Filtreler */}
@@ -571,9 +602,9 @@ const PTSPage = () => {
       {message && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
           <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl border backdrop-blur-sm min-w-[300px] max-w-[450px] ${message.type === 'success' ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50' :
-              message.type === 'error' ? 'bg-rose-900/90 text-rose-100 border-rose-500/50' :
-                message.type === 'warning' ? 'bg-amber-900/90 text-amber-100 border-amber-500/50' :
-                  'bg-primary-900/90 text-primary-100 border-primary-500/50'
+            message.type === 'error' ? 'bg-rose-900/90 text-rose-100 border-rose-500/50' :
+              message.type === 'warning' ? 'bg-amber-900/90 text-amber-100 border-amber-500/50' :
+                'bg-primary-900/90 text-primary-100 border-primary-500/50'
             }`}>
             {/* İkon */}
             <div className="flex-shrink-0">
@@ -611,6 +642,7 @@ const PTSPage = () => {
                 resizable: true,
                 headerClass: 'ag-header-cell-center'
               }}
+              rowClass="cursor-pointer hover:bg-dark-700/50"
               animateRows={true}
               rowHeight={50}
               headerHeight={48}
@@ -772,8 +804,8 @@ const PTSPage = () => {
 
                   {/* Başarısız */}
                   <div className={`rounded-lg p-3 text-center border ${downloadProgress.failed > 0
-                      ? 'bg-rose-500/20 border-rose-500/30'
-                      : 'bg-dark-700/50 border-dark-600'
+                    ? 'bg-rose-500/20 border-rose-500/30'
+                    : 'bg-dark-700/50 border-dark-600'
                     }`}>
                     <div className={`text-2xl font-bold ${downloadProgress.failed > 0 ? 'text-rose-400' : 'text-slate-600'
                       }`}>

@@ -329,14 +329,32 @@ export const depoAlisBildirimi = async (products, frontendSettings = null) => {
 
         log('✅ ITS Alış Bildirimi yanıtı:', response.data)
 
-        // Sonuçları işle
-        const results = (response.data?.productList || []).map(item => ({
-            gtin: item.gtin,
-            seriNo: item.sn,
-            durum: item.uc  // uc = durum kodu (1 = başarılı vb.)
-        }))
+        // Durum mesajlarını al
+        let durumMesajlari = {}
+        try {
+            const ptsPool = await getPTSConnection()
+            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
+            mesajResult.recordset.forEach(row => {
+                // Türkçe karakter düzeltmesi uygula
+                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
+            })
+        } catch (e) {
+            log('⚠️ Mesaj kodları alınamadı:', e.message)
+        }
 
-        const successCount = results.filter(r => r.durum == 1).length
+        // Sonuçları işle
+        const results = (response.data?.productList || []).map(item => {
+            // Baştaki sıfırları temizle (00000 -> 0, 00045 -> 45)
+            const normalizedUc = String(item.uc).replace(/^0+/, '') || '0'
+            return {
+                gtin: item.gtin,
+                seriNo: item.sn,
+                durum: item.uc,  // uc = durum kodu (orijinal değer)
+                durumMesaji: durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
+            }
+        })
+
+        const successCount = results.filter(r => String(r.durum).replace(/^0+/, '') === '0' || r.durum == 0).length
         const errorCount = results.length - successCount
 
         return {
@@ -406,13 +424,31 @@ export const depoIadeAlisBildirimi = async (karsiGlnNo, products, frontendSettin
 
         log('✅ ITS İade Alış Bildirimi yanıtı:', response.data)
 
-        const results = (response.data?.productList || []).map(item => ({
-            gtin: item.gtin,
-            seriNo: item.sn,
-            durum: item.uc
-        }))
+        // Durum mesajlarını al
+        let durumMesajlari = {}
+        try {
+            const ptsPool = await getPTSConnection()
+            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
+            mesajResult.recordset.forEach(row => {
+                // Türkçe karakter düzeltmesi uygula
+                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
+            })
+        } catch (e) {
+            log('⚠️ Mesaj kodları alınamadı:', e.message)
+        }
 
-        const successCount = results.filter(r => r.durum == 1).length
+        const results = (response.data?.productList || []).map(item => {
+            // Baştaki sıfırları temizle (00000 -> 0, 00045 -> 45)
+            const normalizedUc = String(item.uc).replace(/^0+/, '') || '0'
+            return {
+                gtin: item.gtin,
+                seriNo: item.sn,
+                durum: item.uc,
+                durumMesaji: durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
+            }
+        })
+
+        const successCount = results.filter(r => String(r.durum).replace(/^0+/, '') === '0' || r.durum == 0).length
         const errorCount = results.length - successCount
 
         return {
@@ -677,36 +713,80 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili) =
         const pool = await getPTSConnection()
         const ptsPool = pool  // PTS veritabanı bağlantısı
 
-        // 1. AKTBLPTSTRA tablosundaki her ürünün durumunu güncelle
-        // NOT: Tablo ID kolonu yok, TRANSFER_ID + GTIN + SERIAL_NUMBER kombinasyonu kullanılır
-        let updatedCount = 0
-        for (const item of results || []) {
-            if (item.gtin && item.sn && item.durum !== undefined) {
-                try {
-                    const traQuery = `
-                        UPDATE AKTBLPTSTRA
-                        SET DURUM = @durum,
-                            BILDIRIM_TARIHI = GETDATE()
-                        WHERE TRANSFER_ID = @transferId 
-                          AND GTIN = @gtin 
-                          AND SERIAL_NUMBER = @sn
-                    `
-                    const traRequest = ptsPool.request()
-                    traRequest.input('durum', String(item.durum))
-                    traRequest.input('transferId', transferId)
-                    traRequest.input('gtin', item.gtin)
-                    traRequest.input('sn', item.sn)
-                    const traResult = await traRequest.query(traQuery)
-                    if (traResult.rowsAffected[0] > 0) {
-                        updatedCount++
+        // 1. AKTBLPTSTRA tablosundaki ürünlerin durumunu TOPLU güncelle
+        // Temp table + JOIN ile tek sorguda güncelleme (1000 kayıt = 2 sorgu)
+        const validItems = (results || []).filter(item => item.id && item.durum !== undefined)
+
+        if (validItems.length > 0) {
+            try {
+                // Durum bazlı gruplama - aynı duruma sahip ID'leri grupla
+                const durumGroups = {}
+                validItems.forEach(item => {
+                    const durum = String(item.durum)
+                    if (!durumGroups[durum]) {
+                        durumGroups[durum] = []
                     }
-                    log(`   ✅ AKTBLPTSTRA GTIN=${item.gtin} SN=${item.sn} güncellendi, durum=${item.durum}`)
-                } catch (itemError) {
-                    log(`   ❌ AKTBLPTSTRA GTIN=${item.gtin} SN=${item.sn} hata: ${itemError.message}`)
+                    durumGroups[durum].push(item.id)
+                })
+
+                let totalUpdated = 0
+                const durumKeys = Object.keys(durumGroups)
+                log(`📋 ${durumKeys.length} farklı durum kodu için güncelleme yapılacak`)
+
+                // Her durum grubu için tek UPDATE sorgusu
+                for (const durum of durumKeys) {
+                    const ids = durumGroups[durum].map(Number).sort((a, b) => a - b) // Sayıya çevir ve sırala
+                    const minId = ids[0]
+                    const maxId = ids[ids.length - 1]
+                    const isContiguous = (maxId - minId + 1) === ids.length
+
+                    if (isContiguous) {
+                        // ID'ler ardışık - BETWEEN ile tek sorgu (çok hızlı)
+                        const request = ptsPool.request()
+                        request.input('durum', durum)
+                        request.input('transferId', transferId)
+                        request.input('minId', minId)
+                        request.input('maxId', maxId)
+                        const updateQuery = `
+                            UPDATE AKTBLPTSTRA
+                            SET DURUM = @durum,
+                                BILDIRIM_TARIHI = GETDATE()
+                            WHERE TRANSFER_ID = @transferId
+                              AND ID BETWEEN @minId AND @maxId
+                        `
+                        const result = await request.query(updateQuery)
+                        totalUpdated += result.rowsAffected[0] || 0
+                        log(`📝 Durum ${durum}: ${ids.length} kayıt (BETWEEN ${minId}-${maxId})`)
+                    } else {
+                        // ID'ler ardışık değil - IN ile chunk'lar halinde
+                        const CHUNK_SIZE = 900
+                        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+                            const chunk = ids.slice(i, i + CHUNK_SIZE)
+                            const idList = chunk.join(',')
+                            const request = ptsPool.request()
+                            request.input('durum', durum)
+                            request.input('transferId', transferId)
+                            const updateQuery = `
+                                UPDATE AKTBLPTSTRA
+                                SET DURUM = @durum,
+                                    BILDIRIM_TARIHI = GETDATE()
+                                WHERE TRANSFER_ID = @transferId
+                                  AND ID IN (${idList})
+                            `
+                            const result = await request.query(updateQuery)
+                            totalUpdated += result.rowsAffected[0] || 0
+                        }
+                        log(`📝 Durum ${durum}: ${ids.length} kayıt (IN chunks)`)
+                    }
                 }
+
+                log(`✅ AKTBLPTSTRA: ${totalUpdated}/${validItems.length} kayıt güncellendi`)
+            } catch (batchError) {
+                log(`❌ AKTBLPTSTRA güncelleme hatası: ${batchError.message}`)
             }
+        } else {
+            log(`⚠️ AKTBLPTSTRA: Güncellenecek kayıt yok`)
         }
-        log(`📝 AKTBLPTSTRA: ${updatedCount}/${results?.length || 0} kayıt güncellendi`)
 
         // 2. AKTBLPTSMAS tablosundaki genel durumu güncelle
         const masDurum = tumBasarili ? 'OK' : 'NOK'

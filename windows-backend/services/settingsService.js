@@ -9,9 +9,13 @@ const DEFAULT_SETTINGS = {
   cariUtsBilgisi: 'TBLCASABITEK.KULL3S'
 }
 
+// Ayarları hafızada tut (cache)
+let cachedSettings = null
+let settingsLoaded = false
+
 const settingsService = {
-  // Tüm ayarları getir
-  async getSettings() {
+  // Backend başlatıldığında ayarları yükle (bir seferlik)
+  async loadSettings() {
     try {
       const pool = await getPTSConnection()
 
@@ -19,20 +23,42 @@ const settingsService = {
         .query('SELECT AYAR_ADI, AYAR_DEGERI FROM AKTBLAYAR')
 
       // DB'den gelen ayarları object'e çevir
-      const settings = { ...DEFAULT_SETTINGS }
+      cachedSettings = { ...DEFAULT_SETTINGS }
 
       for (const row of result.recordset) {
-        settings[row.AYAR_ADI] = row.AYAR_DEGERI
+        cachedSettings[row.AYAR_ADI] = row.AYAR_DEGERI
       }
 
-      return settings
+      settingsLoaded = true
+      console.log('✅ Ayarlar yüklendi:', Object.keys(cachedSettings).length, 'adet')
+      return cachedSettings
     } catch (error) {
-      console.error('Ayar okuma hatası:', error)
-      return DEFAULT_SETTINGS
+      console.error('❌ Ayar yükleme hatası:', error)
+      cachedSettings = { ...DEFAULT_SETTINGS }
+      settingsLoaded = true
+      return cachedSettings
     }
   },
 
-  // Ayarları kaydet
+  // Tüm ayarları getir (cache'den)
+  getSettings() {
+    if (!settingsLoaded) {
+      console.warn('⚠️ Ayarlar henüz yüklenmedi, default kullanılıyor')
+      return DEFAULT_SETTINGS
+    }
+    return cachedSettings || DEFAULT_SETTINGS
+  },
+
+  // Belirli bir ayarı getir (cache'den - senkron)
+  getSetting(key) {
+    if (!settingsLoaded) {
+      console.warn('⚠️ Ayarlar henüz yüklenmedi, default kullanılıyor:', key)
+      return DEFAULT_SETTINGS[key] || null
+    }
+    return cachedSettings?.[key] || DEFAULT_SETTINGS[key] || null
+  },
+
+  // Ayarları kaydet ve cache'i güncelle
   async saveSettings(settings) {
     try {
       const pool = await getPTSConnection()
@@ -64,33 +90,30 @@ const settingsService = {
               VALUES (@ayarAdi, @ayarDegeri)
             `)
         }
+
+        // Cache'i güncelle
+        if (cachedSettings) {
+          cachedSettings[key] = value
+        }
       }
 
+      console.log('✅ Ayarlar kaydedildi ve cache güncellendi')
       return { success: true }
     } catch (error) {
-      console.error('Ayar kaydetme hatası:', error)
+      console.error('❌ Ayar kaydetme hatası:', error)
       throw error
     }
   },
 
-  // Belirli bir ayarı getir
-  async getSetting(key) {
-    try {
-      const pool = await getPTSConnection()
+  // Cache'i yenile (manuel refresh)
+  async refreshCache() {
+    settingsLoaded = false
+    return await this.loadSettings()
+  },
 
-      const result = await pool.request()
-        .input('ayarAdi', key)
-        .query('SELECT AYAR_DEGERI FROM AKTBLAYAR WHERE AYAR_ADI = @ayarAdi')
-
-      if (result.recordset.length > 0) {
-        return result.recordset[0].AYAR_DEGERI
-      }
-
-      return DEFAULT_SETTINGS[key] || null
-    } catch (error) {
-      console.error('Ayar okuma hatası:', error)
-      return DEFAULT_SETTINGS[key] || null
-    }
+  // Cache durumunu kontrol et
+  isLoaded() {
+    return settingsLoaded
   },
 
   // Cari GLN kolon bilgisini parse et

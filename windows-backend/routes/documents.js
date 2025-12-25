@@ -968,7 +968,7 @@ router.post('/:id/its-satis-bildirimi', async (req, res) => {
 
       // Belge ITS durumunu güncelle (tüm satırlar başarılı ise OK, değilse NOK)
       if (belgeInfo?.subeKodu && belgeInfo?.fatirsNo) {
-        const tumBasarili = result.data.every(item => item.durum == 1)
+        const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
@@ -1028,7 +1028,7 @@ router.post('/:id/its-satis-iptal', async (req, res) => {
 
       // Belge ITS durumunu güncelle
       if (belgeInfo?.subeKodu && belgeInfo?.fatirsNo) {
-        const tumBasarili = result.data.every(item => item.durum == 1)
+        const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
@@ -1085,7 +1085,7 @@ router.post('/:id/its-alis-bildirimi', async (req, res) => {
 
       // Belge ITS durumunu güncelle
       if (belgeInfo?.subeKodu && belgeInfo?.fatirsNo) {
-        const tumBasarili = result.data.every(item => item.durum == 1)
+        const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
@@ -1145,7 +1145,7 @@ router.post('/:id/its-iade-alis', async (req, res) => {
 
       // Belge ITS durumunu güncelle
       if (belgeInfo?.subeKodu && belgeInfo?.fatirsNo) {
-        const tumBasarili = result.data.every(item => item.durum == 1)
+        const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,

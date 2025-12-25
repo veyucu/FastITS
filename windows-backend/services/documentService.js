@@ -19,8 +19,8 @@ const documentService = {
         throw new Error('Tarih filtresi zorunludur')
       }
 
-      // Ayarlardan GLN ve UTS kolon bilgilerini al
-      const settings = await settingsService.getSettings()
+      // Ayarlardan GLN ve UTS kolon bilgilerini al (cache'den senkron)
+      const settings = settingsService.getSettings()
       const glnInfo = settingsService.parseColumnInfo(settings.cariGlnBilgisi || 'TBLCASABIT.EMAIL')
       const utsInfo = settingsService.parseColumnInfo(settings.cariUtsBilgisi || 'TBLCASABITEK.KULL3S')
 
@@ -202,8 +202,8 @@ const documentService = {
       log('📄 getDocumentById çağrıldı:', { subeKodu, ftirsip, fatirs_no })
       const pool = await getConnection()
 
-      // Ayarlardan GLN, UTS ve ePosta kolon bilgilerini al
-      const settings = await settingsService.getSettings()
+      // Ayarlardan GLN, UTS ve ePosta kolon bilgilerini al (cache'den senkron)
+      const settings = settingsService.getSettings()
       const glnInfo = settingsService.parseColumnInfo(settings.cariGlnBilgisi || 'TBLCASABIT.EMAIL')
       const utsInfo = settingsService.parseColumnInfo(settings.cariUtsBilgisi || 'TBLCASABITEK.KULL3S')
       const epostaInfo = settingsService.parseColumnInfo(settings.cariEpostaBilgisi || 'TBLCASABITEK.CARIALIAS')

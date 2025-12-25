@@ -6,7 +6,7 @@ const router = express.Router()
 // GET /api/settings - Ayarları getir
 router.get('/', async (req, res) => {
   try {
-    const settings = await settingsService.getSettings()
+    const settings = settingsService.getSettings()
     res.json({
       success: true,
       data: settings

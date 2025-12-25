@@ -12,21 +12,20 @@ import {
 import apiService from '../services/apiService'
 import { getSettings } from '../utils/settingsHelper'
 
-// Durum badge renkleri
+// Durum badge renkleri - Kod bazlı
 const getStatusStyle = (status) => {
-  const statusLower = (status || '').toLowerCase()
-  if (statusLower.includes('onay') || statusLower.includes('kabul') || statusLower.includes('tamamlan')) {
+  // Baştaki sıfırları temizle (00000 -> 0, 00045 -> 45)
+  const normalizedStatus = String(status || '').replace(/^0+/, '') || '0'
+
+  // Durum kodu 0 ise başarılı (yeşil)
+  if (normalizedStatus === '0') {
     return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500/30', icon: CheckCircle }
   }
-  if (statusLower.includes('bekle') || statusLower.includes('işlem')) {
-    return { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', icon: Clock }
-  }
-  if (statusLower.includes('iptal') || statusLower.includes('red')) {
+  // Diğer tüm kodlar hatalı (kırmızı)
+  if (status && status !== '-') {
     return { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30', icon: XCircle }
   }
-  if (statusLower.includes('hata') || statusLower.includes('error')) {
-    return { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30', icon: AlertCircle }
-  }
+  // Boş veya tanımsız
   return { bg: 'bg-slate-500/20', text: 'text-slate-400', border: 'border-slate-500/30', icon: Info }
 }
 
@@ -43,6 +42,16 @@ const PTSDetailPage = () => {
   const [statusFilter, setStatusFilter] = useState('all') // Durum filtresi
   const [actionLoading, setActionLoading] = useState(false)
   const [message, setMessage] = useState(null) // {type: 'success'|'error', text: '...'}
+
+  // Bildirim popup state
+  const [bildirimModal, setBildirimModal] = useState({
+    show: false,
+    type: '', // 'alim' | 'iade'
+    status: 'loading', // 'loading' | 'success' | 'error'
+    message: '',
+    productCount: 0,
+    results: [] // [{message: 'mesaj', count: 10}, ...]
+  })
 
   useEffect(() => {
     loadPackageDetails()
@@ -98,6 +107,41 @@ const PTSDetailPage = () => {
     }
   }
 
+  // Sadece verileri yenile (loading göstermeden)
+  const refreshData = async () => {
+    try {
+      const settings = getSettings()
+      const response = await apiService.getPackageFromDB(transferId, settings)
+
+      if (response.success && response.data) {
+        const data = response.data
+        setPackageData(data)
+
+        const onlyProducts = (data.products || [])
+          .filter(p => p.SERIAL_NUMBER)
+          .map(p => ({
+            id: p.ID,
+            gtin: p.GTIN || '',
+            stockName: p.STOK_ADI || '-',
+            serialNumber: p.SERIAL_NUMBER,
+            lotNumber: p.LOT_NUMBER,
+            expirationDate: p.EXPIRATION_DATE ? new Date(p.EXPIRATION_DATE).toLocaleDateString('tr-TR') : '',
+            productionDate: p.PRODUCTION_DATE ? new Date(p.PRODUCTION_DATE).toLocaleDateString('tr-TR') : '',
+            carrierLabel: p.CARRIER_LABEL,
+            containerType: p.CONTAINER_TYPE,
+            durum: p.DURUM || data.DURUM || '-',
+            durumMesaji: p.DURUM_MESAJI || null,
+            bildirimTarihi: p.BILDIRIM_TARIHI ? new Date(p.BILDIRIM_TARIHI).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) :
+              (data.BILDIRIM_TARIHI ? new Date(data.BILDIRIM_TARIHI).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '-')
+          }))
+
+        setProducts(onlyProducts)
+      }
+    } catch (error) {
+      console.error('Veri yenileme hatası:', error)
+    }
+  }
+
   // Durum istatistikleri - her durum mesajı için kayıt sayısı
   const statusStats = useMemo(() => {
     const stats = {}
@@ -130,8 +174,14 @@ const PTSDetailPage = () => {
     )
     if (!confirmed) return
 
-    setActionLoading(true)
-    setMessage(null)
+    // Popup göster
+    setBildirimModal({
+      show: true,
+      type: 'alim',
+      status: 'loading',
+      message: 'Lütfen bekleyin, alım bildirimi yapılıyor...',
+      productCount: filteredProducts.length
+    })
 
     try {
       const settings = getSettings()
@@ -147,17 +197,44 @@ const PTSDetailPage = () => {
 
       const result = await apiService.ptsAlimBildirimi(transferId, productsToSend, settings)
 
+      // Mesajları gruplandır (durumMesaji alanını kullan)
+      const groupedResults = []
+      if (result.data && Array.isArray(result.data)) {
+        const counts = {}
+        result.data.forEach(item => {
+          const msg = item.durumMesaji || item.message || `Kod: ${item.durum}`
+          counts[msg] = (counts[msg] || 0) + 1
+        })
+        Object.entries(counts).forEach(([msg, count]) => {
+          groupedResults.push({ message: msg, count })
+        })
+        groupedResults.sort((a, b) => b.count - a.count)
+      }
+
       if (result.success) {
-        setMessage({ type: 'success', text: result.message || 'Alım bildirimi başarıyla gönderildi!' })
-        // Not: Sayfa yenilemesi kaldırıldı, veriler korunacak
+        setBildirimModal(prev => ({
+          ...prev,
+          status: 'success',
+          message: result.message || 'Alım bildirimi başarıyla gönderildi!',
+          results: groupedResults
+        }))
+        // Verileri yenile (grid ve header durumu - loading göstermeden)
+        await refreshData()
       } else {
-        setMessage({ type: 'error', text: result.message || 'Alım bildirimi gönderilemedi!' })
+        setBildirimModal(prev => ({
+          ...prev,
+          status: 'error',
+          message: result.message || 'Alım bildirimi gönderilemedi!',
+          results: groupedResults
+        }))
       }
     } catch (error) {
       console.error('Alım bildirimi hatası:', error)
-      setMessage({ type: 'error', text: error.message || 'Bir hata oluştu!' })
-    } finally {
-      setActionLoading(false)
+      setBildirimModal(prev => ({
+        ...prev,
+        status: 'error',
+        message: error.message || 'Bir hata oluştu!'
+      }))
     }
   }
 
@@ -184,8 +261,14 @@ const PTSDetailPage = () => {
     )
     if (!confirmed) return
 
-    setActionLoading(true)
-    setMessage(null)
+    // Popup göster
+    setBildirimModal({
+      show: true,
+      type: 'iade',
+      status: 'loading',
+      message: 'Lütfen bekleyin, iade bildirimi yapılıyor...',
+      productCount: filteredProducts.length
+    })
 
     try {
       const settings = getSettings()
@@ -201,17 +284,44 @@ const PTSDetailPage = () => {
 
       const result = await apiService.ptsAlimIadeBildirimi(transferId, karsiGlnNo, productsToSend, settings)
 
+      // Mesajları gruplandır (durumMesaji alanını kullan)
+      const groupedResults = []
+      if (result.data && Array.isArray(result.data)) {
+        const counts = {}
+        result.data.forEach(item => {
+          const msg = item.durumMesaji || item.message || `Kod: ${item.durum}`
+          counts[msg] = (counts[msg] || 0) + 1
+        })
+        Object.entries(counts).forEach(([msg, count]) => {
+          groupedResults.push({ message: msg, count })
+        })
+        groupedResults.sort((a, b) => b.count - a.count)
+      }
+
       if (result.success) {
-        setMessage({ type: 'success', text: result.message || 'Alım iade bildirimi başarıyla gönderildi!' })
-        // Not: Sayfa yenilemesi kaldırıldı, veriler korunacak
+        setBildirimModal(prev => ({
+          ...prev,
+          status: 'success',
+          message: result.message || 'Alım iade bildirimi başarıyla gönderildi!',
+          results: groupedResults
+        }))
+        // Verileri yenile (grid ve header durumu - loading göstermeden)
+        await refreshData()
       } else {
-        setMessage({ type: 'error', text: result.message || 'Alım iade bildirimi gönderilemedi!' })
+        setBildirimModal(prev => ({
+          ...prev,
+          status: 'error',
+          message: result.message || 'Alım iade bildirimi gönderilemedi!',
+          results: groupedResults
+        }))
       }
     } catch (error) {
       console.error('Alım iade bildirimi hatası:', error)
-      setMessage({ type: 'error', text: error.message || 'Bir hata oluştu!' })
-    } finally {
-      setActionLoading(false)
+      setBildirimModal(prev => ({
+        ...prev,
+        status: 'error',
+        message: error.message || 'Bir hata oluştu!'
+      }))
     }
   }
 
@@ -292,34 +402,34 @@ const PTSDetailPage = () => {
       accessorKey: 'serialNumber',
       header: 'Seri No',
       enableSorting: true,
-      size: 180,
-      cell: info => <span className="font-mono text-rose-400 font-bold text-sm">{info.getValue()}</span>,
+      size: 150,
+      cell: info => <span className="font-mono text-rose-400 font-bold text-xs">{info.getValue()}</span>,
     },
     {
       accessorKey: 'expirationDate',
       header: 'Miad',
       enableSorting: true,
-      size: 110,
+      size: 90,
       cell: info => (
-        <span className="px-2 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-medium text-xs">
+        <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-medium text-xs">
           {info.getValue() || '-'}
         </span>
       ),
     },
     {
       accessorKey: 'lotNumber',
-      header: 'Lot No',
+      header: 'Lot',
       enableSorting: true,
-      size: 120,
-      cell: info => <span className="font-mono text-slate-300">{info.getValue() || '-'}</span>,
+      size: 100,
+      cell: info => <span className="font-mono text-slate-300 text-xs">{info.getValue() || '-'}</span>,
     },
     {
       accessorKey: 'productionDate',
       header: 'Üretim',
       enableSorting: true,
-      size: 110,
+      size: 90,
       cell: info => (
-        <span className="px-2 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-medium text-xs">
+        <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded font-medium text-xs">
           {info.getValue() || '-'}
         </span>
       ),
@@ -328,9 +438,9 @@ const PTSDetailPage = () => {
       accessorKey: 'carrierLabel',
       header: 'Koli',
       enableSorting: true,
-      size: 200,
+      size: 160,
       cell: info => (
-        <span className="font-mono text-xs text-slate-400 bg-dark-700/50 border border-dark-600 px-2 py-1 rounded">
+        <span className="font-mono text-xs text-slate-400 bg-dark-700/50 border border-dark-600 px-1.5 py-0.5 rounded">
           {info.getValue() || '-'}
         </span>
       ),
@@ -339,7 +449,7 @@ const PTSDetailPage = () => {
       accessorKey: 'durum',
       header: 'Durum',
       enableSorting: true,
-      size: 200,
+      size: 220,
       cell: info => {
         const value = info.getValue()
         const row = info.row.original
@@ -350,11 +460,11 @@ const PTSDetailPage = () => {
         const StatusIcon = style.icon
         return (
           <div
-            className={`inline-flex items-center gap-1.5 px-2 py-1 ${style.bg} ${style.border} border rounded text-xs font-medium`}
+            className={`inline-flex items-center gap-2 px-2.5 py-1.5 ${style.bg} ${style.border} border-2 rounded-lg text-xs font-bold shadow-sm`}
             title={`Kod: ${value}`}
           >
-            <StatusIcon className={`w-3 h-3 ${style.text} flex-shrink-0`} />
-            <span className={`${style.text} truncate`}>{displayText}</span>
+            <StatusIcon className={`w-4 h-4 ${style.text} flex-shrink-0`} />
+            <span className={`${style.text}`}>{displayText}</span>
           </div>
         )
       },
@@ -363,9 +473,9 @@ const PTSDetailPage = () => {
       accessorKey: 'bildirimTarihi',
       header: 'Bildirim',
       enableSorting: true,
-      size: 100,
+      size: 120,
       cell: info => (
-        <span className="px-2 py-1 bg-primary-500/20 text-primary-300 border border-primary-500/30 rounded font-medium text-xs">
+        <span className="text-slate-500 text-xs">
           {info.getValue() || '-'}
         </span>
       ),
@@ -427,126 +537,120 @@ const PTSDetailPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-dark-950 overflow-hidden">
-      {/* Header - Sabit */}
+      {/* Header - Sabit - Kompakt */}
       <div className="flex-shrink-0 bg-dark-900/80 backdrop-blur-sm border-b border-dark-700 z-20">
-        <div className="px-6 py-3">
-          <div className="flex items-center gap-4">
-            {/* Sol - Geri ve Başlık */}
+        <div className="px-3 py-1.5">
+          <div className="flex items-center gap-3">
+            {/* Sol - Geri butonu */}
             <button
               onClick={() => navigate('/pts')}
-              className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0"
+              className="w-6 h-6 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-300" />
+              <ArrowLeft className="w-3.5 h-3.5 text-slate-300" />
             </button>
-            <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
-              <Package className="w-5 h-5 text-white" />
-            </div>
-            <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS Detay</h1>
-            <div className="bg-primary-500/20 border border-primary-500/40 px-3 py-1 rounded flex-shrink-0">
-              <span className="text-primary-300 text-sm font-bold font-mono">#{transferId}</span>
+
+            {/* Transfer ID - Badge */}
+            <div className="bg-primary-500/10 border border-primary-500/30 rounded px-2 py-0.5 flex flex-col items-center">
+              <span className="text-[9px] text-primary-400/70 uppercase">Transfer</span>
+              <span className="text-primary-400 text-xs font-bold font-mono">#{transferId}</span>
             </div>
 
-            {/* Orta - Belge Bilgileri */}
-            <div className="flex items-center gap-3 ml-4">
-              <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded">
-                <span className="text-slate-400 text-sm">Belge:</span>{' '}
-                <span className="text-slate-200 text-sm font-medium">{packageData.DOCUMENT_NUMBER || '-'}</span>
-              </div>
-              <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded">
-                <span className="text-slate-400 text-sm">Tarih:</span>{' '}
-                <span className="text-slate-200 text-sm font-medium">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
-              </div>
-              {/* GLN */}
-              <div className="bg-dark-800/80 border border-dark-700 px-3 py-1.5 rounded">
-                <span className="text-slate-400 text-sm">GLN:</span>{' '}
-                <span className="font-mono text-slate-200 text-sm">{packageData.SOURCE_GLN || '-'}</span>
-              </div>
-              {/* Cari */}
-              {packageData.SOURCE_GLN_NAME && (
-                <div className="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded">
-                  <span className="text-amber-400 text-sm font-medium">
-                    {packageData.SOURCE_GLN_NAME}
-                    {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
-                  </span>
-                </div>
-              )}
+            {/* Belge No - Badge */}
+            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+              <span className="text-[9px] text-slate-500 uppercase">Belge No</span>
+              <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_NUMBER || '-'}</span>
             </div>
 
-            {/* Sağ - Durum Filtre, Aksiyon Butonları */}
-            <div className="flex items-center gap-3 ml-auto">
+            {/* Tarih - Badge */}
+            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+              <span className="text-[9px] text-slate-500 uppercase">Tarih</span>
+              <span className="text-slate-200 text-xs font-medium">{packageData.DOCUMENT_DATE ? new Date(packageData.DOCUMENT_DATE).toLocaleDateString('tr-TR') : '-'}</span>
+            </div>
+
+            {/* GLN - Badge */}
+            <div className="bg-dark-800 border border-dark-600 rounded px-2 py-0.5 flex flex-col items-center">
+              <span className="text-[9px] text-slate-500 uppercase">GLN</span>
+              <span className="text-slate-200 text-xs font-mono">{packageData.SOURCE_GLN || '-'}</span>
+            </div>
+
+            {/* Cari - Badge */}
+            {packageData.SOURCE_GLN_NAME && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded px-2 py-0.5 flex flex-col items-center">
+                <span className="text-[9px] text-amber-400/70 uppercase">Cari</span>
+                <span className="text-amber-400 text-xs font-medium truncate max-w-[180px]">
+                  {packageData.SOURCE_GLN_NAME}
+                  {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
+                </span>
+              </div>
+            )}
+
+            {/* Sağ - Aksiyon Butonları */}
+            <div className="flex items-center gap-2 ml-auto">
               {/* Durum Filtresi */}
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-dark-800 border border-dark-600 text-slate-200 text-sm rounded px-3 py-1.5 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-w-[180px]"
-                >
-                  <option value="all">Tüm Durumlar ({products.length})</option>
-                  {statusStats.map(([durum, count]) => (
-                    <option key={durum} value={durum}>
-                      {durum} ({count})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Dikey Ayraç */}
-              <div className="w-px h-8 bg-dark-600" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-dark-800 border border-dark-600 text-slate-200 text-xs rounded px-1.5 py-0.5 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 min-w-[120px]"
+              >
+                <option value="all">Tümü ({products.length})</option>
+                {statusStats.map(([durum, count]) => (
+                  <option key={durum} value={durum}>
+                    {durum} ({count})
+                  </option>
+                ))}
+              </select>
 
               {/* Aksiyon Butonları */}
               <button
                 type="button"
                 onClick={handleAlimBildirimi}
                 disabled={actionLoading || filteredProducts.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-2 py-0.5 text-xs bg-emerald-600 text-white rounded shadow-sm hover:bg-emerald-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3 h-3" />
                 )}
-                <span className="font-medium">Alım Bildirimi</span>
-                <span className="text-xs opacity-75">(accept)</span>
+                <span>Alım Bildirimi</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleAlimIadeBildirimi}
                 disabled={actionLoading || filteredProducts.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg shadow-lg shadow-amber-600/30 hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-2 py-0.5 text-xs bg-amber-600 text-white rounded shadow-sm hover:bg-amber-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {actionLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <RotateCcw className="w-4 h-4" />
+                  <RotateCcw className="w-3 h-3" />
                 )}
-                <span className="font-medium">Alım İade</span>
-                <span className="text-xs opacity-75">(return)</span>
+                <span>İade Bildirimi</span>
               </button>
 
-              {/* Dikey Ayraç */}
-              <div className="w-px h-8 bg-dark-600" />
-
-              {/* Durum */}
+              {/* ITS Durum + Bildirim Tarihi */}
               {(() => {
-                const durumValue = packageData.DURUM || '-'
-                const style = getStatusStyle(durumValue)
-                const StatusIcon = style.icon
+                const durumValue = packageData.DURUM
+                const isOK = durumValue === 'OK'
                 return (
-                  <div className={`${style.bg} ${style.border} border px-3 py-1.5 rounded flex items-center gap-2`}>
-                    <StatusIcon className={`w-4 h-4 ${style.text}`} />
-                    <span className={`text-sm font-medium ${style.text}`}>{durumValue}</span>
+                  <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${isOK ? 'bg-emerald-500/30 border border-emerald-500/50' : 'bg-amber-500/20 border border-amber-500/40'}`}>
+                      <span className={isOK ? 'text-emerald-300' : 'text-amber-300'}>ITS</span>
+                      {isOK ? (
+                        <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-amber-400" />
+                      )}
+                    </div>
+                    {packageData.BILDIRIM_TARIHI && (
+                      <span className="text-[10px] text-slate-400">
+                        {new Date(packageData.BILDIRIM_TARIHI).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                      </span>
+                    )}
                   </div>
                 )
               })()}
-              {/* Bildirim Tarihi */}
-              <div className="bg-primary-500/10 border border-primary-500/30 px-3 py-1.5 rounded flex items-center gap-2">
-                <Clock className="w-4 h-4 text-primary-400" />
-                <span className="text-primary-300 text-sm font-medium">
-                  {packageData.BILDIRIM_TARIHI ? new Date(packageData.BILDIRIM_TARIHI).toLocaleDateString('tr-TR') : '-'}
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -713,6 +817,82 @@ const PTSDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Bildirim Modal Popup */}
+      {bildirimModal.show && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-dark-800 border border-dark-600 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            {/* İkon */}
+            <div className="flex justify-center mb-6">
+              {bildirimModal.status === 'loading' && (
+                <div className="w-16 h-16 border-4 border-primary-500/30 border-t-primary-500 rounded-full animate-spin" />
+              )}
+              {bildirimModal.status === 'success' && (
+                <div className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-500 rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-10 h-10 text-emerald-400" />
+                </div>
+              )}
+              {bildirimModal.status === 'error' && (
+                <div className="w-16 h-16 bg-rose-500/20 border-2 border-rose-500 rounded-full flex items-center justify-center">
+                  <XCircle className="w-10 h-10 text-rose-400" />
+                </div>
+              )}
+            </div>
+
+            {/* Başlık */}
+            <h3 className="text-xl font-bold text-center text-slate-100 mb-2">
+              {bildirimModal.type === 'alim' ? 'Alım Bildirimi' : 'İade Bildirimi'}
+            </h3>
+
+            {/* Ürün Sayısı */}
+            <p className="text-center text-slate-400 text-sm mb-4">
+              {bildirimModal.productCount} ürün işleniyor
+            </p>
+
+            {/* Mesaj */}
+            <p className={`text-center text-lg font-medium mb-6 ${bildirimModal.status === 'success' ? 'text-emerald-400' :
+              bildirimModal.status === 'error' ? 'text-rose-400' :
+                'text-slate-300'
+              }`}>
+              {bildirimModal.message}
+            </p>
+
+            {/* Sonuç Detayları */}
+            {bildirimModal.results?.length > 0 && bildirimModal.status !== 'loading' && (
+              <div className="bg-dark-900/50 border border-dark-600 rounded-lg p-4 mb-6 max-h-48 overflow-y-auto">
+                <div className="space-y-2">
+                  {bildirimModal.results.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm">
+                      <span className="text-slate-300 flex-1 truncate mr-2">{item.message}</span>
+                      <span className={`font-bold px-2 py-0.5 rounded ${item.message.includes('0') || item.message.toLowerCase().includes('başar')
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-rose-500/20 text-rose-400'
+                        }`}>
+                        ({item.count})
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Kapat Butonu (sadece success veya error durumunda) */}
+            {bildirimModal.status !== 'loading' && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setBildirimModal(prev => ({ ...prev, show: false }))}
+                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${bildirimModal.status === 'success'
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white'
+                    }`}
+                >
+                  Tamam
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

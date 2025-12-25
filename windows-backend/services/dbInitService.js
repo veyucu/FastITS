@@ -268,6 +268,7 @@ async function createPTSTables() {
     log('📋 AKTBLPTSTRA tablosu oluşturuluyor...')
     await pool.request().query(`
       CREATE TABLE AKTBLPTSTRA (
+        ID BIGINT IDENTITY(1,1) PRIMARY KEY,
         TRANSFER_ID BIGINT NOT NULL,
         CARRIER_LABEL VARCHAR(25) NULL,
         PARENT_CARRIER_LABEL VARCHAR(25) NULL,
@@ -286,7 +287,7 @@ async function createPTSTables() {
       )
     `)
 
-    await pool.request().query(`CREATE CLUSTERED INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA(TRANSFER_ID)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_TRANSFER_ID ON AKTBLPTSTRA(TRANSFER_ID)`)
     await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_CARRIER_LABEL ON AKTBLPTSTRA(CARRIER_LABEL) INCLUDE (TRANSFER_ID, GTIN, SERIAL_NUMBER)`)
     await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_GTIN ON AKTBLPTSTRA(GTIN) INCLUDE (TRANSFER_ID, SERIAL_NUMBER, EXPIRATION_DATE)`)
     await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLPTSTRA_SERIAL_NUMBER ON AKTBLPTSTRA(SERIAL_NUMBER) INCLUDE (TRANSFER_ID, GTIN)`)
@@ -298,6 +299,7 @@ async function createPTSTables() {
 
     // Migration: Eksik kolonları ekle
     const kolonlar = [
+      { name: 'ID', type: 'BIGINT IDENTITY(1,1)', special: true },
       { name: 'DURUM', type: 'VARCHAR(20) NULL' },
       { name: 'BILDIRIM_TARIHI', type: 'DATETIME NULL' },
       { name: 'PARENT_CARRIER_LABEL', type: 'VARCHAR(25) NULL' },
@@ -305,14 +307,25 @@ async function createPTSTables() {
     ]
 
     for (const kolon of kolonlar) {
-      await pool.request().query(`
-        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLPTSTRA') AND name = '${kolon.name}')
-          ALTER TABLE AKTBLPTSTRA ADD ${kolon.name} ${kolon.type};
+      if (kolon.special) {
+        // ID kolonu için özel işlem - IDENTITY kolon sonradan eklenemez, bu yüzden kontrol et
+        const hasId = await pool.request().query(`
+          SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLPTSTRA') AND name = 'ID'
+        `)
+        if (hasId.recordset.length === 0) {
+          log('⚠️ AKTBLPTSTRA tablosuna ID kolonu eklenemedi - manuel migration gerekli')
+          // NOT: Mevcut tabloya IDENTITY kolon eklemek için tablo yeniden oluşturulmalı
+        }
+      } else {
+        await pool.request().query(`
+          IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLPTSTRA') AND name = '${kolon.name}')
+            ALTER TABLE AKTBLPTSTRA ADD ${kolon.name} ${kolon.type};
       `)
+      }
     }
-  }
 
-  log('✅ PTS tabloları hazır')
+    log('✅ PTS tabloları hazır')
+  }
 }
 
 // ============================================================================
@@ -437,4 +450,3 @@ async function createITSTables() {
 export default {
   initializeDatabase
 }
-

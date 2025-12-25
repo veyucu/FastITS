@@ -610,8 +610,10 @@ router.post('/:transferId/alim-bildirimi', async (req, res) => {
 
     // Sonuç başarılı veya başarısız - her durumda kayıtları güncelle
     if (result.data && result.data.length > 0) {
-      // Her ürün için sonucu hazırla - GTIN ve seriNo ile
-      const recordsToUpdate = result.data.map(item => ({
+      // Her ürün için sonucu hazırla - ID ile (daha hızlı update için)
+      // products dizisindeki ID'leri result.data ile eşleştir
+      const recordsToUpdate = result.data.map((item, index) => ({
+        id: products[index]?.id, // Frontend'den gelen ID
         gtin: item.gtin,
         sn: item.seriNo,
         durum: item.durum
@@ -620,7 +622,7 @@ router.post('/:transferId/alim-bildirimi', async (req, res) => {
       log(`📝 Güncellenecek kayıt: ${recordsToUpdate.length}/${result.data.length}`)
 
       // Tüm satırlar başarılı mı kontrol et
-      const tumBasarili = result.data.every(item => item.durum == 1)
+      const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
 
       // PTS tablolarını güncelle (AKTBLPTSMAS her zaman, AKTBLPTSTRA eşleşenler için)
       try {
@@ -681,8 +683,9 @@ router.post('/:transferId/alim-iade-bildirimi', async (req, res) => {
 
     // Sonuç başarılı veya başarısız - her durumda kayıtları güncelle
     if (result.data && result.data.length > 0) {
-      // Her ürün için sonucu hazırla - GTIN ve seriNo ile
-      const recordsToUpdate = result.data.map(item => ({
+      // Her ürün için sonucu hazırla - ID ile (daha hızlı update için)
+      const recordsToUpdate = result.data.map((item, index) => ({
+        id: products[index]?.id, // Frontend'den gelen ID
         gtin: item.gtin,
         sn: item.seriNo,
         durum: item.durum
@@ -691,7 +694,7 @@ router.post('/:transferId/alim-iade-bildirimi', async (req, res) => {
       log(`📝 Güncellenecek kayıt: ${recordsToUpdate.length}/${result.data.length}`)
 
       // Tüm satırlar başarılı mı kontrol et
-      const tumBasarili = result.data.every(item => item.durum == 1)
+      const tumBasarili = result.data.every(item => String(item.durum).replace(/^0+/, '') === '0' || item.durum == 0)
 
       // PTS tablolarını güncelle (AKTBLPTSMAS her zaman, AKTBLPTSTRA eşleşenler için)
       try {
