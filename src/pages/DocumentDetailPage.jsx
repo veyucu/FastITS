@@ -15,8 +15,10 @@ import { parseITSBarcode } from '../utils/barcodeParser'
 import PTSModal from '../components/modals/PTSModal'
 import ITSBildirimModal from '../components/modals/ITSBildirimModal'
 import UTSBildirimModal from '../components/modals/UTSBildirimModal'
+import usePageTitle from '../hooks/usePageTitle'
 
 const DocumentDetailPage = () => {
+  usePageTitle('Belge Detay')
   const { id } = useParams()
   const navigate = useNavigate()
   const barcodeInputRef = useRef(null)

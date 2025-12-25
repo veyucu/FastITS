@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-table'
 import apiService from '../services/apiService'
 import { getSettings } from '../utils/settingsHelper'
+import usePageTitle from '../hooks/usePageTitle'
 
 // Durum badge renkleri - Kod bazlı
 const getStatusStyle = (status) => {
@@ -32,6 +33,7 @@ const getStatusStyle = (status) => {
 const PTSDetailPage = () => {
   const { transferId } = useParams()
   const navigate = useNavigate()
+  usePageTitle('PTS Detay')
 
   const [loading, setLoading] = useState(true)
   const [packageData, setPackageData] = useState(null)
