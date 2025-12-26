@@ -52,16 +52,43 @@ const DocumentsPage = () => {
   const [isInitialLoad, setIsInitialLoad] = useState(true) // İlk yükleme kontrolü
 
   // Belge Tipi Gösterimi - Dark Theme
-  const DocTypeRenderer = ({ value }) => {
-    const types = {
-      '6': { text: 'Sipariş', color: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' },
-      '1': { text: 'Satış Faturası', color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' },
-      '2': { text: 'Alış Faturası', color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' }
+  // FTIRSIP + TIPI kombinasyonu ile belge türü belirlenir
+  const DocTypeRenderer = ({ value, data }) => {
+    const ftirsip = value
+    const tipi = data?.tipi
+
+    // FTIRSIP + TIPI kombinasyonuna göre belge türü
+    let docTypeInfo = { text: 'Bilinmeyen', color: 'bg-slate-500/20 text-slate-400 border border-slate-500/30' }
+
+    if (ftirsip === '6') {
+      // Sipariş
+      docTypeInfo = { text: 'Sipariş', color: 'bg-violet-500/20 text-violet-400 border border-violet-500/30' }
+    } else if (ftirsip === '1') {
+      // Satış Faturası
+      if (tipi === 4 || tipi === '4') {
+        docTypeInfo = { text: 'Satış Faturası (İade)', color: 'bg-rose-500/20 text-rose-400 border border-rose-500/30' }
+      } else {
+        docTypeInfo = { text: 'Satış Faturası', color: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' }
+      }
+    } else if (ftirsip === '2') {
+      // Alış Faturası
+      if (tipi === 4 || tipi === '4') {
+        docTypeInfo = { text: 'Alış Faturası (İade)', color: 'bg-orange-500/20 text-orange-400 border border-orange-500/30' }
+      } else {
+        docTypeInfo = { text: 'Alış Faturası', color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' }
+      }
+    } else if (ftirsip === '4') {
+      // Alış İrsaliyesi
+      if (tipi === 4 || tipi === '4') {
+        docTypeInfo = { text: 'Alış İrsaliyesi (İade)', color: 'bg-pink-500/20 text-pink-400 border border-pink-500/30' }
+      } else {
+        docTypeInfo = { text: 'Alış İrsaliyesi', color: 'bg-sky-500/20 text-sky-400 border border-sky-500/30' }
+      }
     }
-    const type = types[value] || { text: 'Bilinmeyen', color: 'bg-slate-500/20 text-slate-400 border border-slate-500/30' }
+
     return (
-      <span className={`px-2 py-0.5 rounded text-xs font-medium ${type.color}`}>
-        {type.text}
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${docTypeInfo.color}`}>
+        {docTypeInfo.text}
       </span>
     )
   }
@@ -98,7 +125,7 @@ const DocumentsPage = () => {
       headerName: 'Belge Tipi',
       field: 'docType',
       width: 140,
-      cellRenderer: (params) => <DocTypeRenderer value={params.value} />,
+      cellRenderer: (params) => <DocTypeRenderer value={params.value} data={params.data} />,
       wrapHeaderText: true,
       autoHeaderHeight: true
     },
@@ -596,212 +623,128 @@ const DocumentsPage = () => {
 
   return (
     <div className="flex flex-col h-screen bg-dark-950">
-      {/* Header - Dark Theme */}
+      {/* Header with Filters - Dark Theme */}
       <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-        <div className="px-6 py-3">
-          <div className="flex items-center justify-between gap-4">
-            {/* Sol - Başlık */}
-            <div className="flex items-center gap-2">
+        <div className="px-4 py-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Ana Menü Butonu */}
+            <button
+              onClick={() => navigate('/')}
+              className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 shrink-0"
+              title="Ana Menü"
+            >
+              <Home className="w-5 h-5 text-slate-300" />
+            </button>
+
+            <div className="h-6 w-px bg-dark-600"></div>
+
+            {/* Belge Tipi Filtreleri */}
+            <div className="flex gap-1">
               <button
-                onClick={() => navigate('/')}
-                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
-                title="Ana Menü"
+                onClick={() => setDocTypeFilter('all')}
+                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === 'all'
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                  }`}
               >
-                <Home className="w-5 h-5 text-slate-300" />
+                Tümü
               </button>
-              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30">
-                <Package className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-lg font-bold text-slate-100">Ürün Hazırlama</h1>
+              <button
+                onClick={() => setDocTypeFilter('6')}
+                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '6'
+                  ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                  }`}
+              >
+                Sipariş
+              </button>
+              <button
+                onClick={() => setDocTypeFilter('1')}
+                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '1'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                  }`}
+              >
+                Satış
+              </button>
+              <button
+                onClick={() => setDocTypeFilter('2')}
+                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '2'
+                  ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                  }`}
+              >
+                Alış
+              </button>
             </div>
 
-            {/* Orta - İstatistikler */}
-            <div className="flex items-center gap-2">
-              <div className="bg-primary-600/20 border border-primary-500/30 rounded px-3 py-1.5 text-primary-400">
-                <div className="flex items-center gap-2">
-                  <Package className="w-3.5 h-3.5" />
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium opacity-90">Toplam:</span>
-                    <span className="text-base font-bold">{stats.total}</span>
-                  </div>
-                </div>
-              </div>
+            <div className="h-6 w-px bg-dark-600"></div>
 
-              <div className="bg-emerald-600/20 border border-emerald-500/30 rounded px-3 py-1.5 text-emerald-400">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium opacity-90">Okutulan:</span>
-                    <span className="text-base font-bold">{stats.completed}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-violet-600/20 border border-violet-500/30 rounded px-3 py-1.5 text-violet-400">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium opacity-90">Yarım:</span>
-                    <span className="text-base font-bold">{stats.partial}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-amber-600/20 border border-amber-500/30 rounded px-3 py-1.5 text-amber-400">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3.5 h-3.5" />
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xs font-medium opacity-90">Bekleyen:</span>
-                    <span className="text-base font-bold">{stats.pending}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sağ - Server Status */}
-            <div>
-              {serverStatus === 'online' && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-xs font-medium">
-                  <Wifi className="w-3 h-3" />
-                  Bağlı
-                </span>
-              )}
-              {serverStatus === 'offline' && (
-                <span className="flex items-center gap-1 px-2 py-1 bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-xs font-medium">
-                  <WifiOff className="w-3 h-3" />
-                  Bağlantı Yok
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters - Dark Theme */}
-      <div className="px-6 py-2 bg-dark-800/50 border-b border-dark-700">
-        <div className="flex flex-wrap gap-2 items-center">
-          {/* Belge Tipi Filtreleri */}
-          <div className="flex gap-1">
-            <button
-              onClick={() => setDocTypeFilter('all')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === 'all'
-                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
-                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-                }`}
-            >
-              Tümü
-            </button>
-            <button
-              onClick={() => setDocTypeFilter('6')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '6'
-                ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
-                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-                }`}
-            >
-              Sipariş
-            </button>
-            <button
-              onClick={() => setDocTypeFilter('1')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '1'
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
-                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-                }`}
-            >
-              Satış
-            </button>
-            <button
-              onClick={() => setDocTypeFilter('2')}
-              className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '2'
-                ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
-                : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
-                }`}
-            >
-              Alış
-            </button>
-          </div>
-
-          <div className="h-6 w-px bg-dark-600"></div>
-
-          {/* Okutulanları Gizle */}
-          <label className="flex items-center gap-2 px-3 py-1.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600">
-            <input
-              type="checkbox"
-              checked={hideCompleted}
-              onChange={(e) => setHideCompleted(e.target.checked)}
-              className="w-4 h-4 text-primary-600 rounded bg-dark-800 border-dark-500 focus:ring-2 focus:ring-primary-500"
-            />
-            <span className="text-sm font-medium text-slate-300">Okutulanları Gizle</span>
-          </label>
-
-          <div className="h-6 w-px bg-dark-600"></div>
-
-          {/* Tarih Filtresi */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={goToPreviousDate}
-              className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
-              title="Önceki Gün"
-            >
-              <ChevronLeft className="w-4 h-4 text-slate-400" />
-            </button>
-
-            <div className="relative">
-              <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+            {/* Bitirilenleri Gizle */}
+            <label className="flex items-center gap-1.5 px-2 py-1.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600">
               <input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                type="checkbox"
+                checked={hideCompleted}
+                onChange={(e) => setHideCompleted(e.target.checked)}
+                className="w-3.5 h-3.5 text-primary-600 rounded bg-dark-800 border-dark-500 focus:ring-2 focus:ring-primary-500"
               />
+              <span className="text-xs font-medium text-slate-300 whitespace-nowrap">Bitir. Gizle</span>
+            </label>
+
+            <div className="h-6 w-px bg-dark-600"></div>
+
+            {/* Tarih Filtresi */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={goToPreviousDate}
+                className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
+                title="Önceki Gün"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
+              </button>
+
+              <div className="relative">
+                <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
+
+              <button
+                onClick={goToNextDate}
+                className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
+                title="Sonraki Gün"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
             </div>
 
-            <button
-              onClick={goToNextDate}
-              className="p-1.5 hover:bg-dark-600 rounded transition-all border border-dark-600"
-              title="Sonraki Gün"
-            >
-              <ChevronRight className="w-4 h-4 text-slate-400" />
-            </button>
-          </div>
+            <div className="h-6 w-px bg-dark-600"></div>
 
-          <div className="h-6 w-px bg-dark-600"></div>
+            {/* Arama ve Yenile */}
+            <div className="flex flex-1 gap-2 items-center">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  placeholder="Belge no, cari, şehir ara..."
+                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                />
+              </div>
 
-          {/* Arama ve Diğer Filtreler */}
-          <div className="flex flex-1 gap-2 items-center">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Belge no, cari, şehir ara..."
-                className="w-full pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-              />
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
+              >
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
             </div>
-
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-dark-700 text-slate-300 rounded hover:bg-dark-600 transition-all border border-dark-600"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Sıfırla
-            </button>
-
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Yenile
-            </button>
-
-            <button
-              onClick={onExportExcel}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all"
-            >
-              📊 Excel
-            </button>
           </div>
         </div>
       </div>

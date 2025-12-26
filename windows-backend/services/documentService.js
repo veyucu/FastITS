@@ -122,7 +122,7 @@ const documentService = {
             A.PTS_KULLANICI
           FROM 
             TBLFATUIRS A WITH (NOLOCK)
-          WHERE A.FTIRSIP IN ('1','2') ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
+          WHERE A.FTIRSIP IN ('1','2','4') ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
         ) AS V
         LEFT JOIN
           TBLFATUEK E

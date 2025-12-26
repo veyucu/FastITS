@@ -48,6 +48,47 @@ const DocumentDetailPage = () => {
   // Custom Hooks
   const { playSuccessSound, playErrorSound, playWarningSound } = useSound()
 
+  // Belge türü adını FTIRSIP + TIPI kombinasyonuna göre döndür
+  const getDocumentTypeName = (ftirsip, tipi) => {
+    const isIade = tipi === 4 || tipi === '4'
+
+    if (ftirsip === '1') {
+      return isIade ? 'Satış Faturası (İade)' : 'Satış Faturası'
+    } else if (ftirsip === '2') {
+      return isIade ? 'Alış Faturası (İade)' : 'Alış Faturası'
+    } else if (ftirsip === '4') {
+      return isIade ? 'Alış İrsaliyesi (İade)' : 'Alış İrsaliyesi'
+    } else if (ftirsip === '6') {
+      return 'Sipariş'
+    }
+    return 'Bilinmeyen'
+  }
+
+  // Belge türü stilini FTIRSIP + TIPI kombinasyonuna göre döndür
+  const getDocTypeStyle = (ftirsip, tipi) => {
+    const isIade = tipi === 4 || tipi === '4'
+
+    if (ftirsip === '6') {
+      return { bg: 'bg-violet-500/20', border: 'border-violet-500/30', text: 'text-violet-400', title: 'text-violet-300' }
+    } else if (ftirsip === '1') {
+      if (isIade) {
+        return { bg: 'bg-rose-500/20', border: 'border-rose-500/30', text: 'text-rose-400', title: 'text-rose-300' }
+      }
+      return { bg: 'bg-emerald-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', title: 'text-emerald-300' }
+    } else if (ftirsip === '2') {
+      if (isIade) {
+        return { bg: 'bg-orange-500/20', border: 'border-orange-500/30', text: 'text-orange-400', title: 'text-orange-300' }
+      }
+      return { bg: 'bg-amber-500/20', border: 'border-amber-500/30', text: 'text-amber-400', title: 'text-amber-300' }
+    } else if (ftirsip === '4') {
+      if (isIade) {
+        return { bg: 'bg-pink-500/20', border: 'border-pink-500/30', text: 'text-pink-400', title: 'text-pink-300' }
+      }
+      return { bg: 'bg-sky-500/20', border: 'border-sky-500/30', text: 'text-sky-400', title: 'text-sky-300' }
+    }
+    return { bg: 'bg-slate-500/20', border: 'border-slate-500/30', text: 'text-slate-400', title: 'text-slate-300' }
+  }
+
   const [document, setDocument] = useState(null)
   const [items, setItems] = useState([])
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -91,27 +132,6 @@ const DocumentDetailPage = () => {
 
   // UTS Bildirim Modal State'i
   const [showUTSBildirimModal, setShowUTSBildirimModal] = useState(false)
-
-  // Belge tipini belirle
-  const getDocumentTypeName = (docType, tipi) => {
-    // docType: FTIRSIP değeri ('1', '2', '6')
-    // tipi: TIPI değeri (Alış/Satış bilgisi)
-    if (docType === '6') {
-      return 'Sipariş'
-    } else if (docType === '1' || docType === '2') {
-      // TIPI alanına göre Alış veya Satış faturası
-      const tipiStr = tipi ? String(tipi).toLowerCase() : ''
-      if (tipiStr.includes('aliş') || tipiStr.includes('alis')) {
-        return 'Alış Faturası'
-      } else if (tipiStr.includes('satiş') || tipiStr.includes('satis')) {
-        return 'Satış Faturası'
-      }
-      // Eğer TIPI bilgisi yoksa, FTIRSIP'e göre varsayılan
-      // FTIRSIP: '1' = Satış Faturası, '2' = Alış Faturası
-      return docType === '1' ? 'Satış Faturası' : 'Alış Faturası'
-    }
-    return 'Belge'
-  }
 
   // Update statistics
   const updateStats = useCallback((currentItems) => {
@@ -2092,33 +2112,23 @@ const DocumentDetailPage = () => {
               >
                 <ArrowLeft className="w-5 h-5 text-slate-300" />
               </button>
-              <div className={`px-2 h-9 flex flex-col justify-center rounded-lg border ${document.docType === '6'
-                ? 'bg-violet-500/20 border-violet-500/30'
-                : document.docType === '1'
-                  ? 'bg-emerald-500/20 border-emerald-500/30'
-                  : 'bg-amber-500/20 border-amber-500/30'
-                }`}>
-                <div className="flex items-center gap-1.5">
-                  <p className={`text-[9px] font-medium leading-none ${document.docType === '6'
-                    ? 'text-violet-400'
-                    : document.docType === '1'
-                      ? 'text-emerald-400'
-                      : 'text-amber-400'
-                    }`}>
-                    {getDocumentTypeName(document.docType, document.tipi)}
-                  </p>
-                  <span className="text-slate-600 text-[9px]">•</span>
-                  <p className="text-[9px] text-slate-400 leading-none">
-                    {document.documentDate ? new Date(document.documentDate).toLocaleDateString('tr-TR') : '-'}
-                  </p>
-                </div>
-                <h1 className={`text-xs font-bold leading-none ${document.docType === '6'
-                  ? 'text-violet-300'
-                  : document.docType === '1'
-                    ? 'text-emerald-300'
-                    : 'text-amber-300'
-                  }`}>{document.documentNo}</h1>
-              </div>
+              {(() => {
+                const style = getDocTypeStyle(document.docType, document.tipi)
+                return (
+                  <div className={`px-2 h-9 flex flex-col justify-center rounded-lg border ${style.bg} ${style.border}`}>
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-[9px] font-medium leading-none ${style.text}`}>
+                        {getDocumentTypeName(document.docType, document.tipi)}
+                      </p>
+                      <span className="text-slate-600 text-[9px]">•</span>
+                      <p className="text-[9px] text-slate-400 leading-none">
+                        {document.documentDate ? new Date(document.documentDate).toLocaleDateString('tr-TR') : '-'}
+                      </p>
+                    </div>
+                    <h1 className={`text-xs font-bold leading-none ${style.title}`}>{document.documentNo}</h1>
+                  </div>
+                )
+              })()}
 
               {/* Cari İsim - Tooltip ile detaylı bilgi */}
               <div className="bg-dark-800/80 px-2 h-9 w-72 flex items-center rounded-lg border border-dark-700 relative group cursor-help">
