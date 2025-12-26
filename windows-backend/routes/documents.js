@@ -734,8 +734,8 @@ router.post('/:id/pts-preview', async (req, res) => {
 
     // XML oluştur
     const packageData = {
-      documentNumber: document.orderNo,
-      documentDate: document.orderDate ? new Date(document.orderDate).toISOString().split('T')[0] : '',
+      documentNumber: document.documentNo,
+      documentDate: document.documentDate ? new Date(document.documentDate).toISOString().split('T')[0] : '',
       sourceGLN: PTS_CONFIG?.glnNo || '',
       destinationGLN: document.glnNo || document.email || '',
       note: note || '',
@@ -873,8 +873,8 @@ router.post('/:id/pts-notification', async (req, res) => {
     }
 
     const packageData = {
-      documentNumber: document.orderNo,
-      documentDate: document.orderDate ? new Date(document.orderDate).toISOString().split('T')[0] : '',
+      documentNumber: document.documentNo,
+      documentDate: document.documentDate ? new Date(document.documentDate).toISOString().split('T')[0] : '',
       sourceGLN: PTS_CONFIG?.glnNo || '', // Kendi GLN'imiz - ayarlardan alınır
       destinationGLN: document.glnNo || document.email || '', // Alıcı GLN (XML içinde kullanılır)
       receiverGLN: PTS_CONFIG?.glnNo || '', // Şu an için kendi GLN'imize gönder (test için)

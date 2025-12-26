@@ -536,9 +536,38 @@ const DocumentsPage = () => {
       filtered = filtered.filter(document => document.status === statusFilter)
     }
 
-    // Tamamlananları gizle (kalan = 0 olanları filtrele)
+    // Bitirilenleri gizle - Tamamlanma şartları:
+    // - dgrCount = 0 ise ITS ürünü yok, ITS şartları atlanır, sadece kalan = 0 bakılır
+    // - dgrCount > 0 ve kalan = 0 ise:
+    //   1. itsCount > 0 ise itsBildirim = 'OK' olmalı
+    //   2. utsCount > 0 ise utsBildirim = 'OK' olmalı
+    //   3. itsCount > 0 ise ptsId boş olmamalı
     if (hideCompleted) {
-      filtered = filtered.filter(document => document.kalan > 0)
+      filtered = filtered.filter(document => {
+        // Bitirilmiş şartları:
+        // 1. kalan = 0 (zorunlu)
+        // 2. dgrCount = 0 ise: sadece kalan kontrolü yeterli
+        // 3. dgrCount > 0 ise:
+        //    - itsCount > 0 ise itsBildirim = 'OK'
+        //    - utsCount > 0 ise utsBildirim = 'OK'
+        //    - itsCount > 0 ise ptsId boş değil
+
+        const isKalanZero = document.kalan === 0
+
+        // dgrCount = 0 ise ITS ürünü yok, sadece kalan kontrolü yeterli
+        if (!document.dgrCount || document.dgrCount === 0) {
+          return !isKalanZero // kalan = 0 ise bitirilmiş, gizle
+        }
+
+        // dgrCount > 0 ise ITS/UTS/PTS şartlarına bak
+        const isItsOk = document.itsCount > 0 ? document.itsBildirim === 'OK' : true
+        const isUtsOk = document.utsCount > 0 ? document.utsBildirim === 'OK' : true
+        const isPtsOk = document.itsCount > 0 ? (document.ptsId && document.ptsId !== '') : true
+
+        // Tüm şartlar sağlanıyorsa bitirilmiş demek
+        const isCompleted = isKalanZero && isItsOk && isUtsOk && isPtsOk
+        return !isCompleted // Bitirilmemişleri göster
+      })
     }
 
     // Arama filtresi
@@ -642,7 +671,7 @@ const DocumentsPage = () => {
             <div className="flex gap-1">
               <button
                 onClick={() => setDocTypeFilter('all')}
-                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === 'all'
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${docTypeFilter === 'all'
                   ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
                   : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
                   }`}
@@ -651,7 +680,7 @@ const DocumentsPage = () => {
               </button>
               <button
                 onClick={() => setDocTypeFilter('6')}
-                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '6'
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all ${docTypeFilter === '6'
                   ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
                   : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
                   }`}
@@ -660,35 +689,44 @@ const DocumentsPage = () => {
               </button>
               <button
                 onClick={() => setDocTypeFilter('1')}
-                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '1'
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all text-center leading-tight ${docTypeFilter === '1'
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
                   }`}
               >
-                Satış
+                Satış<br />Faturası
               </button>
               <button
                 onClick={() => setDocTypeFilter('2')}
-                className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${docTypeFilter === '2'
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all text-center leading-tight ${docTypeFilter === '2'
                   ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/30'
                   : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
                   }`}
               >
-                Alış
+                Alış<br />Faturası
+              </button>
+              <button
+                onClick={() => setDocTypeFilter('4')}
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-all text-center leading-tight ${docTypeFilter === '4'
+                  ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/30'
+                  : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                  }`}
+              >
+                Alış<br />İrsaliyesi
               </button>
             </div>
 
             <div className="h-6 w-px bg-dark-600"></div>
 
             {/* Bitirilenleri Gizle */}
-            <label className="flex items-center gap-1.5 px-2 py-1.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600">
+            <label className="flex items-center gap-1.5 px-2 py-0.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600">
               <input
                 type="checkbox"
                 checked={hideCompleted}
                 onChange={(e) => setHideCompleted(e.target.checked)}
                 className="w-3.5 h-3.5 text-primary-600 rounded bg-dark-800 border-dark-500 focus:ring-2 focus:ring-primary-500"
               />
-              <span className="text-xs font-medium text-slate-300 whitespace-nowrap">Bitir. Gizle</span>
+              <span className="text-[10px] font-medium text-slate-300 text-center leading-tight">Bitirilenleri<br />Gizle</span>
             </label>
 
             <div className="h-6 w-px bg-dark-600"></div>
@@ -703,15 +741,12 @@ const DocumentsPage = () => {
                 <ChevronLeft className="w-4 h-4 text-slate-400" />
               </button>
 
-              <div className="relative">
-                <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
+              <input
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-2 py-1.5 text-xs border border-dark-600 rounded bg-dark-800 text-slate-100 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+              />
 
               <button
                 onClick={goToNextDate}

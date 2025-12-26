@@ -1212,7 +1212,7 @@ const documentService = {
         const updateQuery = `
           UPDATE AKTBLITSUTS
           SET MIKTAR = @newMiktar,
-              KULLANICI = @kullanici,
+              KAYIT_KULLANICI = @kullanici,
               KAYIT_TARIHI = GETDATE()
           WHERE RECNO = @recno
         `
@@ -1280,7 +1280,7 @@ const documentService = {
             GTIN,
             HAR_RECNO,
             MIKTAR,
-            KULLANICI,
+            KAYIT_KULLANICI,
             KAYIT_TARIHI
           ) VALUES (
             'D',
@@ -1521,7 +1521,7 @@ const documentService = {
           URETIM_TARIHI,
           HAR_RECNO,
           MIKTAR,
-          KULLANICI,
+          KAYIT_KULLANICI,
           KAYIT_TARIHI
         ) VALUES (
           'U',
@@ -1659,7 +1659,7 @@ const documentService = {
                   URETIM_TARIHI = @formattedUretimTarihi,
                   LOT_NO = @finalLotNo,
                   MIKTAR = @miktar,
-                  KULLANICI = @kullanici,
+                  KAYIT_KULLANICI = @kullanici,
                   KAYIT_TARIHI = GETDATE()
               WHERE RECNO = @siraNo
             `
@@ -1691,7 +1691,7 @@ const documentService = {
                 LOT_NO,
                 URETIM_TARIHI,
                 MIKTAR,
-                KULLANICI
+                KAYIT_KULLANICI
               ) VALUES (
                 'U',
                 @ftirsip,
@@ -1976,7 +1976,7 @@ const documentService = {
             INSERT INTO AKTBLITSUTS (
               HAR_RECNO, TURU, FTIRSIP, FATIRS_NO, CARI_KODU, STOK_KODU, MIKTAR,
               GTIN, SERI_NO, MIAD, LOT_NO, URETIM_TARIHI,
-              CARRIER_LABEL, CONTAINER_TYPE, KULLANICI, KAYIT_TARIHI
+              CARRIER_LABEL, CONTAINER_TYPE, KAYIT_KULLANICI, KAYIT_TARIHI
             ) VALUES (
               @har_recno, @turu, @ftirsip, @fatirs_no, @cari_kodu, @stok_kodu, @miktar,
               @gtin, @seri_no, @miad, @lot_no, @uretim_tarihi,
