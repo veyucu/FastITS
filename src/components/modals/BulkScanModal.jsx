@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { XCircle } from 'lucide-react'
+import { XCircle, Barcode, CheckCircle } from 'lucide-react'
 import apiService from '../../services/apiService'
+import { parseITSBarcode } from '../../utils/barcodeParser'
 
 /**
- * Toplu ITS Karekod Okutma Modal Componenti
+ * Toplu ITS Karekod Okutma Modal Componenti - Dark Theme
  */
 const BulkScanModal = ({
   isOpen,
@@ -11,6 +12,9 @@ const BulkScanModal = ({
   documentId,
   documentNo,
   docType,
+  ftirsip,
+  cariKodu,
+  items = [],
   onSuccess,
   playSuccessSound,
   playErrorSound
@@ -44,6 +48,16 @@ const BulkScanModal = ({
     }
   }
 
+  // Kullanıcı bilgisini al
+  const getKullanici = () => {
+    try {
+      const userData = JSON.parse(localStorage.getItem('user') || '{}')
+      return userData.username || 'SYSTEM'
+    } catch {
+      return 'SYSTEM'
+    }
+  }
+
   // Toplu okutma işlemi
   const handleBulkScan = async () => {
     const lines = barcodeText.split('\n').filter(line => line.trim())
@@ -56,39 +70,101 @@ const BulkScanModal = ({
     setLoading(true)
     setResults(null)
 
-    try {
-      const response = await apiService.bulkScanITSBarcodes({
-        documentId: documentId,
-        barcodes: lines,
-        belgeNo: documentNo,
-        docType: docType
-      })
+    const successItems = []
+    const errorItems = []
+    const kullanici = getKullanici()
 
-      if (response.success) {
-        setResults(response.data)
+    for (let i = 0; i < lines.length; i++) {
+      const barcode = lines[i].trim()
 
-        if (response.data.successCount > 0) {
-          playSuccessSound?.()
-        }
-        if (response.data.errorCount > 0) {
-          playErrorSound?.()
+      try {
+        // Barkodu parse et
+        const parsed = parseITSBarcode(barcode)
+
+        if (!parsed) {
+          errorItems.push({
+            line: i + 1,
+            barcode: barcode.substring(0, 30) + '...',
+            message: 'Geçersiz ITS karekod formatı'
+          })
+          continue
         }
 
-        // Başarılı işlem sonrası callback
-        if (response.data.successCount > 0) {
-          onSuccess?.()
+        // Ürünü bul
+        const matchedItem = items.find(item => {
+          const itemGtin = item.gtin?.replace(/^0+/, '') || ''
+          const parsedGtin = parsed.gtin?.replace(/^0+/, '') || ''
+          return itemGtin === parsedGtin
+        })
+
+        if (!matchedItem) {
+          errorItems.push({
+            line: i + 1,
+            barcode: barcode.substring(0, 30) + '...',
+            message: `GTIN ${parsed.gtin} belgede bulunamadı`
+          })
+          continue
         }
-      } else {
-        alert('❌ ' + response.message)
-        playErrorSound?.()
+
+        // API'ye kaydet
+        const response = await apiService.saveITSBarcode({
+          kayitTipi: 'ITS',
+          gtin: parsed.gtin,
+          seriNo: parsed.serialNumber,
+          miad: parsed.expiryDate,
+          lotNo: parsed.lotNumber,
+          stokKodu: matchedItem.stokKodu,
+          straInc: matchedItem.straInc,
+          tarih: matchedItem.tarih,
+          gckod: matchedItem.gckod,
+          belgeNo: documentNo,
+          belgeTip: docType,
+          subeKodu: matchedItem.subeKodu,
+          ilcGtin: matchedItem.ilcGtin,
+          expectedQuantity: matchedItem.miktar,
+          ftirsip: ftirsip,
+          cariKodu: cariKodu,
+          kullanici: kullanici
+        })
+
+        if (response.success) {
+          successItems.push({
+            line: i + 1,
+            barcode: barcode.substring(0, 30) + '...',
+            stokKodu: matchedItem.stokKodu
+          })
+        } else {
+          errorItems.push({
+            line: i + 1,
+            barcode: barcode.substring(0, 30) + '...',
+            message: response.message || 'Kaydetme hatası'
+          })
+        }
+      } catch (error) {
+        errorItems.push({
+          line: i + 1,
+          barcode: barcode.substring(0, 30) + '...',
+          message: error.message || 'Beklenmeyen hata'
+        })
       }
-    } catch (error) {
-      console.error('Toplu okutma hatası:', error)
-      alert('❌ Toplu okutma sırasında hata oluştu')
-      playErrorSound?.()
-    } finally {
-      setLoading(false)
     }
+
+    setResults({
+      totalCount: lines.length,
+      successCount: successItems.length,
+      errorCount: errorItems.length,
+      errors: errorItems
+    })
+
+    if (successItems.length > 0) {
+      playSuccessSound?.()
+      onSuccess?.()
+    }
+    if (errorItems.length > 0) {
+      playErrorSound?.()
+    }
+
+    setLoading(false)
   }
 
   // Temizle
@@ -107,83 +183,95 @@ const BulkScanModal = ({
 
   if (!isOpen) return null
 
+  const lineCount = barcodeText.split('\n').filter(l => l.trim()).length
+
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
       onClick={handleClose}
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-[90%] max-w-3xl max-h-[80vh] overflow-hidden"
+        className="bg-dark-800 rounded-2xl shadow-dark-xl border border-dark-700 w-full max-w-2xl max-h-[90vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">📋 Toplu ITS Karekod Okutma</h2>
-              <p className="text-sm text-indigo-100">Her satıra bir karekod yapıştırın</p>
+        <div className="px-6 py-4 border-b border-primary-500/30 flex items-center justify-between bg-gradient-to-r from-primary-600/30 to-cyan-600/30 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-500/20 border border-primary-500/30 rounded-lg flex items-center justify-center">
+              <Barcode className="w-6 h-6 text-primary-400" />
             </div>
-            <button
-              onClick={handleClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
-            >
-              <XCircle className="w-5 h-5" />
-            </button>
+            <div>
+              <h2 className="text-xl font-bold text-slate-100">Toplu ITS Karekod Okutma</h2>
+              <p className="text-xs text-slate-400">Her satıra bir ITS karekod (2D) yazın</p>
+            </div>
           </div>
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
+            disabled={loading}
+          >
+            <XCircle className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6">
+        <div className="p-6 flex-1 flex flex-col gap-4 overflow-y-auto">
           {/* Textarea with Line Numbers */}
-          <div className="flex border border-gray-300 rounded-lg overflow-hidden mb-4" style={{ height: '300px' }}>
-            {/* Line Numbers */}
-            <pre
-              ref={lineNumbersRef}
-              className="bg-gray-100 text-gray-500 text-right px-3 py-2 font-mono text-sm overflow-hidden select-none"
-              style={{ minWidth: '50px', lineHeight: '1.5' }}
-            >
-              {Array.from({ length: 10 }, (_, i) => i + 1).join('\n')}
-            </pre>
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              value={barcodeText}
-              onChange={(e) => setBarcodeText(e.target.value)}
-              onScroll={handleScroll}
-              placeholder="Her satıra bir ITS karekod yapıştırın...&#10;&#10;Örnek:&#10;01086992937002582110020832004322217280831102509178&#10;01086992937002582110020832004322217280831102509179"
-              className="flex-1 p-2 font-mono text-sm resize-none focus:outline-none"
-              style={{ lineHeight: '1.5' }}
-              disabled={loading}
-            />
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-slate-300 mb-2">
+              ITS Karekod Listesi
+              <span className="text-slate-500 font-normal ml-2">(Her satıra bir ITS karekod)</span>
+            </label>
+            <div className="flex border border-dark-600 rounded-lg focus-within:border-primary-500 overflow-hidden" style={{ height: '256px' }}>
+              {/* Line Numbers */}
+              <div
+                ref={lineNumbersRef}
+                className="w-10 bg-dark-700 text-dark-400 text-right pr-2 py-2 font-mono text-sm overflow-hidden select-none"
+                style={{ lineHeight: '1.5' }}
+              >
+                {Array.from({ length: Math.max(barcodeText.split('\n').length, 10) }, (_, i) => i + 1).join('\n')}
+              </div>
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={barcodeText}
+                onChange={(e) => setBarcodeText(e.target.value)}
+                onScroll={handleScroll}
+                placeholder="ITS karekodları buraya yapıştırın...&#10;&#10;Örnek:&#10;01086992937002582110020832004322217280831102509178&#10;01086992937002582110020832004322217280831102509179"
+                className="flex-1 p-2 font-mono text-sm resize-none focus:outline-none bg-dark-900 text-slate-100 placeholder-slate-600"
+                style={{ lineHeight: '1.5' }}
+                disabled={loading}
+              />
+            </div>
           </div>
 
           {/* Results */}
           {results && (
-            <div className="mb-4 p-4 rounded-lg bg-gray-50 border border-gray-200">
-              <h3 className="font-bold mb-2">📊 Sonuçlar</h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-2 bg-blue-100 rounded">
-                  <p className="text-2xl font-bold text-blue-600">{results.totalCount}</p>
-                  <p className="text-xs text-blue-600">Toplam</p>
+            <div className="p-4 rounded-lg bg-dark-700 border border-dark-600">
+              <h3 className="font-bold mb-3 text-slate-200">📊 Sonuçlar</h3>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="p-3 bg-primary-500/20 border border-primary-500/30 rounded-lg">
+                  <p className="text-2xl font-bold text-primary-400">{results.totalCount}</p>
+                  <p className="text-xs text-primary-300">Toplam</p>
                 </div>
-                <div className="p-2 bg-green-100 rounded">
-                  <p className="text-2xl font-bold text-green-600">{results.successCount}</p>
-                  <p className="text-xs text-green-600">Başarılı</p>
+                <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg">
+                  <p className="text-2xl font-bold text-emerald-400">{results.successCount}</p>
+                  <p className="text-xs text-emerald-300">Başarılı</p>
                 </div>
-                <div className="p-2 bg-red-100 rounded">
-                  <p className="text-2xl font-bold text-red-600">{results.errorCount}</p>
-                  <p className="text-xs text-red-600">Hatalı</p>
+                <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+                  <p className="text-2xl font-bold text-red-400">{results.errorCount}</p>
+                  <p className="text-xs text-red-300">Hatalı</p>
                 </div>
               </div>
 
               {/* Error Details */}
               {results.errors && results.errors.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="text-sm font-semibold text-red-600 mb-2">❌ Hatalar:</h4>
-                  <div className="max-h-32 overflow-y-auto bg-red-50 rounded p-2">
+                  <h4 className="text-sm font-semibold text-red-400 mb-2">❌ Hatalar:</h4>
+                  <div className="max-h-32 overflow-y-auto bg-red-500/10 border border-red-500/20 rounded-lg p-2">
                     {results.errors.map((error, index) => (
-                      <p key={index} className="text-xs text-red-700 font-mono py-0.5">
+                      <p key={index} className="text-xs text-red-300 font-mono py-0.5">
                         Satır {error.line}: {error.message}
                       </p>
                     ))}
@@ -192,31 +280,34 @@ const BulkScanModal = ({
               )}
             </div>
           )}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleBulkScan}
-              disabled={loading || !barcodeText.trim()}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
-                  İşleniyor...
-                </>
-              ) : (
-                <>📤 Toplu Okut ({barcodeText.split('\n').filter(l => l.trim()).length} satır)</>
-              )}
-            </button>
-            <button
-              onClick={handleClear}
-              disabled={loading}
-              className="px-4 py-3 text-lg font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all bg-gray-200 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
-            >
-              🗑️ Temizle
-            </button>
-          </div>
+        {/* Modal Footer */}
+        <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
+          <button
+            onClick={handleClose}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all border border-dark-600 text-slate-300 hover:bg-dark-600"
+            disabled={loading}
+          >
+            İptal
+          </button>
+          <button
+            onClick={handleBulkScan}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !barcodeText.trim()}
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                <span>Kaydediliyor...</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>Kaydet ({lineCount} satır)</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -224,5 +315,3 @@ const BulkScanModal = ({
 }
 
 export default BulkScanModal
-
-
