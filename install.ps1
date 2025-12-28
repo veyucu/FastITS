@@ -1,8 +1,8 @@
-# AtakodITS Kurulum Script'i
+# FastITS Kurulum Script'i
 # PowerShell ile calistirin
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  AtakodITS Kurulum Basliyor..." -ForegroundColor Cyan
+Write-Host "  FastITS Kurulum Basliyor..." -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -29,14 +29,16 @@ Write-Host "  OK - Logs klasoru hazir" -ForegroundColor Green
 
 # 3. Backend bagimliliklari
 Write-Host "[3/6] Backend bagimliliklari yukleniyor..." -ForegroundColor Yellow
-Push-Location ".\windows-backend"
+Push-Location ".\backend"
 npm install --production 2>&1 | Out-Null
 Pop-Location
 Write-Host "  OK - Backend bagimliliklari yuklendi" -ForegroundColor Green
 
 # 4. Frontend bagimliliklari
 Write-Host "[4/6] Frontend bagimliliklari yukleniyor..." -ForegroundColor Yellow
+Push-Location ".\frontend"
 npm install --production 2>&1 | Out-Null
+Pop-Location
 Write-Host "  OK - Frontend bagimliliklari yuklendi" -ForegroundColor Green
 
 # 5. PM2 ve serve global kurulum

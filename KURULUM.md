@@ -1,4 +1,4 @@
-# AtakodITS - Kurulum Rehberi
+# FastITS - Kurulum Rehberi
 
 ## Hızlı Kurulum
 
@@ -8,7 +8,7 @@ Tüm proje klasörünü müşteri sunucusuna kopyalayın (`node_modules` hariç)
 ### 2. Ortam Değişkenlerini Ayarla
 ```powershell
 # .env dosyasını düzenle
-notepad windows-backend\.env
+notepad backend\.env
 ```
 
 Minimum değiştirilmesi gerekenler:
@@ -18,7 +18,7 @@ Minimum değiştirilmesi gerekenler:
 ### 3. Kurulumu Başlat
 ```powershell
 # Administrator olarak PowerShell açın
-cd C:\AtakodITS
+cd C:\FastITS
 .\install.ps1
 ```
 
@@ -43,5 +43,5 @@ pm2 stop all      # Durdur
 
 ### Servis Başlamıyor
 ```powershell
-pm2 logs atakod-backend  # Hata mesajlarını görün
+pm2 logs fastits-backend  # Hata mesajlarını görün
 ```

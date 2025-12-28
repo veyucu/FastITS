@@ -1,7 +1,7 @@
 {
-  "name": "atakodits-backend",
+  "name": "fastits-backend",
   "version": "1.0.0",
-  "description": "Backend server for AtakodITS",
+  "description": "Backend server for FastITS",
   "main": "server.js",
   "type": "module",
   "scripts": {

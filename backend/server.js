@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'AtakodITS Backend is running',
+    message: 'FastITS Backend is running',
     timestamp: new Date().toISOString()
   });
 });

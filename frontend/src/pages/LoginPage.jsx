@@ -64,7 +64,7 @@ const LoginPage = () => {
             <Package className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-4xl font-extrabold text-white tracking-tight">
-            Atakod<span className="text-primary-400">ITS</span>
+            Fast<span className="text-primary-400">ITS</span>
           </h1>
           <p className="mt-3 text-lg text-slate-400">
             Ürün Hazırlama Sistemi
@@ -163,7 +163,7 @@ const LoginPage = () => {
 
         {/* Footer */}
         <p className="text-center text-slate-600 text-sm">
-          © 2025 AtakodITS. Tüm hakları saklıdır.
+          © 2025 FastITS. Tüm hakları saklıdır.
         </p>
       </div>
     </div>

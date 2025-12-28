@@ -1,9 +1,9 @@
 module.exports = {
     apps: [
         {
-            name: 'atakod-backend',
+            name: 'fastits-backend',
             script: 'server.js',
-            cwd: './windows-backend',
+            cwd: './backend',
             instances: 1,
             autorestart: true,
             watch: false,
@@ -18,10 +18,10 @@ module.exports = {
             time: true
         },
         {
-            name: 'atakod-frontend',
+            name: 'fastits-frontend',
             script: 'serve',
             args: '-s dist -p 3000',
-            cwd: './',
+            cwd: './frontend',
             instances: 1,
             autorestart: true,
             watch: false,

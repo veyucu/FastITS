@@ -7,7 +7,7 @@ import { useEffect } from 'react'
 const usePageTitle = (title) => {
     useEffect(() => {
         const prevTitle = document.title
-        document.title = title ? `${title} - AtakodITS` : 'AtakodITS'
+        document.title = title ? `${title} - FastITS` : 'FastITS'
 
         // Cleanup: Component unmount olunca önceki başlığa dön
         return () => {
