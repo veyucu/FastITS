@@ -1021,6 +1021,26 @@ const apiService = {
         message: error.response?.data?.message || error.message || 'Doğrulama yapılamadı'
       }
     }
+  },
+
+  // ==================== BELGE TAMAMLAMA ====================
+
+  // Belge FAST durumunu güncelle (OK/NOK)
+  updateFastDurum: async (documentId, status, kullanici) => {
+    try {
+      log('📋 FAST Durum güncelleniyor:', { documentId, status, kullanici })
+      const response = await apiClient.post(`/documents/${documentId}/fast-durum`, {
+        status,
+        kullanici
+      })
+      return response.data
+    } catch (error) {
+      console.error('❌ FAST Durum güncelleme hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Durum güncellenemedi'
+      }
+    }
   }
 }
 

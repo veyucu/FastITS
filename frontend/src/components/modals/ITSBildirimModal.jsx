@@ -16,7 +16,9 @@ const ITSBildirimModal = ({
     document,
     docType,
     playSuccessSound,
-    playErrorSound
+    playErrorSound,
+    autoAction = null, // Otomatik çalıştırılacak aksiyon tipi (örn: 'satis', 'alis')
+    onComplete = null  // Otomatik işlem tamamlandığında çağrılacak callback (success: boolean)
 }) => {
     const gridRef = useRef(null)
     const [loading, setLoading] = useState(false)
@@ -26,6 +28,7 @@ const ITSBildirimModal = ({
     const [actionLoading, setActionLoading] = useState(false)
     const [selectedDurumlar, setSelectedDurumlar] = useState([])
     const [durumDropdownOpen, setDurumDropdownOpen] = useState(false)
+    const [autoActionTriggered, setAutoActionTriggered] = useState(false)
 
     // Belge tipi kontrolü - Satış Faturası mı?
     const isSatisFaturasi = document?.docType === '1' && String(document?.tipi || '').toLowerCase().includes('sat')
@@ -35,8 +38,17 @@ const ITSBildirimModal = ({
         if (isOpen && document?.id) {
             fetchRecords()
             setSelectedDurumlar([])
+            setAutoActionTriggered(false) // Reset auto action flag
         }
     }, [isOpen, document?.id])
+
+    // Auto action tetikle (kayıtlar yüklendiğinde)
+    useEffect(() => {
+        if (autoAction && records.length > 0 && !autoActionTriggered && !loading && !actionLoading) {
+            setAutoActionTriggered(true)
+            handleAction(autoAction, true) // skipConfirm = true
+        }
+    }, [autoAction, records, autoActionTriggered, loading, actionLoading])
 
     // Dışarı tıklayınca dropdown'ı kapat
     useEffect(() => {
@@ -207,7 +219,7 @@ const ITSBildirimModal = ({
     }), [])
 
     // Bildirim işlemi yap
-    const handleAction = async (actionType) => {
+    const handleAction = async (actionType, skipConfirm = false) => {
         const actionNames = {
             'satis': 'Satış Bildirimi',
             'satis-iptal': 'Satış İptal Bildirimi',
@@ -218,7 +230,8 @@ const ITSBildirimModal = ({
             'basarisiz-sorgula': 'Başarısız Ürün Sorgulama'
         }
 
-        if (!confirm(`${actionNames[actionType]} işlemi yapılacak. Devam etmek istiyor musunuz?`)) {
+        // Onay sor (skipConfirm değilse)
+        if (!skipConfirm && !confirm(`${actionNames[actionType]} işlemi yapılacak. Devam etmek istiyor musunuz?`)) {
             return
         }
 
@@ -257,6 +270,8 @@ const ITSBildirimModal = ({
                     if (!glnNo) {
                         setMessage({ type: 'error', text: 'Alıcı GLN numarası tanımlı değil!' })
                         playErrorSound?.()
+                        setActionLoading(false)
+                        onComplete?.(false) // Auto mode callback
                         return
                     }
                     result = await apiService.itsSatisBildirimi(document.id, glnNo, products, settings, belgeInfo)
@@ -267,6 +282,8 @@ const ITSBildirimModal = ({
                     if (!glnNoIptal) {
                         setMessage({ type: 'error', text: 'Alıcı GLN numarası tanımlı değil!' })
                         playErrorSound?.()
+                        setActionLoading(false)
+                        onComplete?.(false) // Auto mode callback
                         return
                     }
                     result = await apiService.itsSatisIptalBildirimi(document.id, glnNoIptal, products, settings, belgeInfo)
@@ -283,6 +300,8 @@ const ITSBildirimModal = ({
                     if (!karsiGlnNo) {
                         setMessage({ type: 'error', text: 'Karşı taraf GLN numarası tanımlı değil!' })
                         playErrorSound?.()
+                        setActionLoading(false)
+                        onComplete?.(false) // Auto mode callback
                         return
                     }
                     result = await apiService.itsIadeAlisBildirimi(document.id, karsiGlnNo, products, settings, belgeInfo)
@@ -388,15 +407,23 @@ const ITSBildirimModal = ({
                 playSuccessSound?.()
                 // Kayıtları yenile
                 await fetchRecords()
+                // Auto mode callback
+                if (autoAction) {
+                    setTimeout(() => {
+                        onComplete?.(true)
+                    }, 1000) // 1 saniye bekle mesajı göster
+                }
             } else {
                 setMessage({ type: 'error', text: result.message })
                 playErrorSound?.()
+                onComplete?.(false) // Auto mode callback
             }
 
         } catch (error) {
             console.error(`${actionType} hatası:`, error)
             setMessage({ type: 'error', text: error.message || 'İşlem başarısız' })
             playErrorSound?.()
+            onComplete?.(false) // Auto mode callback
         } finally {
             setActionLoading(false)
         }

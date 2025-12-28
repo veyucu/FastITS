@@ -15,7 +15,9 @@ const UTSBildirimModal = ({
     onClose,
     document,
     playSuccessSound,
-    playErrorSound
+    playErrorSound,
+    autoAction = null, // Otomatik çalıştırılacak aksiyon tipi (örn: 'verme')
+    onComplete = null  // Otomatik işlem tamamlandığında çağrılacak callback
 }) => {
     const gridRef = useRef(null)
     const [loading, setLoading] = useState(false)
@@ -23,13 +25,23 @@ const UTSBildirimModal = ({
     const [selectedRows, setSelectedRows] = useState([])
     const [message, setMessage] = useState(null)
     const [actionLoading, setActionLoading] = useState(false)
+    const [autoActionTriggered, setAutoActionTriggered] = useState(false)
 
     // Modal açıldığında kayıtları getir
     useEffect(() => {
         if (isOpen && document?.id) {
             fetchRecords()
+            setAutoActionTriggered(false)
         }
     }, [isOpen, document?.id])
+
+    // Auto action tetikle (kayıtlar yüklendiğinde)
+    useEffect(() => {
+        if (autoAction && records.length > 0 && !autoActionTriggered && !loading && !actionLoading) {
+            setAutoActionTriggered(true)
+            handleAction(autoAction, true) // skipConfirm = true
+        }
+    }, [autoAction, records, autoActionTriggered, loading, actionLoading])
 
     // Kayıtları getir
     const fetchRecords = async () => {
@@ -129,13 +141,14 @@ const UTSBildirimModal = ({
     }), [])
 
     // Bildirim işlemi yap
-    const handleAction = async (actionType) => {
+    const handleAction = async (actionType, skipConfirm = false) => {
         const actionNames = {
             'verme': 'UTS Verme Bildirimi',
             'verme-iptal': 'UTS Verme İptal Bildirimi'
         }
 
-        if (!confirm(`${actionNames[actionType]} işlemi yapılacak. Devam etmek istiyor musunuz?`)) {
+        // Onay sor (skipConfirm değilse)
+        if (!skipConfirm && !confirm(`${actionNames[actionType]} işlemi yapılacak. Devam etmek istiyor musunuz?`)) {
             return
         }
 
@@ -178,15 +191,23 @@ const UTSBildirimModal = ({
                 playSuccessSound?.()
                 // Kayıtları yenile
                 await fetchRecords()
+                // Auto mode callback
+                if (autoAction) {
+                    setTimeout(() => {
+                        onComplete?.(true)
+                    }, 1000)
+                }
             } else {
                 setMessage({ type: 'error', text: result.message })
                 playErrorSound?.()
+                onComplete?.(false)
             }
 
         } catch (error) {
             console.error(`${actionType} hatası:`, error)
             setMessage({ type: 'error', text: error.message || 'İşlem başarısız' })
             playErrorSound?.()
+            onComplete?.(false)
         } finally {
             setActionLoading(false)
         }

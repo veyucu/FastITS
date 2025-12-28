@@ -1255,4 +1255,53 @@ router.post('/:id/its-basarisiz-sorgula', async (req, res) => {
   }
 })
 
+// POST /api/documents/:id/fast-durum - Belge FAST durumunu güncelle
+router.post('/:id/fast-durum', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status, kullanici } = req.body
+
+    log('📋 FAST Durum Güncelleme İsteği:', { documentId: id, status, kullanici })
+
+    if (!status || !['OK', 'NOK'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Geçersiz durum değeri. OK veya NOK olmalı.'
+      })
+    }
+
+    if (!kullanici) {
+      return res.status(400).json({
+        success: false,
+        message: 'Kullanıcı bilgisi zorunludur'
+      })
+    }
+
+    // Document ID parse et
+    const [subeKodu, ftirsip, fatirs_no] = id.split('-')
+
+    // FAST durumunu güncelle
+    const result = await documentService.updateDocumentFastStatus(
+      subeKodu,
+      fatirs_no,
+      ftirsip,
+      status,
+      kullanici
+    )
+
+    res.json({
+      success: true,
+      message: `Belge durumu ${status} olarak güncellendi`,
+      data: result
+    })
+
+  } catch (error) {
+    console.error('❌ FAST Durum Güncelleme Hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Durum güncellenemedi'
+    })
+  }
+})
+
 export default router

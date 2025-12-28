@@ -14,12 +14,15 @@ const PTSModal = ({
     document,
     playSuccessSound,
     playErrorSound,
-    onSuccess
+    onSuccess,
+    autoSend = false, // Otomatik gönderim modu
+    onComplete = null // Otomatik işlem tamamlandığında çağrılacak callback
 }) => {
     const [loading, setLoading] = useState(false)
     const [result, setResult] = useState(null)
     const [note, setNote] = useState('')
     const [xmlPreview, setXmlPreview] = useState(null)
+    const [autoSendTriggered, setAutoSendTriggered] = useState(false)
 
     // Modal kapandığında state'leri temizle
     useEffect(() => {
@@ -28,8 +31,17 @@ const PTSModal = ({
             setXmlPreview(null)
             setNote('')
             setLoading(false)
+            setAutoSendTriggered(false)
         }
     }, [isOpen])
+
+    // Auto send tetikle
+    useEffect(() => {
+        if (autoSend && isOpen && !autoSendTriggered && !loading && document?.id) {
+            setAutoSendTriggered(true)
+            handleSend(true) // skipConfirm = true
+        }
+    }, [autoSend, isOpen, autoSendTriggered, loading, document?.id])
 
     // GLN kontrolü
     const hasGLN = !!(document?.glnNo || document?.email)
@@ -79,8 +91,18 @@ const PTSModal = ({
     }
 
     // PTS Gönder
-    const handleSend = async () => {
-        if (!confirm('Bu belge için PTS bildirimi gönderilecek. Devam etmek istiyor musunuz?')) {
+    const handleSend = async (skipConfirm = false) => {
+        // Onay sor (skipConfirm değilse)
+        if (!skipConfirm && !confirm('Bu belge için PTS bildirimi gönderilecek. Devam etmek istiyor musunuz?')) {
+            return
+        }
+
+        // GLN kontrolü - autoSend modunda GLN yoksa hata dön
+        if (!hasGLN) {
+            const errorResult = { success: false, message: 'GLN numarası tanımlı değil!' }
+            setResult(errorResult)
+            playErrorSound?.()
+            onComplete?.(false)
             return
         }
 
@@ -102,8 +124,15 @@ const PTSModal = ({
             if (response.success) {
                 playSuccessSound?.()
                 onSuccess?.()
+                // Auto mode callback - 1 saniye bekle mesajı göster
+                if (autoSend) {
+                    setTimeout(() => {
+                        onComplete?.(true)
+                    }, 1000)
+                }
             } else {
                 playErrorSound?.()
+                onComplete?.(false)
             }
         } catch (error) {
             console.error('PTS Bildirimi hatası:', error)
@@ -112,6 +141,7 @@ const PTSModal = ({
                 message: error.message || 'PTS bildirimi gönderilemedi'
             })
             playErrorSound?.()
+            onComplete?.(false)
         } finally {
             setLoading(false)
         }

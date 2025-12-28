@@ -427,6 +427,11 @@ const documentService = {
         FAST_KULLANICI: row.FAST_KULLANICI
       }
 
+      // Items'dan ürün türü sayılarını hesapla
+      const itsCount = items.filter(item => item.turu === 'ITS').length
+      const utsCount = items.filter(item => item.turu === 'UTS').length
+      const dgrCount = items.filter(item => item.turu === 'DGR').length
+
       const document = {
         id: `${fixedRow.SUBE_KODU}-${fixedRow.FTIRSIP}-${fixedRow.FATIRS_NO}`,
         subeKodu: fixedRow.SUBE_KODU,
@@ -435,6 +440,9 @@ const documentService = {
         documentNo: fixedRow.FATIRS_NO,
         documentDate: fixedRow.TARIH,
         totalItems: fixedRow.KALEM || 0,
+        itsCount: itsCount,
+        utsCount: utsCount,
+        dgrCount: dgrCount,
         customerCode: fixedRow.CARI_KODU,
         customerName: fixedRow.CARI_ISIM,
         district: fixedRow.CARI_ILCE,
@@ -2181,6 +2189,42 @@ const documentService = {
       return { success: true, rowsAffected: result.rowsAffected[0] }
     } catch (error) {
       console.error('❌ PTS Durumu Güncelleme Hatası:', error)
+      throw error
+    }
+  },
+
+  // Belgenin FAST durumunu güncelle
+  async updateDocumentFastStatus(subeKodu, fatirs_no, ftirsip, status, kullanici) {
+    try {
+      const pool = await getConnection()
+
+      // Sipariş mi yoksa fatura mı?
+      const isSiparis = ftirsip === '6'
+      const tableName = isSiparis ? 'TBLSIPAMAS' : 'TBLFATUIRS'
+
+      const query = `
+        UPDATE ${tableName}
+        SET FAST_DURUM = @status,
+            FAST_TARIH = GETDATE(),
+            FAST_KULLANICI = @kullanici
+        WHERE FATIRS_NO = @fatirs_no
+          AND FTIRSIP = @ftirsip
+          AND SUBE_KODU = @subeKodu
+      `
+
+      const request = pool.request()
+      request.input('status', status)
+      request.input('kullanici', kullanici)
+      request.input('fatirs_no', fatirs_no)
+      request.input('ftirsip', ftirsip)
+      request.input('subeKodu', subeKodu)
+
+      const result = await request.query(query)
+
+      log('✅ FAST durumu güncellendi:', { fatirs_no, status, rowsAffected: result.rowsAffected })
+      return { success: true, rowsAffected: result.rowsAffected[0] }
+    } catch (error) {
+      console.error('❌ FAST Durumu Güncelleme Hatası:', error)
       throw error
     }
   }

@@ -141,6 +141,20 @@ const DocumentDetailPage = () => {
     uts: false,
     dgr: false
   })
+  // Belgeyi Tamamla İşlem State'leri
+  const [completeProcessing, setCompleteProcessing] = useState(false)
+  const [completePhase, setCompletePhase] = useState(null) // 'its', 'pts', 'uts', null
+  const [completeResults, setCompleteResults] = useState({ its: null, pts: null, uts: null })
+
+  // Mesaj ekleme yardımcı fonksiyonu
+  const addMessage = useCallback((text, type = 'info') => {
+    const newMessage = { id: Date.now(), text, type }
+    setMessages(prev => [...prev, newMessage])
+    // 3 saniye sonra otomatik kaldır
+    setTimeout(() => {
+      setMessages(prev => prev.filter(m => m.id !== newMessage.id))
+    }, 3000)
+  }, [])
 
   // Update statistics
   const updateStats = useCallback((currentItems) => {
@@ -178,6 +192,128 @@ const DocumentDetailPage = () => {
   useEffect(() => {
     fetchDocument()
   }, [fetchDocument])
+
+  // Belgeyi Tamamla - Sıralı işlem akışı
+  const handleCompleteDocument = async () => {
+    setCompleteProcessing(true)
+    setCompleteResults({ its: null, pts: null, uts: null })
+
+    let allSuccess = true
+    const results = { its: null, pts: null, uts: null }
+
+    // Adım 1: ITS Bildirimi
+    if (completeCheckboxes.its && (document?.itsCount || 0) > 0) {
+      setCompletePhase('its')
+      setShowCompleteModal(false) // Ana modal'ı kapat
+
+      // ITS action type'ı belge tipine göre belirle
+      const itsAction = document?.docType === '2' ? 'alis' : 'satis'
+
+      // Modal'ı aç ve Promise ile bekle
+      const itsResult = await new Promise((resolve) => {
+        setShowITSBildirimModal(true)
+        // Modal'dan sonuç gelince çözülecek
+        window._itsCompleteCallback = (success) => {
+          resolve(success)
+        }
+      })
+
+      results.its = itsResult
+      if (!itsResult) allSuccess = false
+
+      setShowITSBildirimModal(false)
+      await new Promise(r => setTimeout(r, 500)) // Kısa bekleme
+    }
+
+    // Adım 2: PTS Bildirimi
+    if (completeCheckboxes.pts && (document?.itsCount || 0) > 0 && !document?.ptsId) {
+      setCompletePhase('pts')
+
+      // Modal'ı aç ve Promise ile bekle
+      const ptsResult = await new Promise((resolve) => {
+        setShowPTSModal(true)
+        window._ptsCompleteCallback = (success) => {
+          resolve(success)
+        }
+      })
+
+      results.pts = ptsResult
+      if (!ptsResult) allSuccess = false
+
+      setShowPTSModal(false)
+      await new Promise(r => setTimeout(r, 500)) // Kısa bekleme
+    }
+
+    // Adım 3: UTS Bildirimi
+    if (completeCheckboxes.uts && (document?.utsCount || 0) > 0) {
+      setCompletePhase('uts')
+
+      // Modal'ı aç ve Promise ile bekle
+      const utsResult = await new Promise((resolve) => {
+        setShowUTSBildirimModal(true)
+        window._utsCompleteCallback = (success) => {
+          resolve(success)
+        }
+      })
+
+      results.uts = utsResult
+      if (!utsResult) allSuccess = false
+
+      setShowUTSBildirimModal(false)
+      await new Promise(r => setTimeout(r, 500)) // Kısa bekleme
+    }
+
+    // Sonuçları kaydet
+    setCompleteResults(results)
+
+    // FAST_DURUM güncelle
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      const kullanici = user.username || 'SYSTEM'
+
+      await apiService.updateFastDurum(document.id, allSuccess ? 'OK' : 'NOK', kullanici)
+
+      if (allSuccess) {
+        playSuccessSound()
+        addMessage('✅ Belge tamamlandı!', 'success')
+      } else {
+        playWarningSound()
+        addMessage('⚠️ Belge tamamlandı (bazı işlemler başarısız)', 'warning')
+      }
+
+      // Belgeyi yenile
+      await fetchDocument()
+    } catch (error) {
+      console.error('FAST_DURUM güncelleme hatası:', error)
+      playErrorSound()
+      addMessage('❌ Belge durumu güncellenemedi', 'error')
+    }
+
+    setCompletePhase(null)
+    setCompleteProcessing(false)
+  }
+
+  // Modal completion callbacks
+  const handleITSBildirimComplete = (success) => {
+    if (window._itsCompleteCallback) {
+      window._itsCompleteCallback(success)
+      delete window._itsCompleteCallback
+    }
+  }
+
+  const handlePTSComplete = (success) => {
+    if (window._ptsCompleteCallback) {
+      window._ptsCompleteCallback(success)
+      delete window._ptsCompleteCallback
+    }
+  }
+
+  const handleUTSBildirimComplete = (success) => {
+    if (window._utsCompleteCallback) {
+      window._utsCompleteCallback(success)
+      delete window._utsCompleteCallback
+    }
+  }
 
   // Auto focus barcode input - sayfa yüklendiğinde ve her state değiştiğinde
   useEffect(() => {
@@ -397,10 +533,13 @@ const DocumentDetailPage = () => {
                   const hasITS = (document?.itsCount || 0) > 0
                   const hasUTS = (document?.utsCount || 0) > 0
                   const hasDGR = (document?.dgrCount || 0) > 0
+                  const itsSuccess = document?.itsBildirim?.toString().trim().toUpperCase() === 'OK'
+                  const utsSuccess = document?.utsBildirim?.toString().trim().toUpperCase() === 'OK'
+                  const ptsExists = !!document?.ptsId
                   setCompleteCheckboxes({
-                    its: hasITS,
-                    pts: hasITS, // ITS varsa PTS de işaretli
-                    uts: hasUTS,
+                    its: hasITS && !itsSuccess, // ITS varsa ve başarılı değilse işaretli
+                    pts: hasITS && !ptsExists, // ITS varsa ve PTS yapılmamışsa işaretli
+                    uts: hasUTS && !utsSuccess, // UTS varsa ve başarılı değilse işaretli
                     dgr: hasDGR
                   })
                   setShowCompleteModal(true)
@@ -2288,13 +2427,16 @@ const DocumentDetailPage = () => {
                   <button
                     type="button"
                     onClick={() => setShowITSBildirimModal(true)}
-                    className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${document?.itsBildirim?.toString().trim().toUpperCase() === 'OK'
-                      ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
-                      : document?.itsBildirim?.toString().trim().toUpperCase() === 'NOK'
-                        ? 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600/30'
-                        : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
+                    disabled={(document?.itsCount || 0) === 0}
+                    className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${(document?.itsCount || 0) === 0
+                      ? 'bg-dark-800 text-slate-600 border-dark-700 cursor-not-allowed opacity-50'
+                      : document?.itsBildirim?.toString().trim().toUpperCase() === 'OK'
+                        ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
+                        : document?.itsBildirim?.toString().trim().toUpperCase() === 'NOK'
+                          ? 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600/30'
+                          : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
                       }`}
-                    title={`ITS Bildirim${document?.itsTarih ? `\n${new Date(document.itsTarih).toLocaleString('tr-TR')}` : ''}${document?.itsKullanici ? ` - ${document.itsKullanici}` : ''}`}
+                    title={(document?.itsCount || 0) === 0 ? 'Bu belgede ITS ürünü yok' : `ITS Bildirim${document?.itsTarih ? `\n${new Date(document.itsTarih).toLocaleString('tr-TR')}` : ''}${document?.itsKullanici ? ` - ${document.itsKullanici}` : ''}`}
                   >
                     ITS
                   </button>
@@ -2303,11 +2445,14 @@ const DocumentDetailPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowPTSModal(true)}
-                      className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${document?.ptsId
-                        ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
-                        : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
+                      disabled={(document?.itsCount || 0) === 0}
+                      className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${(document?.itsCount || 0) === 0
+                        ? 'bg-dark-800 text-slate-600 border-dark-700 cursor-not-allowed opacity-50'
+                        : document?.ptsId
+                          ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
+                          : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
                         }`}
-                      title={`PTS Gönderimi${document?.ptsId ? `\nID: ${document.ptsId}` : ''}${document?.ptsTarih ? `\n${new Date(document.ptsTarih).toLocaleString('tr-TR')}` : ''}${document?.ptsKullanici ? ` - ${document.ptsKullanici}` : ''}`}
+                      title={(document?.itsCount || 0) === 0 ? 'Bu belgede ITS ürünü yok' : `PTS Gönderimi${document?.ptsId ? `\nID: ${document.ptsId}` : ''}${document?.ptsTarih ? `\n${new Date(document.ptsTarih).toLocaleString('tr-TR')}` : ''}${document?.ptsKullanici ? ` - ${document.ptsKullanici}` : ''}`}
                     >
                       PTS
                     </button>
@@ -2317,13 +2462,16 @@ const DocumentDetailPage = () => {
                     <button
                       type="button"
                       onClick={() => setShowUTSBildirimModal(true)}
-                      className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${document?.utsBildirim?.toString().trim().toUpperCase() === 'OK'
-                        ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
-                        : document?.utsBildirim?.toString().trim().toUpperCase() === 'NOK'
-                          ? 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600/30'
-                          : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
+                      disabled={(document?.utsCount || 0) === 0}
+                      className={`w-9 h-9 flex items-center justify-center rounded transition-all border ${(document?.utsCount || 0) === 0
+                        ? 'bg-dark-800 text-slate-600 border-dark-700 cursor-not-allowed opacity-50'
+                        : document?.utsBildirim?.toString().trim().toUpperCase() === 'OK'
+                          ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
+                          : document?.utsBildirim?.toString().trim().toUpperCase() === 'NOK'
+                            ? 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600/30'
+                            : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
                         }`}
-                      title={`UTS Bildirim${document?.utsTarih ? `\n${new Date(document.utsTarih).toLocaleString('tr-TR')}` : ''}${document?.utsKullanici ? ` - ${document.utsKullanici}` : ''}`}
+                      title={(document?.utsCount || 0) === 0 ? 'Bu belgede UTS ürünü yok' : `UTS Bildirim${document?.utsTarih ? `\n${new Date(document.utsTarih).toLocaleString('tr-TR')}` : ''}${document?.utsKullanici ? ` - ${document.utsKullanici}` : ''}`}
                     >
                       UTS
                     </button>
@@ -2792,6 +2940,8 @@ const DocumentDetailPage = () => {
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}
         onSuccess={fetchDocument}
+        autoSend={completePhase === 'pts'}
+        onComplete={handlePTSComplete}
       />
 
       {/* ITS Bildirim Modal */}
@@ -2802,6 +2952,8 @@ const DocumentDetailPage = () => {
         docType={document?.docType}
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}
+        autoAction={completePhase === 'its' ? (document?.docType === '2' ? 'alis' : 'satis') : null}
+        onComplete={handleITSBildirimComplete}
       />
 
       {/* UTS Bildirim Modal */}
@@ -2811,6 +2963,8 @@ const DocumentDetailPage = () => {
         document={document}
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}
+        autoAction={completePhase === 'uts' ? 'verme' : null}
+        onComplete={handleUTSBildirimComplete}
       />
 
       {/* ITS Kayıtları Modal - Okutulan sütununa tıklandığında açılır */}
@@ -2879,14 +3033,19 @@ const DocumentDetailPage = () => {
             {/* Modal Body */}
             <div className="p-6 space-y-4">
               {/* ITS Checkbox */}
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+              <div
+                className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${(document?.itsCount || 0) > 0 ? 'bg-dark-900/50 border-dark-700 hover:bg-dark-800/70' : 'bg-dark-900/30 border-dark-800 opacity-50 cursor-not-allowed'}`}
+                onClick={() => (document?.itsCount || 0) > 0 && setCompleteCheckboxes(prev => ({ ...prev, its: !prev.its }))}
+              >
                 <input
                   type="checkbox"
                   checked={completeCheckboxes.its}
                   onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, its: e.target.checked }))}
-                  className="w-5 h-5 accent-emerald-500"
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={(document?.itsCount || 0) === 0}
+                  className="w-5 h-5 accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 />
-                <span className="font-bold text-slate-200 w-12">ITS</span>
+                <span className={`font-bold w-12 ${(document?.itsCount || 0) > 0 ? 'text-slate-200' : 'text-slate-500'}`}>ITS</span>
                 <div className="flex items-center gap-2 flex-1">
                   {document?.itsBildirim?.toString().trim().toUpperCase() === 'OK' ? (
                     <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
@@ -2902,21 +3061,30 @@ const DocumentDetailPage = () => {
                     </div>
                   )}
                   <span className="text-sm text-slate-400">
-                    {document?.itsTarih ? new Date(document.itsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                    {document?.itsKullanici ? ` - ${document.itsKullanici}` : ''}
+                    {(document?.itsCount || 0) === 0 ? 'Bu belgede ITS ürünü yok' : (
+                      <>
+                        {document?.itsTarih ? new Date(document.itsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        {document?.itsKullanici ? ` - ${document.itsKullanici}` : ''}
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
 
               {/* PTS Checkbox */}
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+              <div
+                className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${(document?.itsCount || 0) > 0 ? 'bg-dark-900/50 border-dark-700 hover:bg-dark-800/70' : 'bg-dark-900/30 border-dark-800 opacity-50 cursor-not-allowed'}`}
+                onClick={() => (document?.itsCount || 0) > 0 && setCompleteCheckboxes(prev => ({ ...prev, pts: !prev.pts }))}
+              >
                 <input
                   type="checkbox"
                   checked={completeCheckboxes.pts}
                   onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, pts: e.target.checked }))}
-                  className="w-5 h-5 accent-emerald-500"
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={(document?.itsCount || 0) === 0}
+                  className="w-5 h-5 accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 />
-                <span className="font-bold text-slate-200 w-12">PTS</span>
+                <span className={`font-bold w-12 ${(document?.itsCount || 0) > 0 ? 'text-slate-200' : 'text-slate-500'}`}>PTS</span>
                 <div className="flex items-center gap-2 flex-1">
                   {document?.ptsId ? (
                     <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
@@ -2928,22 +3096,31 @@ const DocumentDetailPage = () => {
                     </div>
                   )}
                   <span className="text-sm text-slate-400">
-                    {document?.ptsId ? `ID: ${document.ptsId.substring(0, 20)}...` : '-'}
-                    {document?.ptsTarih ? ` - ${new Date(document.ptsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
-                    {document?.ptsKullanici ? ` - ${document.ptsKullanici}` : ''}
+                    {(document?.itsCount || 0) === 0 ? 'Bu belgede ITS ürünü yok' : (
+                      <>
+                        {document?.ptsId ? `ID: ${document.ptsId.substring(0, 20)}...` : '-'}
+                        {document?.ptsTarih ? ` - ${new Date(document.ptsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
+                        {document?.ptsKullanici ? ` - ${document.ptsKullanici}` : ''}
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
 
               {/* UTS Checkbox */}
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+              <div
+                className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${(document?.utsCount || 0) > 0 ? 'bg-dark-900/50 border-dark-700 hover:bg-dark-800/70' : 'bg-dark-900/30 border-dark-800 opacity-50 cursor-not-allowed'}`}
+                onClick={() => (document?.utsCount || 0) > 0 && setCompleteCheckboxes(prev => ({ ...prev, uts: !prev.uts }))}
+              >
                 <input
                   type="checkbox"
                   checked={completeCheckboxes.uts}
                   onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, uts: e.target.checked }))}
-                  className="w-5 h-5 accent-emerald-500"
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={(document?.utsCount || 0) === 0}
+                  className="w-5 h-5 accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 />
-                <span className="font-bold text-slate-200 w-12">UTS</span>
+                <span className={`font-bold w-12 ${(document?.utsCount || 0) > 0 ? 'text-slate-200' : 'text-slate-500'}`}>UTS</span>
                 <div className="flex items-center gap-2 flex-1">
                   {document?.utsBildirim?.toString().trim().toUpperCase() === 'OK' ? (
                     <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
@@ -2959,21 +3136,30 @@ const DocumentDetailPage = () => {
                     </div>
                   )}
                   <span className="text-sm text-slate-400">
-                    {document?.utsTarih ? new Date(document.utsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                    {document?.utsKullanici ? ` - ${document.utsKullanici}` : ''}
+                    {(document?.utsCount || 0) === 0 ? 'Bu belgede UTS ürünü yok' : (
+                      <>
+                        {document?.utsTarih ? new Date(document.utsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        {document?.utsKullanici ? ` - ${document.utsKullanici}` : ''}
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
 
               {/* DGR Checkbox */}
-              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+              <div
+                className={`flex items-center gap-4 p-3 rounded-lg border cursor-pointer transition-colors ${(document?.dgrCount || 0) > 0 ? 'bg-dark-900/50 border-dark-700 hover:bg-dark-800/70' : 'bg-dark-900/30 border-dark-800 opacity-50 cursor-not-allowed'}`}
+                onClick={() => (document?.dgrCount || 0) > 0 && setCompleteCheckboxes(prev => ({ ...prev, dgr: !prev.dgr }))}
+              >
                 <input
                   type="checkbox"
                   checked={completeCheckboxes.dgr}
                   onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, dgr: e.target.checked }))}
-                  className="w-5 h-5 accent-emerald-500"
+                  onClick={(e) => e.stopPropagation()}
+                  disabled={(document?.dgrCount || 0) === 0}
+                  className="w-5 h-5 accent-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
                 />
-                <span className="font-bold text-slate-200 w-12">DGR</span>
+                <span className={`font-bold w-12 ${(document?.dgrCount || 0) > 0 ? 'text-slate-200' : 'text-slate-500'}`}>DGR</span>
                 <div className="flex items-center gap-2 flex-1">
                   {document?.fastDurum?.toString().trim().toUpperCase() === 'OK' ? (
                     <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
@@ -2989,24 +3175,39 @@ const DocumentDetailPage = () => {
                     </div>
                   )}
                   <span className="text-sm text-slate-400">
-                    {document?.fastTarih ? new Date(document.fastTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
-                    {document?.fastKullanici ? ` - ${document.fastKullanici}` : ''}
+                    {(document?.dgrCount || 0) === 0 ? 'Bu belgede DGR ürünü yok' : (
+                      <>
+                        {document?.fastTarih ? new Date(document.fastTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                        {document?.fastKullanici ? ` - ${document.fastKullanici}` : ''}
+                      </>
+                    )}
                   </span>
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-dark-700 flex justify-end">
+            <div className="px-6 py-4 border-t border-dark-700 flex justify-end gap-3">
               <button
-                onClick={() => {
-                  // TODO: Belgeyi Tamamla API çağrısı
-                  console.log('Belgeyi Tamamla:', completeCheckboxes)
-                  setShowCompleteModal(false)
-                }}
-                className="px-6 py-2 text-sm font-bold rounded-lg transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
+                onClick={() => setShowCompleteModal(false)}
+                disabled={completeProcessing}
+                className="px-4 py-2 text-sm font-bold rounded-lg transition-all bg-dark-700 text-slate-300 hover:bg-dark-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                BELGEYİ TAMAMLA
+                İptal
+              </button>
+              <button
+                onClick={handleCompleteDocument}
+                disabled={completeProcessing || (!completeCheckboxes.its && !completeCheckboxes.pts && !completeCheckboxes.uts && !completeCheckboxes.dgr)}
+                className="px-6 py-2 text-sm font-bold rounded-lg transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {completeProcessing ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                    İşleniyor...
+                  </>
+                ) : (
+                  'BELGEYİ TAMAMLA'
+                )}
               </button>
             </div>
           </div>
