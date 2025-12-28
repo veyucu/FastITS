@@ -63,7 +63,10 @@ const documentService = {
           V.UTS_KULLANICI,
           V.PTS_ID,
           V.PTS_TARIH,
-          V.PTS_KULLANICI
+          V.PTS_KULLANICI,
+          V.FAST_DURUM,
+          V.FAST_TARIH,
+          V.FAST_KULLANICI
         FROM
         (
           SELECT 
@@ -89,7 +92,10 @@ const documentService = {
             A.UTS_KULLANICI,
             A.PTS_ID,
             A.PTS_TARIH,
-            A.PTS_KULLANICI
+            A.PTS_KULLANICI,
+            A.FAST_DURUM,
+            A.FAST_TARIH,
+            A.FAST_KULLANICI
           FROM 
             TBLSIPAMAS A WITH (NOLOCK)
           WHERE FTIRSIP='6' ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
@@ -119,7 +125,10 @@ const documentService = {
             A.UTS_KULLANICI,
             A.PTS_ID,
             A.PTS_TARIH,
-            A.PTS_KULLANICI
+            A.PTS_KULLANICI,
+            A.FAST_DURUM,
+            A.FAST_TARIH,
+            A.FAST_KULLANICI
           FROM 
             TBLFATUIRS A WITH (NOLOCK)
           WHERE A.FTIRSIP IN ('1','2','4') ${additionalWhere.replace('V.TARIH', 'A.TARIH')}
@@ -175,7 +184,10 @@ const documentService = {
           UTS_KULLANICI: row.UTS_KULLANICI,
           PTS_ID: row.PTS_ID || '',
           PTS_TARIH: row.PTS_TARIH,
-          PTS_KULLANICI: row.PTS_KULLANICI
+          PTS_KULLANICI: row.PTS_KULLANICI,
+          FAST_DURUM: row.FAST_DURUM || '',
+          FAST_TARIH: row.FAST_TARIH,
+          FAST_KULLANICI: row.FAST_KULLANICI
         }
 
 
@@ -213,7 +225,10 @@ const documentService = {
           utsKullanici: fixedRow.UTS_KULLANICI || '',
           ptsId: fixedRow.PTS_ID || '',
           ptsTarih: fixedRow.PTS_TARIH ? fixedRow.PTS_TARIH.toISOString() : null,
-          ptsKullanici: fixedRow.PTS_KULLANICI || ''
+          ptsKullanici: fixedRow.PTS_KULLANICI || '',
+          fastDurum: fixedRow.FAST_DURUM || '',
+          fastTarih: fixedRow.FAST_TARIH ? fixedRow.FAST_TARIH.toISOString() : null,
+          fastKullanici: fixedRow.FAST_KULLANICI || ''
         }
 
         return doc
@@ -282,7 +297,10 @@ const documentService = {
           V.ITS_KULLANICI,
           V.UTS_BILDIRIM,
           V.UTS_TARIH,
-          V.UTS_KULLANICI
+          V.UTS_KULLANICI,
+          V.FAST_DURUM,
+          V.FAST_TARIH,
+          V.FAST_KULLANICI
         FROM
         (
           SELECT 
@@ -303,6 +321,9 @@ const documentService = {
             A.UTS_BILDIRIM,
             A.UTS_TARIH,
             A.UTS_KULLANICI,
+            A.FAST_DURUM,
+            A.FAST_TARIH,
+            A.FAST_KULLANICI,
             (SELECT SUM(STHAR_GCMIK) FROM TBLSIPATRA X WITH (NOLOCK) WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS MIKTAR,
             (SELECT SUM(Y.MIKTAR) FROM TBLSIPATRA X WITH (NOLOCK) INNER JOIN AKTBLITSUTS Y WITH (NOLOCK) ON (X.FISNO = Y.FATIRS_NO AND X.INCKEYNO = Y.HAR_RECNO AND X.STOK_KODU=Y.STOK_KODU AND X.STHAR_FTIRSIP = Y.FTIRSIP)
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN
@@ -330,6 +351,9 @@ const documentService = {
             A.UTS_BILDIRIM,
             A.UTS_TARIH,
             A.UTS_KULLANICI,
+            A.FAST_DURUM,
+            A.FAST_TARIH,
+            A.FAST_KULLANICI,
             (SELECT SUM(STHAR_GCMIK) FROM TBLSTHAR X WITH (NOLOCK) WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS MIKTAR,
             (SELECT SUM(Y.MIKTAR) FROM TBLSTHAR X WITH (NOLOCK) INNER JOIN AKTBLITSUTS Y WITH (NOLOCK) ON (X.FISNO = Y.FATIRS_NO AND X.INCKEYNO = Y.HAR_RECNO AND X.STOK_KODU=Y.STOK_KODU AND X.STHAR_FTIRSIP = Y.FTIRSIP)
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN
@@ -397,7 +421,10 @@ const documentService = {
         ITS_KULLANICI: row.ITS_KULLANICI,
         UTS_BILDIRIM: row.UTS_BILDIRIM,
         UTS_TARIH: row.UTS_TARIH,
-        UTS_KULLANICI: row.UTS_KULLANICI
+        UTS_KULLANICI: row.UTS_KULLANICI,
+        FAST_DURUM: row.FAST_DURUM,
+        FAST_TARIH: row.FAST_TARIH,
+        FAST_KULLANICI: row.FAST_KULLANICI
       }
 
       const document = {
@@ -433,7 +460,10 @@ const documentService = {
         itsKullanici: fixedRow.ITS_KULLANICI || null,
         utsBildirim: fixedRow.UTS_BILDIRIM || null,
         utsTarih: fixedRow.UTS_TARIH ? fixedRow.UTS_TARIH.toISOString() : null,
-        utsKullanici: fixedRow.UTS_KULLANICI || null
+        utsKullanici: fixedRow.UTS_KULLANICI || null,
+        fastDurum: fixedRow.FAST_DURUM || null,
+        fastTarih: fixedRow.FAST_TARIH ? fixedRow.FAST_TARIH.toISOString() : null,
+        fastKullanici: fixedRow.FAST_KULLANICI || null
       }
 
       return document

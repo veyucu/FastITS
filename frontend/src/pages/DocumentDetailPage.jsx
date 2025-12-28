@@ -133,6 +133,15 @@ const DocumentDetailPage = () => {
   // UTS Bildirim Modal State'i
   const [showUTSBildirimModal, setShowUTSBildirimModal] = useState(false)
 
+  // Belgeyi Tamamla Modal State'i
+  const [showCompleteModal, setShowCompleteModal] = useState(false)
+  const [completeCheckboxes, setCompleteCheckboxes] = useState({
+    its: false,
+    pts: false,
+    uts: false,
+    dgr: false
+  })
+
   // Update statistics
   const updateStats = useCallback((currentItems) => {
     const total = currentItems.length
@@ -349,17 +358,59 @@ const DocumentDetailPage = () => {
       minWidth: 300,
       cellRenderer: (params) => {
         if (params.node.rowPinned === 'bottom') {
+          const fastDurum = document?.fastDurum?.toString().trim().toUpperCase()
+          const fastTarih = document?.fastTarih
+          const fastKullanici = document?.fastKullanici
+
+          // Tarih formatı
+          const tarihStr = fastTarih ? new Date(fastTarih).toLocaleString('tr-TR', {
+            day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          }) : ''
+
+          // Buton metni
+          let buttonText = 'BELGEYİ TAMAMLA'
+          if (fastDurum === 'OK') {
+            buttonText = `BELGE TAMAMLANMIŞTIR${tarihStr ? ` - ${tarihStr}` : ''}${fastKullanici ? ` - ${fastKullanici}` : ''}`
+          } else if (fastDurum === 'NOK') {
+            buttonText = `BELGE HATALIDIR${tarihStr ? ` - ${tarihStr}` : ''}${fastKullanici ? ` - ${fastKullanici}` : ''}`
+          }
+
+          // Buton sınıfı - ITS butonu gibi
+          const buttonClass = fastDurum === 'OK'
+            ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 hover:bg-emerald-600/30'
+            : fastDurum === 'NOK'
+              ? 'bg-red-600/20 text-red-400 border-red-500/40 hover:bg-red-600/30'
+              : 'bg-dark-700 text-slate-200 border-dark-600 hover:bg-dark-600'
+
           return (
             <div style={{
               width: '100%',
-              textAlign: 'right',
-              fontWeight: 'bold',
-              paddingRight: '12px',
+              height: '100%',
               display: 'flex',
-              justifyContent: 'flex-end',
-              alignItems: 'center'
+              alignItems: 'stretch',
+              padding: '2px 0'
             }}>
-              {params.value}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Belgeyi Tamamla Modal aç
+                  const hasITS = (document?.itsCount || 0) > 0
+                  const hasUTS = (document?.utsCount || 0) > 0
+                  const hasDGR = (document?.dgrCount || 0) > 0
+                  setCompleteCheckboxes({
+                    its: hasITS,
+                    pts: hasITS, // ITS varsa PTS de işaretli
+                    uts: hasUTS,
+                    dgr: hasDGR
+                  })
+                  setShowCompleteModal(true)
+                }}
+                style={{ width: 'calc(100% - 70px)' }}
+                className={`flex items-center justify-center rounded transition-all border text-sm font-bold py-2 ${buttonClass}`}
+              >
+                {buttonText}
+              </button>
+              <span style={{ width: '70px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: '8px' }}>{params.value}</span>
             </div>
           )
         }
@@ -367,7 +418,7 @@ const DocumentDetailPage = () => {
       },
       cellStyle: (params) => {
         if (params.node.rowPinned === 'bottom') {
-          return { justifyContent: 'flex-end' }
+          return { padding: '0' }
         }
         return {}
       }
@@ -2807,6 +2858,160 @@ const DocumentDetailPage = () => {
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}
       />
+
+      {/* Belgeyi Tamamla Modal */}
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowCompleteModal(false)}>
+          <div className="bg-dark-800 rounded-xl shadow-dark-xl border border-dark-700 w-[500px] max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-primary-600/30 to-cyan-600/30 border-b border-primary-500/30 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-100">Belgeyi Tamamla</h2>
+                <button
+                  onClick={() => setShowCompleteModal(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* ITS Checkbox */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+                <input
+                  type="checkbox"
+                  checked={completeCheckboxes.its}
+                  onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, its: e.target.checked }))}
+                  className="w-5 h-5 accent-emerald-500"
+                />
+                <span className="font-bold text-slate-200 w-12">ITS</span>
+                <div className="flex items-center gap-2 flex-1">
+                  {document?.itsBildirim?.toString().trim().toUpperCase() === 'OK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                  ) : document?.itsBildirim?.toString().trim().toUpperCase() === 'NOK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40">
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+                      <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-400">
+                    {document?.itsTarih ? new Date(document.itsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {document?.itsKullanici ? ` - ${document.itsKullanici}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* PTS Checkbox */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+                <input
+                  type="checkbox"
+                  checked={completeCheckboxes.pts}
+                  onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, pts: e.target.checked }))}
+                  className="w-5 h-5 accent-emerald-500"
+                />
+                <span className="font-bold text-slate-200 w-12">PTS</span>
+                <div className="flex items-center gap-2 flex-1">
+                  {document?.ptsId ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+                      <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-400">
+                    {document?.ptsId ? `ID: ${document.ptsId.substring(0, 20)}...` : '-'}
+                    {document?.ptsTarih ? ` - ${new Date(document.ptsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
+                    {document?.ptsKullanici ? ` - ${document.ptsKullanici}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* UTS Checkbox */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+                <input
+                  type="checkbox"
+                  checked={completeCheckboxes.uts}
+                  onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, uts: e.target.checked }))}
+                  className="w-5 h-5 accent-emerald-500"
+                />
+                <span className="font-bold text-slate-200 w-12">UTS</span>
+                <div className="flex items-center gap-2 flex-1">
+                  {document?.utsBildirim?.toString().trim().toUpperCase() === 'OK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                  ) : document?.utsBildirim?.toString().trim().toUpperCase() === 'NOK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40">
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+                      <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-400">
+                    {document?.utsTarih ? new Date(document.utsTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {document?.utsKullanici ? ` - ${document.utsKullanici}` : ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* DGR Checkbox */}
+              <div className="flex items-center gap-4 p-3 rounded-lg bg-dark-900/50 border border-dark-700">
+                <input
+                  type="checkbox"
+                  checked={completeCheckboxes.dgr}
+                  onChange={(e) => setCompleteCheckboxes(prev => ({ ...prev, dgr: e.target.checked }))}
+                  className="w-5 h-5 accent-emerald-500"
+                />
+                <span className="font-bold text-slate-200 w-12">DGR</span>
+                <div className="flex items-center gap-2 flex-1">
+                  {document?.fastDurum?.toString().trim().toUpperCase() === 'OK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                  ) : document?.fastDurum?.toString().trim().toUpperCase() === 'NOK' ? (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40">
+                      <AlertTriangle className="w-5 h-5 text-red-400" />
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+                      <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-400">
+                    {document?.fastTarih ? new Date(document.fastTarih).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+                    {document?.fastKullanici ? ` - ${document.fastKullanici}` : ''}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-dark-700 flex justify-end">
+              <button
+                onClick={() => {
+                  // TODO: Belgeyi Tamamla API çağrısı
+                  console.log('Belgeyi Tamamla:', completeCheckboxes)
+                  setShowCompleteModal(false)
+                }}
+                className="px-6 py-2 text-sm font-bold rounded-lg transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
+              >
+                BELGEYİ TAMAMLA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

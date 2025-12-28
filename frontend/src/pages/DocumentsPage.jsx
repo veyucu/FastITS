@@ -243,6 +243,43 @@ const DocumentsPage = () => {
       cellRenderer: (params) => <BadgeRenderer value={params.value} type="kalan" />
     },
     {
+      headerName: 'Durum',
+      field: 'fastDurum',
+      width: 60,
+      cellClass: 'text-center',
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      cellRenderer: (params) => {
+        const durum = params.value
+        const { fastTarih, fastKullanici } = params.data
+        const tarihStr = fastTarih ? new Date(fastTarih).toLocaleString('tr-TR', {
+          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : ''
+        const tooltip = tarihStr ? `Durum: ${tarihStr}${fastKullanici ? ` - ${fastKullanici}` : ''}` : ''
+
+        if (durum === 'OK') {
+          return (
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 cursor-help" title={tooltip}>
+              <CheckCircle className="w-5 h-5 text-emerald-400" />
+            </div>
+          )
+        }
+        if (durum === 'NOK') {
+          return (
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40 cursor-help" title={tooltip}>
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+          )
+        }
+        return (
+          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
+            <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+          </div>
+        )
+      }
+    },
+    {
       headerName: 'ITS',
       field: 'itsBildirim',
       width: 60,

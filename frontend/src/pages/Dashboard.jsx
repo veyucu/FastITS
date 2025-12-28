@@ -45,7 +45,7 @@ const Dashboard = () => {
                 <Package className="w-5 md:w-6 h-5 md:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg md:text-2xl font-bold text-slate-100">Atakod<span className="text-primary-400">ITS</span></h1>
+                <h1 className="text-lg md:text-2xl font-bold text-slate-100">Fast<span className="text-primary-400">ITS</span></h1>
                 <p className="hidden md:block text-sm text-slate-500">Ürün Hazırlama Sistemi</p>
               </div>
             </div>

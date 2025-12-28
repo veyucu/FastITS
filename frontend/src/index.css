@@ -302,6 +302,21 @@
   background-color: #0f172a !important;
 }
 
+/* Footer row cell wrapper should fill entire cell */
+.ag-theme-alpine .ag-floating-bottom .ag-cell-wrapper,
+.ag-theme-alpine .ag-floating-bottom .ag-cell-value {
+  width: 100% !important;
+  display: flex !important;
+  flex: 1 !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.ag-theme-alpine .ag-floating-bottom .ag-cell {
+  padding: 0 !important;
+  justify-content: center !important;
+}
+
 /* Input fields in AG Grid */
 .ag-theme-alpine .ag-text-field-input {
   background-color: #334155 !important;
