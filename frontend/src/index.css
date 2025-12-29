@@ -361,13 +361,13 @@
   display: none !important;
 }
 
-/* AG Grid Tamamlanmış Satır - Yeşil arka plan */
+/* AG Grid Tamamlanmış Satır - Koyu yeşil arka plan */
 .ag-theme-alpine .ag-row.row-completed {
-  background-color: rgba(16, 185, 129, 0.15) !important;
+  background-color: #14532d !important;
 }
 
 .ag-theme-alpine .ag-row.row-completed:hover {
-  background-color: rgba(16, 185, 129, 0.25) !important;
+  background-color: #166534 !important;
 }
 
 /* ========================================

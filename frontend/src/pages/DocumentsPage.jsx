@@ -103,11 +103,11 @@ const DocumentsPage = () => {
       default: 'bg-slate-500/20 text-slate-400 border border-slate-500/30'
     }
 
-    // Kalan sütunu için özel gösterim
+    // Kalan sütunu için 0 değeri yeşil gösterilir
     if (type === 'kalan' && (value === 0 || value === '0')) {
       return (
         <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-          ✓
+          0
         </span>
       )
     }
@@ -278,11 +278,17 @@ const DocumentsPage = () => {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : ''
 
-        // Tooltip'ler
-        const durumTooltip = fastTarih ? `Belge Tamamlama: ${formatDate(fastTarih)}${fastKullanici ? ` - ${fastKullanici}` : ''}` : ''
-        const itsTooltip = itsTarih ? `ITS: ${formatDate(itsTarih)}${itsKullanici ? ` - ${itsKullanici}` : ''}` : ''
+        // Tooltip'ler (NOK olanların başına Başarısız eklenir, PTS hariç)
+        const durumTooltip = durum === 'NOK'
+          ? `Başarısız - Belge Tamamlama${fastTarih ? `: ${formatDate(fastTarih)}${fastKullanici ? ` - ${fastKullanici}` : ''}` : ''}`
+          : (fastTarih ? `Belge Tamamlama: ${formatDate(fastTarih)}${fastKullanici ? ` - ${fastKullanici}` : ''}` : '')
+        const itsTooltip = itsBildirim === 'NOK'
+          ? `Başarısız - ITS Bildirimi${itsTarih ? `: ${formatDate(itsTarih)}${itsKullanici ? ` - ${itsKullanici}` : ''}` : ''}`
+          : (itsTarih ? `ITS: ${formatDate(itsTarih)}${itsKullanici ? ` - ${itsKullanici}` : ''}` : '')
         const ptsTooltip = ptsTarih ? `PTS: ${formatDate(ptsTarih)}${ptsKullanici ? ` - ${ptsKullanici}` : ''}` : ''
-        const utsTooltip = utsTarih ? `UTS: ${formatDate(utsTarih)}${utsKullanici ? ` - ${utsKullanici}` : ''}` : ''
+        const utsTooltip = utsBildirim === 'NOK'
+          ? `Başarısız - UTS Bildirimi${utsTarih ? `: ${formatDate(utsTarih)}${utsKullanici ? ` - ${utsKullanici}` : ''}` : ''}`
+          : (utsTarih ? `UTS: ${formatDate(utsTarih)}${utsKullanici ? ` - ${utsKullanici}` : ''}` : '')
 
         // Badge render fonksiyonu
         const renderBadge = (label, status, tooltip, onClick = null) => {
