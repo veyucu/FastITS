@@ -125,7 +125,10 @@ const DocumentsPage = () => {
       headerName: 'Belge Tipi',
       field: 'docType',
       width: 140,
-      cellRenderer: (params) => <DocTypeRenderer value={params.value} data={params.data} />,
+      cellRenderer: (params) => {
+        if (params.node.rowPinned === 'bottom') return null
+        return <DocTypeRenderer value={params.value} data={params.data} />
+      },
       wrapHeaderText: true,
       autoHeaderHeight: true
     },
@@ -134,9 +137,14 @@ const DocumentsPage = () => {
       field: 'documentNo',
       width: 150,
       pinned: 'left',
-      cellClass: 'font-semibold text-blue-600',
       wrapHeaderText: true,
-      autoHeaderHeight: true
+      autoHeaderHeight: true,
+      cellRenderer: (params) => {
+        if (params.node.rowPinned === 'bottom') {
+          return <span className="font-bold text-primary-400">{params.value}</span>
+        }
+        return <span className="font-semibold text-cyan-300">{params.value}</span>
+      }
     },
     {
       headerName: 'Saat',
@@ -165,6 +173,10 @@ const DocumentsPage = () => {
       wrapHeaderText: true,
       autoHeaderHeight: true,
       cellRenderer: (params) => {
+        // Footer için sağa dayalı "Toplam" yazısı
+        if (params.node.rowPinned === 'bottom') {
+          return <div className="w-full text-right font-bold text-primary-400">Toplam:</div>
+        }
         const { customerName, district, city } = params.data
         const location = district ? `${district} / ${city}` : city || ''
         return (
@@ -191,6 +203,7 @@ const DocumentsPage = () => {
       cellRenderer: (params) => {
         const { itsCount, utsCount, dgrCount } = params.data
 
+        // Footer için de aynı renklendirme
         return (
           <div className="flex items-center justify-center gap-1">
             {itsCount > 0 && (
@@ -245,172 +258,96 @@ const DocumentsPage = () => {
     {
       headerName: 'Durum',
       field: 'fastDurum',
-      width: 60,
+      width: 200,
       cellClass: 'text-center',
       wrapHeaderText: true,
       autoHeaderHeight: true,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'flex-start' },
       cellRenderer: (params) => {
+        if (params.node.rowPinned === 'bottom') return null
         const durum = params.value
-        const { fastTarih, fastKullanici } = params.data
-        const tarihStr = fastTarih ? new Date(fastTarih).toLocaleString('tr-TR', {
-          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        }) : ''
-        const tooltip = tarihStr ? `Durum: ${tarihStr}${fastKullanici ? ` - ${fastKullanici}` : ''}` : ''
+        const {
+          fastTarih, fastKullanici,
+          itsBildirim, itsTarih, itsKullanici,
+          ptsId, ptsTarih, ptsKullanici,
+          utsBildirim, utsTarih, utsKullanici
+        } = params.data
 
-        if (durum === 'OK') {
-          return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 cursor-help" title={tooltip}>
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
-            </div>
-          )
-        }
-        if (durum === 'NOK') {
-          return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40 cursor-help" title={tooltip}>
-              <AlertCircle className="w-5 h-5 text-red-400" />
-            </div>
-          )
-        }
-        return (
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
-            <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
-          </div>
-        )
-      }
-    },
-    {
-      headerName: 'ITS',
-      field: 'itsBildirim',
-      width: 60,
-      cellClass: 'text-center',
-      wrapHeaderText: true,
-      autoHeaderHeight: true,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-      cellRenderer: (params) => {
-        const durum = params.value
-        const { itsTarih, itsKullanici } = params.data
-        const tarihStr = itsTarih ? new Date(itsTarih).toLocaleString('tr-TR', {
-          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        }) : ''
-        const tooltip = tarihStr ? `ITS: ${tarihStr}${itsKullanici ? ` - ${itsKullanici}` : ''}` : ''
-
-        if (durum === 'OK') {
-          return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 cursor-help" title={tooltip}>
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
-            </div>
-          )
-        }
-        if (durum === 'NOK') {
-          return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40 cursor-help" title={tooltip}>
-              <AlertCircle className="w-5 h-5 text-red-400" />
-            </div>
-          )
-        }
-        return (
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
-            <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
-          </div>
-        )
-      }
-    },
-    {
-      headerName: 'PTS',
-      field: 'ptsId',
-      width: 60,
-      cellClass: 'text-center',
-      wrapHeaderText: true,
-      autoHeaderHeight: true,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-      cellRenderer: (params) => {
-        const ptsId = params.value
-        const { ptsTarih, ptsKullanici } = params.data
-        const tarihStr = ptsTarih ? new Date(ptsTarih).toLocaleString('tr-TR', {
+        // Helper fonksiyon - tarih formatla
+        const formatDate = (date) => date ? new Date(date).toLocaleString('tr-TR', {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : ''
 
-        if (ptsId) {
-          const handleClick = (e) => {
-            e.stopPropagation()
-            // Popup oluştur
-            const popup = document.createElement('div')
-            popup.className = 'fixed bg-dark-800 border border-dark-600 rounded-lg shadow-xl z-50 p-3'
-            popup.style.left = `${e.clientX - 100}px`
-            popup.style.top = `${e.clientY + 10}px`
-            popup.innerHTML = `
-              <div class="text-xs text-slate-400 mb-1">PTS ID (seçip kopyalayın):</div>
-              <input type="text" value="${ptsId}" readonly 
-                class="w-full bg-dark-900 border border-dark-500 rounded px-2 py-1 text-sm text-slate-100 font-mono select-all" 
-                style="min-width: 200px"
-              />
-              <div class="text-[10px] text-slate-500 mt-1">${tarihStr}${ptsKullanici ? ` - ${ptsKullanici}` : ''}</div>
-            `
-            document.body.appendChild(popup)
-            // Input'a fokusla ve seç
-            const input = popup.querySelector('input')
-            input.focus()
-            input.select()
-            // Dışarı tıklayınca kapat
-            const closePopup = (ev) => {
-              if (!popup.contains(ev.target)) {
-                popup.remove()
-                document.removeEventListener('click', closePopup)
-              }
-            }
-            setTimeout(() => document.addEventListener('click', closePopup), 100)
+        // Tooltip'ler
+        const durumTooltip = fastTarih ? `Belge Tamamlama: ${formatDate(fastTarih)}${fastKullanici ? ` - ${fastKullanici}` : ''}` : ''
+        const itsTooltip = itsTarih ? `ITS: ${formatDate(itsTarih)}${itsKullanici ? ` - ${itsKullanici}` : ''}` : ''
+        const ptsTooltip = ptsTarih ? `PTS: ${formatDate(ptsTarih)}${ptsKullanici ? ` - ${ptsKullanici}` : ''}` : ''
+        const utsTooltip = utsTarih ? `UTS: ${formatDate(utsTarih)}${utsKullanici ? ` - ${utsKullanici}` : ''}` : ''
+
+        // Badge render fonksiyonu
+        const renderBadge = (label, status, tooltip, onClick = null) => {
+          let bgClass, textClass, borderClass
+          if (status === 'OK' || (status && status !== 'NOK')) {
+            bgClass = 'bg-emerald-500/20'
+            textClass = 'text-emerald-400'
+            borderClass = 'border-emerald-500/30'
+          } else if (status === 'NOK') {
+            bgClass = 'bg-rose-500/20'
+            textClass = 'text-rose-400'
+            borderClass = 'border-rose-500/30'
+          } else {
+            return null // Değer yoksa gösterme
           }
-          return (
-            <div
-              className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 cursor-pointer hover:bg-emerald-500/40 transition-colors"
-              title="Tıkla ve PTS ID'yi kopyala"
-              onClick={handleClick}
-            >
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
-            </div>
-          )
-        }
-        return (
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
-            <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
-          </div>
-        )
-      }
-    },
-    {
-      headerName: 'UTS',
-      field: 'utsBildirim',
-      width: 60,
-      cellClass: 'text-center',
-      wrapHeaderText: true,
-      autoHeaderHeight: true,
-      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-      cellRenderer: (params) => {
-        const durum = params.value
-        const { utsTarih, utsKullanici } = params.data
-        const tarihStr = utsTarih ? new Date(utsTarih).toLocaleString('tr-TR', {
-          day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        }) : ''
-        const tooltip = tarihStr ? `UTS: ${tarihStr}${utsKullanici ? ` - ${utsKullanici}` : ''}` : ''
 
-        if (durum === 'OK') {
           return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 cursor-help" title={tooltip}>
-              <CheckCircle className="w-5 h-5 text-emerald-400" />
-            </div>
+            <span
+              className={`inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-semibold ${bgClass} ${textClass} border ${borderClass} ${onClick ? 'cursor-pointer hover:opacity-80' : 'cursor-help'}`}
+              title={tooltip}
+              onClick={onClick}
+            >
+              {label}
+            </span>
           )
         }
-        if (durum === 'NOK') {
-          return (
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 border border-red-500/40 cursor-help" title={tooltip}>
-              <AlertCircle className="w-5 h-5 text-red-400" />
-            </div>
-          )
+
+        // PTS click handler
+        const handlePtsClick = (e) => {
+          if (!ptsId) return
+          e.stopPropagation()
+          const popup = document.createElement('div')
+          popup.className = 'fixed bg-dark-800 border border-dark-600 rounded-lg shadow-xl z-50 p-3'
+          popup.style.left = `${e.clientX - 100}px`
+          popup.style.top = `${e.clientY + 10}px`
+          popup.innerHTML = `
+            <div class="text-xs text-slate-400 mb-1">PTS ID (seçip kopyalayabilirsiniz):</div>
+            <input type="text" value="${ptsId}" readonly 
+              class="w-full bg-dark-900 border border-dark-500 rounded px-2 py-1 text-sm text-slate-100 font-mono select-all" 
+              style="min-width: 200px"
+            />
+            <div class="text-[10px] text-slate-500 mt-1">${ptsTooltip}</div>
+          `
+          document.body.appendChild(popup)
+          const input = popup.querySelector('input')
+          input.focus()
+          input.select()
+          const closePopup = (ev) => {
+            if (!popup.contains(ev.target)) {
+              popup.remove()
+              document.removeEventListener('click', closePopup)
+            }
+          }
+          setTimeout(() => document.addEventListener('click', closePopup), 100)
         }
+
+        // FAST durum etiketi
+        const fastLabel = durum === 'OK' ? 'OK' : durum === 'NOK' ? 'NOK' : null
+
         return (
-          <div className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-700/50 border border-slate-600">
-            <div className="w-3 h-3 rounded-full border-2 border-slate-500" />
+          <div className="flex items-center justify-start gap-1">
+            {fastLabel && renderBadge(fastLabel, durum, durumTooltip)}
+            {itsBildirim && renderBadge('ITS', itsBildirim, itsTooltip)}
+            {ptsId && renderBadge('PTS', ptsId, ptsTooltip, handlePtsClick)}
+            {utsBildirim && renderBadge('UTS', utsBildirim, utsTooltip)}
           </div>
         )
       }
@@ -677,14 +614,25 @@ const DocumentsPage = () => {
     fetchDocuments()
   }
 
-  // Statistics - Filtrelenmiş veriye göre hesapla
-  const stats = useMemo(() => {
-    const total = rowData.length
-    const completed = rowData.filter(o => o.kalan === 0).length // Tamamlanan (kalan = 0)
-    const partial = rowData.filter(o => o.okutulan > 0 && o.kalan > 0).length // Yarım (okutulan > 0 ve kalan > 0)
-    const pending = rowData.filter(o => o.okutulan === 0).length // Bekleyen (okutulan = 0)
+  // Footer Data - Grid içi footer için
+  const footerData = useMemo(() => {
+    const totalMiktar = rowData.reduce((sum, doc) => sum + (doc.miktar || 0), 0)
+    const totalOkutulan = rowData.reduce((sum, doc) => sum + (doc.okutulan || 0), 0)
+    const totalKalan = rowData.reduce((sum, doc) => sum + (doc.kalan || 0), 0)
+    const totalIts = rowData.reduce((sum, doc) => sum + (doc.itsCount || 0), 0)
+    const totalUts = rowData.reduce((sum, doc) => sum + (doc.utsCount || 0), 0)
+    const totalDgr = rowData.reduce((sum, doc) => sum + (doc.dgrCount || 0), 0)
 
-    return { total, completed, partial, pending }
+    return [{
+      isFooter: true,
+      documentNo: `${rowData.length} belge`,
+      miktar: totalMiktar,
+      okutulan: totalOkutulan,
+      kalan: totalKalan,
+      itsCount: totalIts,
+      utsCount: totalUts,
+      dgrCount: totalDgr
+    }]
   }, [rowData])
 
   return (
@@ -826,7 +774,7 @@ const DocumentsPage = () => {
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin w-12 h-12 border-4 border-dark-700 border-t-primary-500 rounded-full mx-auto mb-4" />
-            <p className="text-slate-400">Siparişler yükleniyor...</p>
+            <p className="text-slate-400">Belgeler yükleniyor...</p>
           </div>
         </div>
       )}
@@ -850,7 +798,7 @@ const DocumentsPage = () => {
       {/* AG Grid - Dark Theme */}
       {!loading && !error && (
         <div className="flex-1 px-6 py-2">
-          <div className="ag-theme-alpine h-full rounded-xl shadow-dark-lg overflow-hidden border border-dark-700">
+          <div className="ag-theme-alpine no-pagination h-full rounded-xl shadow-dark-lg overflow-hidden border border-dark-700">
             <AgGridReact
               ref={gridRef}
               onGridReady={(params) => {
@@ -915,11 +863,21 @@ const DocumentsPage = () => {
               columnDefs={columnDefs}
               defaultColDef={defaultColDef}
               onRowDoubleClicked={onRowDoubleClicked}
-              rowClass="cursor-pointer"
+              getRowClass={(params) => {
+                if (params.node.rowPinned === 'bottom') {
+                  return 'ag-row-footer'
+                }
+                if (params.data?.fastDurum === 'OK') {
+                  return 'row-completed'
+                }
+                return ''
+              }}
               animateRows={true}
               enableCellTextSelection={true}
               suppressCellFocus={true}
+              pinnedBottomRowData={footerData}
               localeText={{
+                // Pagination
                 page: 'Sayfa',
                 to: '-',
                 of: '/',
@@ -927,8 +885,20 @@ const DocumentsPage = () => {
                 last: 'Son',
                 first: 'İlk',
                 previous: 'Önceki',
+                // Pagination Panel
+                pageSize: 'Sayfa Başına',
+                pageSizeSelectorLabel: 'Sayfa Başına:',
+                ariaPageSizeSelectorLabel: 'Sayfa Başına',
+                // Loading ve Row
                 loadingOoo: 'Yükleniyor...',
-                noRowsToShow: 'Gösterilecek sipariş yok'
+                noRowsToShow: 'Gösterilecek belge yok',
+                // Extras
+                more: 'Daha Fazla',
+                loadingError: 'Yükleme Hatası',
+                equals: 'Eşittir',
+                notEqual: 'Eşit Değil',
+                lessThan: 'Küçüktür',
+                greaterThan: 'Büyüktür'
               }}
             />
           </div>

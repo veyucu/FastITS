@@ -356,21 +356,18 @@
   border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
 
-/* AG Grid Pagination - Varsayılan olarak gizli, .ag-pagination-visible ile görünür */
-.ag-theme-alpine .ag-paging-panel {
+/* AG Grid Pagination Panel - .no-pagination class'ı olan gridlerde gizli */
+.no-pagination .ag-paging-panel {
   display: none !important;
 }
 
-/* Pagination'ı göstermek isteyen grid containerlarına .ag-pagination-visible ekle */
-.ag-pagination-visible .ag-theme-alpine .ag-paging-panel,
-.ag-pagination-visible.ag-theme-alpine .ag-paging-panel {
-  display: flex !important;
-  background-color: #0f172a !important;
-  border-top: 1px solid #334155 !important;
-  padding: 8px 12px !important;
-  flex-wrap: nowrap !important;
-  justify-content: space-between !important;
-  align-items: center !important;
+/* AG Grid Tamamlanmış Satır - Yeşil arka plan */
+.ag-theme-alpine .ag-row.row-completed {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.ag-theme-alpine .ag-row.row-completed:hover {
+  background-color: rgba(16, 185, 129, 0.25) !important;
 }
 
 /* ========================================
