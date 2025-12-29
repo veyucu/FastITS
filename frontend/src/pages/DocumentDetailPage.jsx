@@ -626,7 +626,7 @@ const DocumentDetailPage = () => {
               className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors cursor-pointer"
               title="ITS karekod detaylarını görüntüle"
             >
-              {okutulan} 🔍
+              {okutulan}
             </button>
           )
         }
@@ -642,7 +642,7 @@ const DocumentDetailPage = () => {
                 }`}
               title="UTS kayıtlarını görüntüle / Manuel kayıt ekle"
             >
-              {okutulan} {okutulan > 0 ? '🔍' : '➕'}
+              {okutulan}
             </button>
           )
         }
@@ -696,7 +696,7 @@ const DocumentDetailPage = () => {
           }
           return (
             <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-              ✓
+              0
             </span>
           )
         }
@@ -717,7 +717,7 @@ const DocumentDetailPage = () => {
         }
         return (
           <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-            ✓
+            0
           </span>
         )
       }
@@ -2532,405 +2532,40 @@ const DocumentDetailPage = () => {
               if (params.node.rowPinned === 'bottom') {
                 return 'footer-row-no-hover'
               }
+              // Kalan = 0 ise satırı yeşile boya
+              const kalan = (params.data?.quantity || 0) - (params.data?.okutulan || 0)
+              if (kalan === 0 && params.data?.quantity > 0) {
+                return 'row-completed'
+              }
               return ''
             }}
           />
         </div>
       </div>
 
-      {/* UTS Kayıtları Modal - Dark Theme */}
-      {showUTSModal && selectedUTSItem && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleCloseUTSModal}>
-          <div className="bg-dark-800 rounded-xl shadow-dark-xl border border-dark-700 w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-rose-600/30 to-rose-500/30 border-b border-rose-500/30 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-100">UTS Kayıtları</h2>
-                  <p className="text-sm text-rose-300">{selectedUTSItem.productName}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-400">Beklenen / Okutulan / Kalan</p>
-                    <p className="text-2xl font-bold text-slate-100">
-                      <span className="text-slate-400">{selectedUTSItem.quantity}</span>
-                      {' / '}
-                      <span>{utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)}</span>
-                      {' / '}
-                      <span className={utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0) >= selectedUTSItem.quantity ? 'text-emerald-400' : 'text-amber-400'}>
-                        {selectedUTSItem.quantity - utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)}
-                      </span>
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleCloseUTSModal}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* UTS Kayıtları Modal - uses component */}
+      <UTSModal
+        isOpen={showUTSModal}
+        onClose={handleCloseUTSModal}
+        selectedItem={selectedUTSItem}
+        document={document}
+        records={utsRecords}
+        setRecords={setUtsRecords}
+        originalRecords={originalUtsRecords}
+        setOriginalRecords={setOriginalUtsRecords}
+        loading={utsLoading}
+      />
 
-            {/* Modal Body */}
-            <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
-              {/* UTS Modal Toast Message */}
-              {utsModalMessage && (
-                <div className={`mb-4 px-4 py-3 rounded-lg border-l-4 ${utsModalMessage.type === 'success'
-                  ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                  : utsModalMessage.type === 'error'
-                    ? 'bg-rose-500/20 border-rose-500 text-rose-400'
-                    : 'bg-amber-500/20 border-amber-500 text-amber-400'
-                  }`}>
-                  <p className="font-semibold">{utsModalMessage.text}</p>
-                </div>
-              )}
-
-              {/* UTS Records Grid */}
-              <div className="ag-theme-alpine flex-1 mb-4 rounded-lg overflow-hidden border border-dark-700">
-                {utsLoading ? (
-                  <div className="flex items-center justify-center h-full bg-dark-900/50">
-                    <div className="text-center">
-                      <div className="animate-spin w-8 h-8 border-3 border-dark-600 border-t-rose-500 rounded-full mx-auto mb-2" />
-                      <p className="text-slate-400 text-sm">Yükleniyor...</p>
-                    </div>
-                  </div>
-                ) : (
-                  <AgGridReact
-                    ref={utsGridRef}
-                    rowData={utsRecords}
-                    columnDefs={utsModalColumnDefs}
-                    defaultColDef={utsModalDefaultColDef}
-                    getRowId={(params) => params.data.id}
-                    rowSelection="multiple"
-                    suppressRowClickSelection={true}
-                    onSelectionChanged={(event) => {
-                      const selected = event.api.getSelectedRows()
-                      setSelectedUTSRecords(selected.map(r => ({
-                        id: r.id,
-                        siraNo: r.siraNo,
-                        seriNo: r.seriNo,
-                        lot: r.lot
-                      })))
-                    }}
-                    onCellValueChanged={(event) => {
-                      const allRows = []
-                      event.api.forEachNode(node => allRows.push(node.data))
-                      setUtsRecords([...allRows])
-                      setUtsHasChanges(true)
-                    }}
-                    animateRows={true}
-                    enableCellTextSelection={true}
-                    singleClickEdit={true}
-                    stopEditingWhenCellsLoseFocus={true}
-                  />
-                )}
-              </div>
-
-              {/* Action Bar */}
-              <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
-                <button
-                  onClick={handleAddNewUTSRow}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
-                >
-                  ➕ Yeni Satır Ekle
-                </button>
-                <button
-                  onClick={handleSaveAllUTSRecords}
-                  className={`flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30 ${utsHasChanges ? 'animate-pulse-save' : ''}`}
-                >
-                  💾 Kaydet
-                </button>
-                <button
-                  onClick={handleDeleteUTSRecords}
-                  disabled={selectedUTSRecords.length === 0}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-rose-600 text-white hover:bg-rose-500 shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  🗑️ Seçilenleri Sil
-                </button>
-                <div className="flex-1" />
-                {selectedUTSRecords.length > 0 && (
-                  <span className="text-sm text-slate-400 font-semibold">
-                    {selectedUTSRecords.length} kayıt seçildi
-                  </span>
-                )}
-                <div className="text-right">
-                  <p className="text-xs text-slate-500">Toplam Miktar</p>
-                  <p className="text-lg font-bold text-primary-400">
-                    {utsRecords.reduce((sum, r) => sum + (r.miktar || 0), 0)} / {selectedUTSItem.quantity}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ITS Karekod Detay Modal - Dark Theme */}
-      {showITSModal && selectedItem && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={handleCloseITSModal}>
-          <div className="bg-dark-800 rounded-xl shadow-dark-xl border border-dark-700 w-[90%] max-w-5xl max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-primary-600/30 to-cyan-600/30 border-b border-primary-500/30 px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-slate-100">ITS Karekod Detayları</h2>
-                  <p className="text-sm text-primary-300">{selectedItem.productName}</p>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-xs text-slate-400">Toplam Okutulan</p>
-                    <p className="text-2xl font-bold text-primary-400">{itsRecords.length}</p>
-                  </div>
-                  <button
-                    onClick={handleCloseITSModal}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
-                  >
-                    <XCircle className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
-              {itsModalView === 'grid' ? (
-                <>
-                  {/* ITS Records Grid */}
-                  <div className="ag-theme-alpine flex-1 mb-4 rounded-lg overflow-hidden border border-dark-700">
-                    {itsLoading ? (
-                      <div className="flex items-center justify-center h-full bg-dark-900/50">
-                        <div className="text-center">
-                          <div className="animate-spin w-8 h-8 border-3 border-dark-600 border-t-primary-500 rounded-full mx-auto mb-2" />
-                          <p className="text-slate-400 text-sm">Yükleniyor...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <AgGridReact
-                        ref={itsGridRef}
-                        rowData={itsRecords}
-                        columnDefs={itsModalColumnDefs}
-                        defaultColDef={itsModalDefaultColDef}
-                        rowSelection="multiple"
-                        suppressRowClickSelection={true}
-                        onSelectionChanged={(event) => {
-                          const selected = event.api.getSelectedRows()
-                          setSelectedRecords(selected.map(r => r.seriNo))
-                        }}
-                        animateRows={true}
-                        enableCellTextSelection={true}
-                        onGridReady={(params) => {
-                          // Son satıra scroll yap
-                          if (itsRecords.length > 0) {
-                            setTimeout(() => {
-                              params.api.ensureIndexVisible(itsRecords.length - 1, 'bottom')
-                            }, 100)
-                          }
-                        }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
-                    <button
-                      onClick={handleDeleteITSRecords}
-                      disabled={selectedRecords.length === 0}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-rose-600 text-white hover:bg-rose-500 shadow-lg shadow-rose-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Seçilenleri Sil
-                    </button>
-                    <button
-                      onClick={() => setItsModalView('text')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30"
-                    >
-                      📄 Karekodları Göster
-                    </button>
-                    {selectedRecords.length > 0 && (
-                      <span className="text-sm text-slate-400 font-semibold">
-                        {selectedRecords.length} kayıt seçildi
-                      </span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* ITS Karekod Text View */}
-                  <div className="flex-1 mb-4 flex flex-col">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-slate-100">
-                        Karekod Text Formatı
-                      </h3>
-                      <span className="text-sm text-slate-400">
-                        {itsRecords.length} kayıt
-                      </span>
-                    </div>
-                    <textarea
-                      value={generateITSBarcodeTexts()}
-                      readOnly
-                      className="flex-1 w-full p-4 font-mono text-sm bg-dark-900 border border-dark-600 rounded-lg text-slate-300 resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50"
-                      style={{ minHeight: '400px' }}
-                    />
-                  </div>
-
-                  {/* Action Bar */}
-                  <div className="flex items-center gap-3 border-t border-dark-700 pt-4">
-                    <button
-                      onClick={() => setItsModalView('grid')}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-dark-600 text-slate-200 hover:bg-dark-500 border border-dark-500"
-                    >
-                      ← Tabloya Dön
-                    </button>
-                    <button
-                      onClick={handleCopyAllBarcodes}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-emerald-600 text-white hover:bg-emerald-500 shadow-lg shadow-emerald-600/30"
-                    >
-                      📋 Tümünü Kopyala
-                    </button>
-                    <span className="text-sm text-slate-500">
-                      Format: 010BARKOD21SERİNO17MİAD10LOT
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toplu Okutma Modal - Dark Theme */}
-      {showBulkScanModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-dark-800 rounded-2xl shadow-dark-xl border border-dark-700 w-full max-w-2xl max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-primary-500/30 flex items-center justify-between bg-gradient-to-r from-primary-600/30 to-cyan-600/30 rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-500/20 border border-primary-500/30 rounded-lg flex items-center justify-center">
-                  <Barcode className="w-6 h-6 text-primary-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-slate-100">Toplu ITS Karekod Okutma</h2>
-                  <p className="text-xs text-slate-400">Her satıra bir ITS karekod (2D) yazın</p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setShowBulkScanModal(false)
-                  setBulkBarcodeText('')
-                  setBulkScanResults(null)
-                }}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
-                disabled={bulkScanLoading}
-              >
-                <XCircle className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 flex-1 flex flex-col gap-4 overflow-y-auto">
-              {/* Textarea with Line Numbers */}
-              <div className="flex-1">
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  ITS Karekod Listesi
-                  <span className="text-slate-500 font-normal ml-2">(Her satıra bir ITS karekod)</span>
-                </label>
-                <div className="flex border border-dark-600 rounded-lg focus-within:border-primary-500 overflow-hidden" style={{ height: '256px' }}>
-                  {/* Line Numbers */}
-                  <div
-                    ref={bulkLineNumbersRef}
-                    className="bg-dark-900 px-3 py-3 font-mono text-sm text-slate-500 text-right select-none border-r border-dark-600 overflow-hidden"
-                    style={{ minWidth: '50px', maxHeight: '256px', overflowY: 'hidden' }}
-                  >
-                    {bulkBarcodeText.split('\n').map((_, index) => (
-                      <div key={index} style={{ lineHeight: '24px', height: '24px' }}>
-                        {index + 1}
-                      </div>
-                    ))}
-                    {bulkBarcodeText === '' && <div style={{ lineHeight: '24px', height: '24px' }}>1</div>}
-                  </div>
-                  {/* Textarea */}
-                  <textarea
-                    ref={bulkTextareaRef}
-                    value={bulkBarcodeText}
-                    onChange={(e) => setBulkBarcodeText(e.target.value)}
-                    onScroll={handleBulkTextareaScroll}
-                    className="flex-1 px-4 py-3 border-0 focus:outline-none font-mono text-sm resize-none bg-dark-900 text-slate-200 placeholder-slate-500"
-                    placeholder="010867978996572117081600001234&#10;010867978996572117081600005678&#10;010867978996572117081600009999"
-                    disabled={bulkScanLoading}
-                    autoFocus
-                    style={{ height: '256px', lineHeight: '24px' }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  💡 Sadece ITS karekod (2D barkod, 01... ile başlayan) desteklenir
-                </p>
-              </div>
-
-              {/* Results */}
-              {bulkScanResults && (
-                <div className="bg-dark-900/50 rounded-lg p-4 border border-dark-700">
-                  <h3 className="font-semibold text-slate-200 mb-3">İşlem Sonuçları</h3>
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="bg-dark-800 rounded-lg p-3 text-center border border-dark-600">
-                      <p className="text-2xl font-bold text-slate-200">{bulkScanResults.total}</p>
-                      <p className="text-xs text-slate-500">Toplam</p>
-                    </div>
-                    <div className="bg-emerald-500/20 rounded-lg p-3 text-center border border-emerald-500/30">
-                      <p className="text-2xl font-bold text-emerald-400">{bulkScanResults.success}</p>
-                      <p className="text-xs text-emerald-500">Başarılı</p>
-                    </div>
-                    <div className="bg-rose-500/20 rounded-lg p-3 text-center border border-rose-500/30">
-                      <p className="text-2xl font-bold text-rose-400">{bulkScanResults.failed}</p>
-                      <p className="text-xs text-rose-500">Başarısız</p>
-                    </div>
-                  </div>
-
-                  {bulkScanResults.errors.length > 0 && (
-                    <div className="max-h-32 overflow-y-auto">
-                      <p className="text-xs font-semibold text-rose-400 mb-2">Hatalar:</p>
-                      {bulkScanResults.errors.map((error, index) => (
-                        <p key={index} className="text-xs text-rose-400 mb-1">• {error}</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-dark-700 flex items-center justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowBulkScanModal(false)
-                  setBulkBarcodeText('')
-                  setBulkScanResults(null)
-                }}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all border border-dark-600 text-slate-300 hover:bg-dark-600"
-                disabled={bulkScanLoading}
-              >
-                İptal
-              </button>
-              <button
-                onClick={handleBulkScan}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-semibold rounded transition-all bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={bulkScanLoading || !bulkBarcodeText.trim()}
-              >
-                {bulkScanLoading ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                    <span>Kaydediliyor...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5" />
-                    <span>Kaydet</span>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ITS Karekod Modal - uses component */}
+      <ITSModal
+        isOpen={showITSModal}
+        onClose={handleCloseITSModal}
+        selectedItem={selectedItem}
+        documentId={id}
+        records={itsRecords}
+        setRecords={setItsRecords}
+        loading={itsLoading}
+      />
 
       {/* PTS Modal */}
       <PTSModal
@@ -2964,26 +2599,8 @@ const DocumentDetailPage = () => {
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}
         autoAction={completePhase === 'uts' ? 'verme' : null}
-        onComplete={handleUTSBildirimComplete}
       />
 
-      {/* ITS Kayıtları Modal - Okutulan sütununa tıklandığında açılır */}
-      <ITSModal
-        isOpen={showITSModal}
-        onClose={() => {
-          setShowITSModal(false)
-          setSelectedItem(null)
-          setItsRecords([])
-        }}
-        selectedItem={selectedItem}
-        documentId={document?.id}
-        records={itsRecords}
-        setRecords={setItsRecords}
-        loading={itsLoading}
-        onRecordsChange={fetchDocument}
-        playSuccessSound={playSuccessSound}
-        playErrorSound={playErrorSound}
-      />
 
       {/* UTS Kayıtları Modal - Okutulan sütununa tıklandığında açılır */}
       <UTSModal

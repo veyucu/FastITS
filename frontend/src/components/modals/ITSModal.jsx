@@ -233,33 +233,34 @@ const ITSModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
-        className="bg-dark-800 rounded-xl shadow-2xl w-[90%] max-w-5xl max-h-[80vh] overflow-hidden border border-dark-600"
+        className="bg-dark-900 rounded-xl border border-dark-700 w-full max-w-5xl mx-4 shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 text-white">
+        <div className="bg-gradient-to-r from-primary-600/30 to-cyan-600/30 border-b border-primary-500/30 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold">ITS Karekod Kayıtları</h2>
-              <p className="text-sm text-primary-200">{selectedItem.productName}</p>
+              <h2 className="text-xl font-bold text-slate-100">ITS Karekod Kayıtları</h2>
+              <p className="text-sm text-primary-300">{selectedItem.productName}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-xs text-primary-200">Beklenen / Okutulan</p>
-                <p className="text-2xl font-bold">
-                  <span className="text-primary-200">{selectedItem.quantity}</span>
+                <p className="text-xs text-slate-400">Beklenen / Okutulan</p>
+                <p className="text-2xl font-bold text-slate-100">
+                  <span className="text-slate-400">{selectedItem.quantity}</span>
                   {' / '}
                   <span>{records.length}</span>
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
               >
                 <XCircle className="w-5 h-5" />
               </button>
@@ -364,6 +365,3 @@ const ITSModal = ({
 }
 
 export default ITSModal
-
-
-

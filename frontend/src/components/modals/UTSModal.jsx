@@ -309,37 +309,38 @@ const UTSModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center"
+      style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={handleClose}
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-[90%] max-w-5xl max-h-[80vh] overflow-hidden"
+        className="bg-dark-900 rounded-xl border border-dark-700 w-full max-w-5xl mx-4 shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4 text-white">
+        <div className="bg-gradient-to-r from-rose-600/30 to-rose-500/30 border-b border-rose-500/30 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold">UTS Kayıtları</h2>
-              <p className="text-sm text-red-100">{selectedItem.productName}</p>
+              <h2 className="text-xl font-bold text-slate-100">UTS Kayıtları</h2>
+              <p className="text-sm text-rose-300">{selectedItem.productName}</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="text-right">
-                <p className="text-xs text-red-100">Beklenen / Okutulan / Kalan</p>
-                <p className="text-2xl font-bold">
-                  <span className="text-red-100">{selectedItem.quantity}</span>
+                <p className="text-xs text-slate-400">Beklenen / Okutulan / Kalan</p>
+                <p className="text-2xl font-bold text-slate-100">
+                  <span className="text-slate-400">{selectedItem.quantity}</span>
                   {' / '}
                   <span>{totalMiktar}</span>
                   {' / '}
-                  <span className={totalMiktar >= selectedItem.quantity ? 'text-green-300' : 'text-yellow-300'}>
+                  <span className={totalMiktar >= selectedItem.quantity ? 'text-emerald-400' : 'text-amber-400'}>
                     {selectedItem.quantity - totalMiktar}
                   </span>
                 </p>
               </div>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
               >
                 <XCircle className="w-5 h-5" />
               </button>
@@ -351,11 +352,11 @@ const UTSModal = ({
         <div className="p-6 flex flex-col" style={{ height: 'calc(80vh - 100px)' }}>
           {/* Toast Message */}
           {modalMessage && (
-            <div className={`mb-4 px-4 py-3 rounded-lg shadow-lg border-l-4 animate-pulse ${modalMessage.type === 'success'
-              ? 'bg-green-50 border-green-500 text-green-800'
+            <div className={`mb-4 px-4 py-3 rounded-lg border-l-4 ${modalMessage.type === 'success'
+              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
               : modalMessage.type === 'error'
-                ? 'bg-red-50 border-red-500 text-red-800'
-                : 'bg-yellow-50 border-yellow-500 text-yellow-800'
+                ? 'bg-rose-500/20 border-rose-500 text-rose-400'
+                : 'bg-amber-500/20 border-amber-500 text-amber-400'
               }`}>
               <p className="font-semibold">{modalMessage.text}</p>
             </div>

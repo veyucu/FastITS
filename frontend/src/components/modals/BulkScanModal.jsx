@@ -187,7 +187,8 @@ const BulkScanModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
       onClick={handleClose}
       onKeyDown={(e) => e.key === 'Escape' && handleClose()}
     >

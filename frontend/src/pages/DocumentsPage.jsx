@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
-import { Package, Search, RefreshCw, Wifi, WifiOff, ChevronLeft, ChevronRight, Calendar, Clock, CheckCircle, AlertCircle, Home } from 'lucide-react'
+import { Package, Search, RefreshCw, Wifi, WifiOff, ChevronLeft, ChevronRight, Calendar, Clock, CheckCircle, AlertCircle, Home, FileSpreadsheet } from 'lucide-react'
 import apiService from '../services/apiService'
 import usePageTitle from '../hooks/usePageTitle'
 import { encodeDocumentId } from '../utils/documentIdUtils'
+import * as XLSX from 'xlsx'
 
 const DocumentsPage = () => {
   usePageTitle('Ürün Hazırlama')
@@ -620,6 +621,124 @@ const DocumentsPage = () => {
     fetchDocuments()
   }
 
+  // Excel Export (XLSX format)
+  const handleExportExcel = async () => {
+    if (!rowData || rowData.length === 0) return
+
+    // Footer olmayan verileri filtrele
+    const dataToExport = rowData.filter(row => !row.isFooter)
+
+    // Tarih formatla (GG.AA.YYYY)
+    const formatDate = (dateStr) => {
+      if (!dateStr) return ''
+      try {
+        const parts = dateStr.split('-')
+        if (parts.length === 3) {
+          return `${parts[2]}.${parts[1]}.${parts[0]}`
+        }
+        return dateStr
+      } catch {
+        return dateStr
+      }
+    }
+
+    // Kayıt tarihi formatla (GG.AA.YYYY SS:DD)
+    const formatDateTime = (dateStr) => {
+      if (!dateStr) return ''
+      try {
+        const date = new Date(dateStr)
+        if (isNaN(date.getTime())) return dateStr
+        const dd = String(date.getDate()).padStart(2, '0')
+        const mm = String(date.getMonth() + 1).padStart(2, '0')
+        const yyyy = date.getFullYear()
+        const hh = String(date.getHours()).padStart(2, '0')
+        const min = String(date.getMinutes()).padStart(2, '0')
+        return `${dd}.${mm}.${yyyy} ${hh}:${min}`
+      } catch {
+        return dateStr
+      }
+    }
+
+    // Belge Tipi belirle (İade dahil)
+    const getBelgeTipi = (doc) => {
+      const ftirsip = doc.docType
+      const tipi = doc.tipi
+      const isIade = tipi === 4 || tipi === '4'
+
+      if (ftirsip === '6') return 'Sipariş'
+      if (ftirsip === '1') return isIade ? 'Satış Faturası (İade)' : 'Satış Faturası'
+      if (ftirsip === '2') return isIade ? 'Alış Faturası (İade)' : 'Alış Faturası'
+      if (ftirsip === '4') return isIade ? 'Alış İrsaliyesi (İade)' : 'Alış İrsaliyesi'
+      return 'Bilinmeyen'
+    }
+
+    // Excel için veri hazırla
+    const excelData = dataToExport.map(doc => {
+      // Belge tarihini formatla (documentDate alanından)
+      let belgeTarihi = ''
+      if (doc.documentDate) {
+        try {
+          const date = new Date(doc.documentDate)
+          if (!isNaN(date.getTime())) {
+            const dd = String(date.getDate()).padStart(2, '0')
+            const mm = String(date.getMonth() + 1).padStart(2, '0')
+            const yyyy = date.getFullYear()
+            belgeTarihi = `${dd}.${mm}.${yyyy}`
+          }
+        } catch { }
+      }
+
+      return {
+        'Belge Tipi': getBelgeTipi(doc),
+        'Belge No': doc.documentNo,
+        'Belge Tarihi': belgeTarihi,
+        'Belge Kayıt Tarihi': formatDateTime(doc.kayitTarihi),
+        'Cari Kodu': doc.customerCode,
+        'Cari İsim': doc.customerName,
+        'İl': doc.city,
+        'İlçe': doc.district,
+        'Kalem': doc.totalItems,
+        'Miktar': doc.miktar,
+        'Okutulan': doc.okutulan,
+        'Kalan': doc.kalan,
+        'Durum': doc.fastDurum,
+        'ITS': doc.itsBildirim,
+        'PTS': doc.ptsId || '',
+        'UTS': doc.utsBildirim
+      }
+    })
+
+    // Worksheet oluştur
+    const ws = XLSX.utils.json_to_sheet(excelData)
+
+    // Kolon genişliklerini ayarla
+    ws['!cols'] = [
+      { wch: 22 }, // Belge Tipi
+      { wch: 15 }, // Belge No
+      { wch: 12 }, // Belge Tarihi
+      { wch: 18 }, // Kayıt Tarihi
+      { wch: 15 }, // Cari Kodu
+      { wch: 35 }, // Cari İsim
+      { wch: 15 }, // İl
+      { wch: 15 }, // İlçe
+      { wch: 8 },  // Kalem
+      { wch: 10 }, // Miktar
+      { wch: 10 }, // Okutulan
+      { wch: 10 }, // Kalan
+      { wch: 12 }, // Durum
+      { wch: 8 },  // ITS
+      { wch: 15 }, // PTS
+      { wch: 8 }   // UTS
+    ]
+
+    // Workbook oluştur
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Belgeler')
+
+    // XLSX dosyasını indir (İndirilenler klasörüne)
+    XLSX.writeFile(wb, `belgeler_${dateFilter}.xlsx`)
+  }
+
   // Footer Data - Grid içi footer için
   const footerData = useMemo(() => {
     const totalMiktar = rowData.reduce((sum, doc) => sum + (doc.miktar || 0), 0)
@@ -767,8 +886,18 @@ const DocumentsPage = () => {
                 onClick={handleRefresh}
                 disabled={loading}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm bg-primary-600 text-white rounded shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-all disabled:opacity-50"
+                title="Yenile"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </button>
+
+              <button
+                onClick={handleExportExcel}
+                disabled={loading || rowData.length === 0}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-emerald-600 text-white rounded shadow-lg shadow-emerald-600/30 hover:bg-emerald-500 transition-all disabled:opacity-50"
+                title="Excel'e Aktar"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
               </button>
             </div>
           </div>

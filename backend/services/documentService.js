@@ -190,9 +190,8 @@ const documentService = {
           FAST_KULLANICI: row.FAST_KULLANICI
         }
 
-
         const doc = {
-          id: `${fixedRow.SUBE_KODU}-${fixedRow.FTIRSIP}-${fixedRow.FATIRS_NO}`,
+          id: `${fixedRow.SUBE_KODU}|${fixedRow.FTIRSIP}|${fixedRow.FATIRS_NO}|${fixedRow.CARI_KODU}`,
           subeKodu: fixedRow.SUBE_KODU,
           docType: fixedRow.FTIRSIP,
           tipi: fixedRow.TIPI,
@@ -434,7 +433,7 @@ const documentService = {
       const dgrCount = items.filter(item => item.turu === 'DGR').length
 
       const document = {
-        id: `${fixedRow.SUBE_KODU}-${fixedRow.FTIRSIP}-${fixedRow.FATIRS_NO}`,
+        id: `${fixedRow.SUBE_KODU}|${fixedRow.FTIRSIP}|${fixedRow.FATIRS_NO}|${fixedRow.CARI_KODU}`,
         subeKodu: fixedRow.SUBE_KODU,
         docType: fixedRow.FTIRSIP,
         tipi: fixedRow.TIPI,
