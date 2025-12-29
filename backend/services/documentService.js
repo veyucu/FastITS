@@ -242,9 +242,9 @@ const documentService = {
   },
 
   // Belirli bir belgeyi getir
-  async getDocumentById(subeKodu, ftirsip, fatirs_no) {
+  async getDocumentById(subeKodu, ftirsip, fatirs_no, cariKodu) {
     try {
-      log('📄 getDocumentById çağrıldı:', { subeKodu, ftirsip, fatirs_no })
+      log('📄 getDocumentById çağrıldı:', { subeKodu, ftirsip, fatirs_no, cariKodu })
       const pool = await getConnection()
 
       // Ayarlardan GLN, UTS ve ePosta kolon bilgilerini al (cache'den senkron)
@@ -329,7 +329,7 @@ const documentService = {
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN
           FROM 
             TBLSIPAMAS A WITH (NOLOCK)
-          WHERE A.SUBE_KODU=@subeKodu AND A.FTIRSIP=@ftirsip AND A.FATIRS_NO=@fatirs_no
+          WHERE A.SUBE_KODU=@subeKodu AND A.FTIRSIP=@ftirsip AND A.FATIRS_NO=@fatirs_no AND A.CARI_KODU=@cariKodu
           
           UNION ALL
           
@@ -359,7 +359,7 @@ const documentService = {
             WHERE X.FISNO=A.FATIRS_NO AND X.SUBE_KODU=A.SUBE_KODU AND X.STHAR_ACIKLAMA=A.CARI_KODU AND X.STHAR_FTIRSIP=A.FTIRSIP) AS OKUTULAN
           FROM 
             TBLFATUIRS A WITH (NOLOCK)
-          WHERE A.SUBE_KODU=@subeKodu AND A.FTIRSIP=@ftirsip AND A.FATIRS_NO=@fatirs_no
+          WHERE A.SUBE_KODU=@subeKodu AND A.FTIRSIP=@ftirsip AND A.FATIRS_NO=@fatirs_no AND A.CARI_KODU=@cariKodu
         ) AS V
         LEFT JOIN
           TBLFATUEK E
@@ -376,6 +376,7 @@ const documentService = {
       request.input('subeKodu', subeKodu)
       request.input('ftirsip', ftirsip)
       request.input('fatirs_no', fatirs_no)
+      request.input('cariKodu', cariKodu)
 
       const result = await request.query(detailQuery)
       log('📊 SQL Sonuç sayısı:', result.recordset.length)
@@ -570,7 +571,7 @@ const documentService = {
   },
 
   // AKTBLITSUTS Kayıtlarını Getir (Belirli bir kalem için) - ITS
-  async getITSBarcodeRecords(subeKodu, belgeNo, straInc, kayitTipi) {
+  async getITSBarcodeRecords(subeKodu, belgeNo, straInc, kayitTipi, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -593,13 +594,19 @@ const documentService = {
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
         ORDER BY KAYIT_TARIHI ASC
       `
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
       request.input('straInc', straInc)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -631,7 +638,7 @@ const documentService = {
   },
 
   // TBLSERITRA Kayıtlarını Getir (Belirli bir kalem için) - UTS
-  async getUTSBarcodeRecords(subeKodu, belgeNo, straInc, kayitTipi) {
+  async getUTSBarcodeRecords(subeKodu, belgeNo, straInc, kayitTipi, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -654,13 +661,19 @@ const documentService = {
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
           AND TURU = 'U'
+          AND SUBE_KODU = @subeKodu
         ORDER BY RECNO
       `
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
       request.input('straInc', straInc)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -690,7 +703,7 @@ const documentService = {
   },
 
   // TBLSERITRA Kayıtlarını Sil - ITS/DGR/UTS
-  async deleteITSBarcodeRecords(seriNos, subeKodu, belgeNo, straInc, turu = 'I') {
+  async deleteITSBarcodeRecords(seriNos, subeKodu, belgeNo, straInc, turu = 'I', ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -705,7 +718,10 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
               AND SERI_NO = @seriNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
               AND CARRIER_LABEL IS NOT NULL
           `
 
@@ -714,6 +730,9 @@ const documentService = {
           checkRequest.input('straInc', straInc)
           checkRequest.input('seriNo', seriNo)
           checkRequest.input('turu', turu)
+          checkRequest.input('ftirsip', ftirsip)
+          checkRequest.input('cariKodu', cariKodu)
+          checkRequest.input('subeKodu', subeKodu)
 
           const checkResult = await checkRequest.query(checkQuery)
           if (checkResult.recordset.length > 0 && checkResult.recordset[0].CARRIER_LABEL) {
@@ -733,6 +752,9 @@ const documentService = {
               WHERE FATIRS_NO = @belgeNo
                 AND HAR_RECNO = @straInc
                 AND CARRIER_LABEL = @carrierLabel
+                AND FTIRSIP = @ftirsip
+                AND CARI_KODU = @cariKodu
+                AND SUBE_KODU = @subeKodu
                 AND TURU = @turu
             `
 
@@ -741,6 +763,9 @@ const documentService = {
             updateRequest.input('straInc', straInc)
             updateRequest.input('carrierLabel', carrierLabel)
             updateRequest.input('turu', turu)
+            updateRequest.input('ftirsip', ftirsip)
+            updateRequest.input('cariKodu', cariKodu)
+            updateRequest.input('subeKodu', subeKodu)
 
             await updateRequest.query(updateQuery)
             log('🔄 Koli bilgisi temizlendi:', carrierLabel)
@@ -769,7 +794,10 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
               AND STOK_KODU = @seriNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
           `
 
           query = `
@@ -777,7 +805,10 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
               AND STOK_KODU = @seriNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
           `
         } else {
           // ITS/UTS için SERI_NO ile arama
@@ -787,7 +818,10 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
               AND SERI_NO = @seriNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
           `
 
           query = `
@@ -795,7 +829,10 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @straInc
               AND SERI_NO = @seriNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
           `
         }
 
@@ -804,6 +841,9 @@ const documentService = {
         checkRequest.input('straInc', straInc)
         checkRequest.input('seriNo', seriNo)
         checkRequest.input('turu', turu)
+        checkRequest.input('ftirsip', ftirsip)
+        checkRequest.input('cariKodu', cariKodu)
+        checkRequest.input('subeKodu', subeKodu)
 
         const checkResult = await checkRequest.query(checkExistQuery)
         log('📊 Kayıt kontrolü - Bulunan:', checkResult.recordset.length, checkResult.recordset)
@@ -816,12 +856,18 @@ const documentService = {
             SELECT TOP 5 SERI_NO, STOK_KODU, HAR_RECNO, CARRIER_LABEL, TURU
             FROM AKTBLITSUTS WITH (NOLOCK)
             WHERE FATIRS_NO = @belgeNo
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = @turu
+              AND SUBE_KODU = @subeKodu
             ORDER BY RECNO DESC
           `
           const allRequest = pool.request()
           allRequest.input('belgeNo', belgeNo)
           allRequest.input('turu', turu)
+          allRequest.input('ftirsip', ftirsip)
+          allRequest.input('cariKodu', cariKodu)
+          allRequest.input('subeKodu', subeKodu)
           const allResult = await allRequest.query(allRecordsQuery)
           console.log(`📋 Bu belgedeki son 5 ${turu} kaydı:`, allResult.recordset)
         }
@@ -831,6 +877,9 @@ const documentService = {
         request.input('straInc', straInc)
         request.input('seriNo', seriNo)
         request.input('turu', turu)
+        request.input('ftirsip', ftirsip)
+        request.input('cariKodu', cariKodu)
+        request.input('subeKodu', subeKodu)
 
         const result = await request.query(query)
         log('🗑️ DELETE Sonucu - Etkilenen Satır Sayısı:', result.rowsAffected[0])
@@ -858,8 +907,8 @@ const documentService = {
 
       log('🗑️ Koli barkoduna göre ITS kayıtları siliniyor:', carrierLabel)
 
-      // docId'yi parse et (format: SUBE_KODU-FTIRSIP-FATIRS_NO)
-      const [subeKodu, ftirsip, belgeNo] = docId.split('-')
+      // docId'yi parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+      const [subeKodu, ftirsip, belgeNo, cariKodu] = docId.split('|')
 
       // Önce bu koli barkoduna sahip kayıtları ve GTIN bilgilerini al
       const selectQuery = `
@@ -868,7 +917,9 @@ const documentService = {
         WHERE CARRIER_LABEL = @carrierLabel
           AND FATIRS_NO = @belgeNo
           AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
         GROUP BY GTIN
       `
 
@@ -876,6 +927,8 @@ const documentService = {
       selectRequest.input('carrierLabel', carrierLabel)
       selectRequest.input('belgeNo', belgeNo)
       selectRequest.input('ftirsip', ftirsip)
+      selectRequest.input('cariKodu', cariKodu)
+      selectRequest.input('subeKodu', subeKodu)
 
       const selectResult = await selectRequest.query(selectQuery)
 
@@ -905,13 +958,17 @@ const documentService = {
         WHERE CARRIER_LABEL = @carrierLabel
           AND FATIRS_NO = @belgeNo
           AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
       `
 
       const deleteRequest = pool.request()
       deleteRequest.input('carrierLabel', carrierLabel)
       deleteRequest.input('belgeNo', belgeNo)
       deleteRequest.input('ftirsip', ftirsip)
+      deleteRequest.input('cariKodu', cariKodu)
+      deleteRequest.input('subeKodu', subeKodu)
 
       await deleteRequest.query(deleteQuery)
 
@@ -935,7 +992,7 @@ const documentService = {
   },
 
   // AKTBLITSUTS Kayıtlarını Sil - UTS
-  async deleteUTSBarcodeRecords(records, subeKodu, belgeNo, straInc) {
+  async deleteUTSBarcodeRecords(records, subeKodu, belgeNo, straInc, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -946,13 +1003,19 @@ const documentService = {
           WHERE FATIRS_NO = @belgeNo
             AND HAR_RECNO = @straInc
             AND RECNO = @recno
+            AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
             AND TURU = 'U'
+            AND SUBE_KODU = @subeKodu
         `
 
         const request = pool.request()
         request.input('recno', record.siraNo || record.recno)
         request.input('belgeNo', belgeNo)
         request.input('straInc', straInc)
+        request.input('ftirsip', ftirsip)
+        request.input('cariKodu', cariKodu)
+        request.input('subeKodu', subeKodu)
 
         await request.query(query)
         log('🗑️ UTS Kayıt Silindi (AKTBLITSUTS):', record.recno || record.siraNo)
@@ -1023,7 +1086,9 @@ const documentService = {
             AND HAR_RECNO = @straInc
             AND STOK_KODU = @stokKodu
             AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
             AND TURU = 'I'
+            AND SUBE_KODU = @subeKodu
         `
 
         const quantityCheckRequest = pool.request()
@@ -1031,6 +1096,8 @@ const documentService = {
         quantityCheckRequest.input('straInc', straInc)
         quantityCheckRequest.input('stokKodu', stokKodu)
         quantityCheckRequest.input('ftirsip', ftirsip)
+        quantityCheckRequest.input('cariKodu', cariKodu)
+        quantityCheckRequest.input('subeKodu', subeKodu)
 
         const quantityCheckResult = await quantityCheckRequest.query(quantityCheckQuery)
         const currentOkutulan = quantityCheckResult.recordset[0].TOTAL_OKUTULAN
@@ -1059,11 +1126,18 @@ const documentService = {
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE SERI_NO = @seriNo
           AND FATIRS_NO = @belgeNo
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
+          AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
       `
 
       const checkRequest = pool.request()
       checkRequest.input('seriNo', seriNo)
       checkRequest.input('belgeNo', belgeNo)
+      checkRequest.input('ftirsip', ftirsip)
+      checkRequest.input('cariKodu', cariKodu)
+      checkRequest.input('subeKodu', subeKodu)
 
       const checkResult = await checkRequest.query(checkQuery)
 
@@ -1095,7 +1169,8 @@ const documentService = {
           HAR_RECNO,
           MIKTAR,
           KAYIT_KULLANICI,
-          KAYIT_TARIHI
+          KAYIT_TARIHI,
+          SUBE_KODU
         ) VALUES (
           'I',
           @ftirsip,
@@ -1109,7 +1184,8 @@ const documentService = {
           @straInc,
           1,
           @kullanici,
-          GETDATE()
+          GETDATE(),
+          @subeKodu
         )
       `
 
@@ -1120,6 +1196,7 @@ const documentService = {
       request.input('stokKodu', stokKodu)
       request.input('ilcGtin', ilcGtin)
       request.input('seriNo', seriNo)
+      request.input('subeKodu', subeKodu)
 
       // MIAD'ı YYMMDD string'den Date tipine dönüştür
       let miadDate = null
@@ -1218,6 +1295,8 @@ const documentService = {
           AND STOK_KODU = @stokKodu
           AND GTIN = @ilcGtin
           AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
+          AND SUBE_KODU = @subeKodu
           AND TURU = 'D'
       `
 
@@ -1226,7 +1305,9 @@ const documentService = {
       checkRequest.input('straInc', straInc)
       checkRequest.input('stokKodu', stokKodu)
       checkRequest.input('ilcGtin', ilcGtin)
-      checkRequest.input('ftirsip', ftirsip || '6')
+      checkRequest.input('ftirsip', ftirsip)
+      checkRequest.input('cariKodu', cariKodu)
+      checkRequest.input('subeKodu', subeKodu)
 
       const checkResult = await checkRequest.query(checkQuery)
 
@@ -1285,7 +1366,9 @@ const documentService = {
               AND HAR_RECNO = @straInc
               AND STOK_KODU = @stokKodu
               AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
               AND TURU = 'D'
+              AND SUBE_KODU = @subeKodu
           `
 
           const totalCheckRequest = pool.request()
@@ -1293,6 +1376,8 @@ const documentService = {
           totalCheckRequest.input('straInc', straInc)
           totalCheckRequest.input('stokKodu', stokKodu)
           totalCheckRequest.input('ftirsip', ftirsip || '6')
+          totalCheckRequest.input('cariKodu', cariKodu)
+          totalCheckRequest.input('subeKodu', subeKodu)
 
           const totalCheckResult = await totalCheckRequest.query(totalCheckQuery)
           const currentTotal = totalCheckResult.recordset[0].TOTAL_OKUTULAN
@@ -1319,7 +1404,8 @@ const documentService = {
             HAR_RECNO,
             MIKTAR,
             KAYIT_KULLANICI,
-            KAYIT_TARIHI
+            KAYIT_TARIHI,
+            SUBE_KODU
           ) VALUES (
             'D',
             @ftirsip,
@@ -1330,7 +1416,8 @@ const documentService = {
             @straInc,
             @miktar,
             @kullanici,
-            GETDATE()
+            GETDATE(),
+            @subeKodu
           )
         `
 
@@ -1343,6 +1430,7 @@ const documentService = {
         insertRequest.input('straInc', straInc)
         insertRequest.input('miktar', miktar)
         insertRequest.input('kullanici', kullanici)
+        insertRequest.input('subeKodu', subeKodu)
 
         await insertRequest.query(insertQuery)
 
@@ -1450,7 +1538,9 @@ const documentService = {
             AND HAR_RECNO = @straInc
             AND STOK_KODU = @stokKodu
             AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
             AND TURU = 'U'
+            AND SUBE_KODU = @subeKodu
         `
 
         const quantityCheckRequest = pool.request()
@@ -1458,6 +1548,8 @@ const documentService = {
         quantityCheckRequest.input('straInc', straInc)
         quantityCheckRequest.input('stokKodu', stokKodu)
         quantityCheckRequest.input('ftirsip', ftirsip)
+        quantityCheckRequest.input('cariKodu', cariKodu)
+        quantityCheckRequest.input('subeKodu', subeKodu)
 
         const quantityCheckResult = await quantityCheckRequest.query(quantityCheckQuery)
         const currentOkutulan = quantityCheckResult.recordset[0].TOTAL_OKUTULAN
@@ -1490,6 +1582,8 @@ const documentService = {
             AND FTIRSIP = @ftirsip
             AND TURU = 'U'
             AND SERI_NO = @seriNo
+            AND CARI_KODU = @cariKodu
+            AND SUBE_KODU = @subeKodu
         `
 
         const seriCheckRequest = pool.request()
@@ -1498,6 +1592,8 @@ const documentService = {
         seriCheckRequest.input('stokKodu', stokKodu)
         seriCheckRequest.input('ftirsip', ftirsip)
         seriCheckRequest.input('seriNo', seriNo)
+        seriCheckRequest.input('cariKodu', cariKodu)
+        seriCheckRequest.input('subeKodu', subeKodu)
 
         const seriCheckResult = await seriCheckRequest.query(seriCheckQuery)
 
@@ -1522,6 +1618,8 @@ const documentService = {
             AND FTIRSIP = @ftirsip
             AND TURU = 'U'
             AND LOT_NO = @lotNo
+            AND CARI_KODU = @cariKodu
+            AND SUBE_KODU = @subeKodu
         `
 
         const lotCheckRequest = pool.request()
@@ -1530,6 +1628,8 @@ const documentService = {
         lotCheckRequest.input('stokKodu', stokKodu)
         lotCheckRequest.input('ftirsip', ftirsip)
         lotCheckRequest.input('lotNo', lotNo)
+        lotCheckRequest.input('cariKodu', cariKodu)
+        lotCheckRequest.input('subeKodu', subeKodu)
 
         const lotCheckResult = await lotCheckRequest.query(lotCheckQuery)
 
@@ -1560,7 +1660,8 @@ const documentService = {
           HAR_RECNO,
           MIKTAR,
           KAYIT_KULLANICI,
-          KAYIT_TARIHI
+          KAYIT_TARIHI,
+          SUBE_KODU
         ) VALUES (
           'U',
           @ftirsip,
@@ -1574,7 +1675,8 @@ const documentService = {
           @straInc,
           @miktar,
           @kullanici,
-          GETDATE()
+          GETDATE(),
+          @subeKodu
         )
       `
 
@@ -1591,6 +1693,7 @@ const documentService = {
       insertRequest.input('straInc', straInc)
       insertRequest.input('miktar', miktar)
       insertRequest.input('kullanici', kullanici)
+      insertRequest.input('subeKodu', subeKodu)
 
       await insertRequest.query(insertQuery)
 
@@ -1729,7 +1832,9 @@ const documentService = {
                 LOT_NO,
                 URETIM_TARIHI,
                 MIKTAR,
-                KAYIT_KULLANICI
+                KAYIT_KULLANICI,
+                KAYIT_TARIHI,
+                SUBE_KODU
               ) VALUES (
                 'U',
                 @ftirsip,
@@ -1742,7 +1847,9 @@ const documentService = {
                 @finalLotNo,
                 @formattedUretimTarihi,
                 @miktar,
-                @kullanici
+                @kullanici,
+                GETDATE(),
+                @subeKodu
               )
             `
 
@@ -1758,6 +1865,7 @@ const documentService = {
             insertRequest.input('formattedUretimTarihi', formattedUretimTarihi)
             insertRequest.input('miktar', record.miktar)
             insertRequest.input('kullanici', kullanici)
+            insertRequest.input('subeKodu', subeKodu)
 
             await insertRequest.query(insertQuery)
             insertCount++
@@ -1843,11 +1951,15 @@ const documentService = {
             WHERE FATIRS_NO = @belgeNo 
             AND STOK_KODU = s.STOK_KODU 
             AND TURU = 'I'
+            AND CARI_KODU = @cariKodu
+            AND FTIRSIP = @ftirsip
+            AND SUBE_KODU = @subeKodu
           ), 0) as PREPARED_QTY
         FROM ${itemTable} s WITH (NOLOCK)
         INNER JOIN TBLSTSABIT st WITH (NOLOCK) ON s.STOK_KODU = st.STOK_KODU
         WHERE s.FISNO = @belgeNo AND s.STHAR_FTIRSIP = @ftirsip 
         AND s.STHAR_ACIKLAMA = @cariKodu
+        AND s.SUBE_KODU = @subeKodu
         AND st.KOD_5 = 'BESERI'
       `)
 
@@ -1947,6 +2059,12 @@ const documentService = {
           FROM AKTBLITSUTS WITH (NOLOCK)
           WHERE SERI_NO IN (${serialParams})
           AND FATIRS_NO = '${belgeNo}'
+          AND CARI_KODU = '${cariKodu}'
+          AND FTIRSIP = '${ftirsip}'
+          AND STOK_KODU = '${stokKodu}'
+          AND TURU = 'I'
+          AND SUBE_KODU = '${subeKodu}'
+          
         `)
 
         if (duplicateResult.recordset.length > 0) {
@@ -2009,16 +2127,17 @@ const documentService = {
           insertRequest.input('carrier_label', product.CARRIER_LABEL)
           insertRequest.input('container_type', product.CONTAINER_TYPE)
           insertRequest.input('kullanici', kullanici)
+          insertRequest.input('sube_kodu', subeKodu)
 
           await insertRequest.query(`
             INSERT INTO AKTBLITSUTS (
               HAR_RECNO, TURU, FTIRSIP, FATIRS_NO, CARI_KODU, STOK_KODU, MIKTAR,
               GTIN, SERI_NO, MIAD, LOT_NO, URETIM_TARIHI,
-              CARRIER_LABEL, CONTAINER_TYPE, KAYIT_KULLANICI, KAYIT_TARIHI
+              CARRIER_LABEL, CONTAINER_TYPE, KAYIT_KULLANICI, KAYIT_TARIHI, SUBE_KODU
             ) VALUES (
               @har_recno, @turu, @ftirsip, @fatirs_no, @cari_kodu, @stok_kodu, @miktar,
               @gtin, @seri_no, @miad, @lot_no, @uretim_tarihi,
-              @carrier_label, @container_type, @kullanici, GETDATE()
+              @carrier_label, @container_type, @kullanici, GETDATE(), @sube_kodu
             )
           `)
         }
@@ -2076,6 +2195,7 @@ const documentService = {
         AND A.FTIRSIP = @ftirsip
         AND A.CARI_KODU = @cariKodu
         AND A.TURU = 'I'
+        AND A.SUBE_KODU = @subeKodu
       ORDER BY A.KAYIT_TARIHI ASC
     `
 
@@ -2083,6 +2203,7 @@ const documentService = {
       request.input('fatirs_no', fatirs_no)
       request.input('ftirsip', ftirsip)
       request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -2131,6 +2252,7 @@ const documentService = {
         AND A.FTIRSIP = @ftirsip
         AND A.CARI_KODU = @cariKodu
         AND A.TURU = 'U'
+        AND A.SUBE_KODU = @subeKodu
       ORDER BY A.KAYIT_TARIHI ASC
     `
 
@@ -2138,6 +2260,7 @@ const documentService = {
       request.input('fatirs_no', fatirs_no)
       request.input('ftirsip', ftirsip)
       request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -2163,7 +2286,7 @@ const documentService = {
   },
 
   // Belgenin PTS durumunu güncelle
-  async updateDocumentPTSStatus(subeKodu, fatirs_no, ftirsip, ptsId, kullanici) {
+  async updateDocumentPTSStatus(subeKodu, fatirs_no, ftirsip, cariKodu, ptsId, kullanici) {
     try {
       const pool = await getConnection()
 
@@ -2175,6 +2298,8 @@ const documentService = {
             PTS_KULLANICI = @kullanici
         WHERE FATIRS_NO = @fatirs_no
           AND FTIRSIP = @ftirsip
+          AND SUBE_KODU = @subeKodu
+          AND CARI_KODU = @cariKodu
       `
 
       const request = pool.request()
@@ -2182,6 +2307,8 @@ const documentService = {
       request.input('kullanici', kullanici)
       request.input('fatirs_no', fatirs_no)
       request.input('ftirsip', ftirsip)
+      request.input('subeKodu', subeKodu)
+      request.input('cariKodu', cariKodu)
 
       const result = await request.query(query)
 
@@ -2194,7 +2321,7 @@ const documentService = {
   },
 
   // Belgenin FAST durumunu güncelle
-  async updateDocumentFastStatus(subeKodu, fatirs_no, ftirsip, status, kullanici) {
+  async updateDocumentFastStatus(subeKodu, fatirs_no, ftirsip, cariKodu, status, kullanici) {
     try {
       const pool = await getConnection()
 
@@ -2210,6 +2337,7 @@ const documentService = {
         WHERE FATIRS_NO = @fatirs_no
           AND FTIRSIP = @ftirsip
           AND SUBE_KODU = @subeKodu
+          AND CARI_KODU = @cariKodu
       `
 
       const request = pool.request()
@@ -2218,6 +2346,7 @@ const documentService = {
       request.input('fatirs_no', fatirs_no)
       request.input('ftirsip', ftirsip)
       request.input('subeKodu', subeKodu)
+      request.input('cariKodu', cariKodu)
 
       const result = await request.query(query)
 

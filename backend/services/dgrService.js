@@ -16,7 +16,8 @@ const dgrService = {
       fatirs_no,
       ftirsip,
       cariKodu,
-      kullanici
+      kullanici,
+      subeKodu
     } = params
 
     try {
@@ -30,12 +31,19 @@ const dgrService = {
           AND HAR_RECNO = @harRecno
           AND STOK_KODU = @stokKodu
           AND TURU = 'D'
+          AND SUBE_KODU = @subeKodu
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
       `
 
       const checkRequest = pool.request()
       checkRequest.input('fatirs_no', fatirs_no)
       checkRequest.input('harRecno', harRecno)
       checkRequest.input('stokKodu', stokKodu)
+      checkRequest.input('subeKodu', subeKodu)
+      checkRequest.input('ftirsip', ftirsip)
+      checkRequest.input('cariKodu', cariKodu)
+
 
       const checkResult = await checkRequest.query(checkQuery)
 
@@ -70,11 +78,11 @@ const dgrService = {
           INSERT INTO AKTBLITSUTS (
             STOK_KODU, GTIN, MIKTAR,
             HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
-            TURU, KAYIT_TARIHI, DURUM, KULLANICI
+            TURU, KAYIT_TARIHI, KAYIT_KULLANICI, SUBE_KODU
           ) VALUES (
             @stokKodu, @gtin, @miktar,
             @harRecno, @fatirs_no, @ftirsip, @cariKodu,
-            'D', GETDATE(), 'A', @kullanici
+            'D', GETDATE(), @kullanici, @subeKodu
           )
         `
 
@@ -85,8 +93,9 @@ const dgrService = {
         insertRequest.input('harRecno', harRecno)
         insertRequest.input('fatirs_no', fatirs_no)
         insertRequest.input('ftirsip', ftirsip)
-        insertRequest.input('cariKodu', cariKodu || '')
-        insertRequest.input('kullanici', kullanici || 'SYSTEM')
+        insertRequest.input('cariKodu', cariKodu)
+        insertRequest.input('kullanici', kullanici)
+        insertRequest.input('subeKodu', subeKodu)
 
         await insertRequest.query(insertQuery)
 
@@ -102,7 +111,7 @@ const dgrService = {
    * DGR Kayıt Sil
    * DGR ürünlerde SERI_NO boş olduğu için STOK_KODU ile silme yapılır
    */
-  async deleteRecord(stokKodu, belgeNo, straInc, quantity = 1) {
+  async deleteRecord(stokKodu, belgeNo, straInc, ftirsip, cariKodu, subeKodu, quantity = 1) {
     try {
       const pool = await getConnection()
 
@@ -113,6 +122,9 @@ const dgrService = {
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
           AND STOK_KODU = @stokKodu
+          AND SUBE_KODU = @subeKodu
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
           AND TURU = 'D'
       `
 
@@ -120,6 +132,9 @@ const dgrService = {
       checkRequest.input('belgeNo', belgeNo)
       checkRequest.input('straInc', straInc)
       checkRequest.input('stokKodu', stokKodu)
+      checkRequest.input('subeKodu', subeKodu)
+      checkRequest.input('ftirsip', ftirsip)
+      checkRequest.input('cariKodu', cariKodu)
 
       const checkResult = await checkRequest.query(checkQuery)
 
@@ -176,7 +191,7 @@ const dgrService = {
   /**
    * DGR Kayıtlarını Getir
    */
-  async getRecords(belgeNo, straInc) {
+  async getRecords(belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -197,12 +212,18 @@ const dgrService = {
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
           AND TURU = 'D'
+          AND SUBE_KODU = @subeKodu
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
         ORDER BY RECNO
       `
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
       request.input('straInc', straInc)
+      request.input('subeKodu', subeKodu)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
 
       const result = await request.query(query)
 

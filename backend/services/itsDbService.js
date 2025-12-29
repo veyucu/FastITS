@@ -51,7 +51,7 @@ export async function addITSRecord(data) {
     const pool = await getConnection()
 
     const result = await pool.request()
-      .input('HAR_RECNO', sql.Int, data.HAR_RECNO || null)
+      .input('HAR_RECNO', sql.Int, data.HAR_RECNO)
       .input('TURU', sql.Char(1), data.TURU)
       .input('FTIRSIP', sql.Char(1), data.FTIRSIP)
       .input('FATIRS_NO', sql.VarChar(15), data.FATIRS_NO)
@@ -63,15 +63,15 @@ export async function addITSRecord(data) {
       .input('LOT_NO', sql.VarChar(35), data.LOT_NO)
       .input('URETIM_TARIHI', sql.Date, data.URETIM_TARIHI ? new Date(data.URETIM_TARIHI) : null)
       .input('CARRIER_LABEL', sql.VarChar(25), data.CARRIER_LABEL)
-      .input('BILDIRIM', sql.VarChar(20), data.BILDIRIM || 'BEKLEMEDE')
       .input('KAYIT_KULLANICI', sql.VarChar(35), data.KAYIT_KULLANICI)
+      .input('SUBE_KODU', sql.Int, data.SUBE_KODU)
       .query(`
         INSERT INTO AKTBLITSUTS (
           HAR_RECNO, TURU, FTIRSIP, FATIRS_NO, CARI_KODU, STOK_KODU, GTIN, SERI_NO,
-          MIAD, LOT_NO, URETIM_TARIHI, CARRIER_LABEL, BILDIRIM, KAYIT_KULLANICI, KAYIT_TARIHI
+          MIAD, LOT_NO, URETIM_TARIHI, CARRIER_LABEL, KAYIT_KULLANICI, KAYIT_TARIHI, SUBE_KODU
         ) VALUES (
           @HAR_RECNO, @TURU, @FTIRSIP, @FATIRS_NO, @CARI_KODU, @STOK_KODU, @GTIN, @SERI_NO,
-          @MIAD, @LOT_NO, @URETIM_TARIHI, @CARRIER_LABEL, @BILDIRIM, @KAYIT_KULLANICI, GETDATE()
+          @MIAD, @LOT_NO, @URETIM_TARIHI, @CARRIER_LABEL, @KAYIT_KULLANICI, GETDATE(), @SUBE_KODU
         );
         SELECT SCOPE_IDENTITY() AS RECNO;
       `)
@@ -301,9 +301,6 @@ export async function updateITSRecord(recno, data) {
       return { success: false, message: 'Güncellenecek alan yok' }
     }
 
-    // KAYIT_TARIHI her zaman güncellenir
-    updateFields.push('KAYIT_TARIHI = GETDATE()')
-
     const query = `
       UPDATE AKTBLITSUTS 
       SET ${updateFields.join(', ')}
@@ -354,8 +351,7 @@ export async function updateBulkNotificationStatus(recnos, bildirimId, bildirimT
         SET 
           BILDIRIM_ID = @bildirimId,
           BILDIRIM_TARIHI = @bildirimTarihi,
-          BILDIRIM = @durum,
-          KAYIT_TARIHI = GETDATE()
+          BILDIRIM = @durum
         WHERE RECNO IN (SELECT value FROM STRING_SPLIT(@recnos, ','))
       `)
 

@@ -416,10 +416,10 @@ const DocumentsPage = () => {
     if (row) {
       // Composite key: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU -> Base64
       const encodedId = encodeDocumentId(
-        row.subeKodu || '0',
-        row.docType || '1',
+        row.subeKodu,
+        row.docType,
         row.documentNo,
-        row.customerCode || ''
+        row.customerCode
       )
       navigate(`/documents/${encodedId}`)
     }

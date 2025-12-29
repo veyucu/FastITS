@@ -8,7 +8,7 @@ const utsService = {
   /**
    * UTS Kayıtlarını Getir
    */
-  async getRecords(subeKodu, belgeNo, straInc) {
+  async getRecords(subeKodu, belgeNo, straInc, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -31,6 +31,9 @@ const utsService = {
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
+          AND SUBE_KODU = @subeKodu
           AND TURU = 'U'
         ORDER BY RECNO
       `
@@ -38,6 +41,9 @@ const utsService = {
       const request = pool.request()
       request.input('belgeNo', belgeNo)
       request.input('straInc', straInc)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -84,7 +90,8 @@ const utsService = {
       expectedQuantity,
       barcode,
       cariKodu,
-      kullanici
+      kullanici,
+      subeKodu
     } = params
 
     try {
@@ -127,11 +134,11 @@ const utsService = {
             INSERT INTO AKTBLITSUTS (
               SERI_NO, LOT_NO, MIKTAR, STOK_KODU, GTIN,
               URETIM_TARIHI, HAR_RECNO, FATIRS_NO, FTIRSIP,
-              CARI_KODU, TURU, KAYIT_TARIHI, BILDIRIM, KAYIT_KULLANICI
+              CARI_KODU, TURU, KAYIT_TARIHI, SUBE_KODU, KAYIT_KULLANICI
             ) VALUES (
               @seriNo, @lot, @miktar, @stokKodu, @gtin,
               @uretimTarihi, @harRecno, @belgeNo, @ftirsip,
-              @cariKodu, 'U', GETDATE(), 'A', @kullanici
+              @cariKodu, 'U', GETDATE(), @subeKodu, @kullanici
             )
           `
 
@@ -145,8 +152,9 @@ const utsService = {
           insertRequest.input('harRecno', itemId)
           insertRequest.input('belgeNo', belgeNo)
           insertRequest.input('ftirsip', docType)
-          insertRequest.input('cariKodu', cariKodu || '')
-          insertRequest.input('kullanici', kullanici || 'SYSTEM')
+          insertRequest.input('cariKodu', cariKodu)
+          insertRequest.input('subeKodu', subeKodu)
+          insertRequest.input('kullanici', kullanici)
 
           await insertRequest.query(insertQuery)
         } else {
@@ -157,7 +165,8 @@ const utsService = {
                 LOT_NO = @lot,
                 MIKTAR = @miktar,
                 URETIM_TARIHI = @uretimTarihi,
-                KAYIT_KULLANICI = @kullanici
+                KAYIT_KULLANICI = @kullanici,
+                KAYIT_TARIHI = GETDATE()
             WHERE FATIRS_NO = @belgeNo
               AND HAR_RECNO = @harRecno
               AND RECNO = @recno
@@ -191,7 +200,7 @@ const utsService = {
   /**
    * UTS Kayıtlarını Sil
    */
-  async deleteRecords(records, belgeNo, straInc) {
+  async deleteRecords(records, belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -201,6 +210,9 @@ const utsService = {
           WHERE FATIRS_NO = @belgeNo
             AND HAR_RECNO = @straInc
             AND RECNO = @recno
+            AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
+            AND SUBE_KODU = @subeKodu
             AND TURU = 'U'
         `
 
@@ -208,6 +220,9 @@ const utsService = {
         request.input('recno', record.siraNo || record.recno)
         request.input('belgeNo', belgeNo)
         request.input('straInc', straInc)
+        request.input('ftirsip', ftirsip)
+        request.input('cariKodu', cariKodu)
+        request.input('subeKodu', subeKodu)
 
         await request.query(query)
       }

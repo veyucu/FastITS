@@ -41,19 +41,19 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    // ID formatı: SUBE_KODU-FTIRSIP-FATIRS_NO
-    const parts = id.split('-')
+    // ID formatı: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU
+    const parts = id.split('|')
 
-    if (parts.length !== 3) {
+    if (parts.length !== 4) {
       return res.status(400).json({
         success: false,
         message: 'Geçersiz belge ID formatı'
       })
     }
 
-    const [subeKodu, ftirsip, fatirs_no] = parts
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = parts
 
-    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no)
+    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no, cariKodu)
 
     if (!document) {
       return res.status(404).json({
@@ -83,7 +83,7 @@ router.get('/:documentId/its-all-records', async (req, res) => {
     const { cariKodu } = req.query
 
     // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKoduFromId] = documentId.split('|')
 
     if (!cariKodu) {
       return res.status(400).json({
@@ -122,7 +122,7 @@ router.get('/:documentId/uts-all-records', async (req, res) => {
     const { cariKodu } = req.query
 
     // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKoduFromId] = documentId.split('|')
 
     if (!cariKodu) {
       return res.status(400).json({
@@ -159,8 +159,8 @@ router.get('/:documentId/item/:itemId/its-records', async (req, res) => {
   try {
     const { documentId, itemId } = req.params
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // Kayıt tipi belirle
     const kayitTipi = ftirsip === '6' ? 'M' : 'A'
@@ -169,7 +169,9 @@ router.get('/:documentId/item/:itemId/its-records', async (req, res) => {
       subeKodu,
       fatirs_no,
       itemId,
-      kayitTipi
+      kayitTipi,
+      ftirsip,
+      cariKodu
     )
 
     res.json({
@@ -193,8 +195,8 @@ router.get('/:documentId/item/:itemId/uts-records', async (req, res) => {
   try {
     const { documentId, itemId } = req.params
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // Kayıt tipi belirle
     const kayitTipi = ftirsip === '6' ? 'M' : 'A'
@@ -203,7 +205,9 @@ router.get('/:documentId/item/:itemId/uts-records', async (req, res) => {
       subeKodu,
       fatirs_no,
       itemId,
-      kayitTipi
+      kayitTipi,
+      ftirsip,
+      cariKodu
     )
 
     res.json({
@@ -237,8 +241,8 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
       })
     }
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // TURU değerini mapping yap (ITS -> I, UTS -> U, DGR -> D)
     let turuMapped = turu
@@ -246,14 +250,16 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
     else if (turu === 'UTS') turuMapped = 'U'
     else if (turu === 'DGR') turuMapped = 'D'
 
-    log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, straInc: itemId, turu, turuMapped })
+    log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, cariKodu, straInc: itemId, turu, turuMapped })
 
     const result = await documentService.deleteITSBarcodeRecords(
       seriNos,
       subeKodu,
       fatirs_no,
       itemId,
-      turuMapped
+      turuMapped,
+      ftirsip,
+      cariKodu
     )
 
     log('✅ Silme sonucu:', result)
@@ -287,14 +293,16 @@ router.delete('/:documentId/item/:itemId/uts-records', async (req, res) => {
       })
     }
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     const result = await documentService.deleteUTSBarcodeRecords(
       records,
       subeKodu,
       fatirs_no,
-      itemId
+      itemId,
+      ftirsip,
+      cariKodu
     )
 
     res.json({
@@ -344,7 +352,7 @@ router.post('/its-barcode', async (req, res) => {
     const parsedData = parseResult.data
 
     // 2. Belge ID'sini parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // 3. KAYIT_TIPI belirle
     const kayitTipi = docType === '6' ? 'M' : 'A' // Sipariş = M, Fatura = A
@@ -367,7 +375,7 @@ router.post('/its-barcode', async (req, res) => {
       ilcGtin: parsedData.barkod,  // Okutulan Barkod
       expectedQuantity,            // Miktar kontrolü için
       ftirsip,                     // Belge tipi: '6'=Sipariş, '2'=Alış, '1'=Satış
-      cariKodu: req.body.cariKodu,         // Belgedeki CARI_KODU (ZORUNLU)
+      cariKodu,         // Belgedeki CARI_KODU (documentId'den alındı)
       kullanici: req.body.kullanici        // Sisteme giriş yapan kullanıcı (ZORUNLU)
     })
 
@@ -422,7 +430,7 @@ router.post('/uts-barcode', async (req, res) => {
     log('🔴 UTS Barkod İsteği:', { barcode, documentId, itemId, stokKodu, seriNo, lotNo, miktar })
 
     // Belge ID'sini parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // KAYIT_TIPI belirle (Sipariş = M, Fatura = A)
     const kayitTipi = docType === '6' ? 'M' : 'A'
@@ -493,7 +501,7 @@ router.post('/uts-records/bulk-save', async (req, res) => {
     log('💾 UTS Toplu Kayıt İsteği:', { documentId, itemId, recordCount: records.length })
 
     // Belge ID'sini parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // KAYIT_TIPI belirle (Sipariş = M, Fatura = A)
     const kayitTipi = docType === '6' ? 'M' : 'A'
@@ -642,7 +650,7 @@ router.post('/dgr-barcode', async (req, res) => {
     log('📦 DGR Barkod İsteği:', { barcode, documentId, itemId, stokKodu, expectedQuantity })
 
     // Belge ID'sini parse et
-    const [subeKodu, ftirsip, fatirs_no] = documentId.split('-')
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
     // KAYIT_TIPI belirle (Sipariş = M, Fatura = A)
     const kayitTipi = docType === '6' ? 'M' : 'A'
@@ -840,11 +848,11 @@ router.post('/:id/pts-notification', async (req, res) => {
 
     log('📤 PTS Bildirimi İsteği:', { documentId: id, kullanici })
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = id.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = id.split('|')
 
     // Belge bilgilerini al
-    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no)
+    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no, cariKodu)
     if (!document) {
       return res.status(404).json({
         success: false,
@@ -853,7 +861,7 @@ router.post('/:id/pts-notification', async (req, res) => {
     }
 
     // Belgedeki tüm ITS kayıtlarını al
-    const itsRecords = await documentService.getAllITSRecordsForDocument(subeKodu, fatirs_no, ftirsip)
+    const itsRecords = await documentService.getAllITSRecordsForDocument(subeKodu, fatirs_no, ftirsip, cariKodu)
 
     if (!itsRecords || itsRecords.length === 0) {
       return res.status(400).json({
@@ -903,6 +911,7 @@ router.post('/:id/pts-notification', async (req, res) => {
       subeKodu,
       fatirs_no,
       ftirsip,
+      cariKodu,
       result.transferId,
       kullanici
     )
@@ -1277,14 +1286,15 @@ router.post('/:id/fast-durum', async (req, res) => {
       })
     }
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = id.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = id.split('|')
 
     // FAST durumunu güncelle
     const result = await documentService.updateDocumentFastStatus(
       subeKodu,
       fatirs_no,
       ftirsip,
+      cariKodu,
       status,
       kullanici
     )

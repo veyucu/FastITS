@@ -29,32 +29,20 @@ export const decodeDocumentId = (encodedId) => {
         const compositeKey = decodeURIComponent(escape(atob(encodedId)))
         const parts = compositeKey.split('|')
 
-        if (parts.length >= 3) {
+        if (parts.length >= 4) {
             return {
                 subeKodu: parts[0],
                 ftirsip: parts[1],
                 fatirs_no: parts[2],
-                cariKodu: parts[3] || '',
-                // Eski format için geriye dönük uyumluluk: SUBE_KODU-FTIRSIP-FATIRS_NO
-                compositeId: `${parts[0]}-${parts[1]}-${parts[2]}`
+                cariKodu: parts[3],
+                // Composite ID: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU
+                compositeId: compositeKey
             }
         }
 
         throw new Error('Invalid document ID format')
     } catch (error) {
         console.error('Document ID decode error:', error)
-        // Eski format olup olmadığını kontrol et (SUBE_KODU-FTIRSIP-FATIRS_NO)
-        // Bu geriye dönük uyumluluk içindir
-        const parts = encodedId.split('-')
-        if (parts.length >= 3) {
-            return {
-                subeKodu: parts[0],
-                ftirsip: parts[1],
-                fatirs_no: parts.slice(2).join('-'), // Belge numarasında - olabilir
-                cariKodu: '',
-                compositeId: encodedId
-            }
-        }
         return null
     }
 }

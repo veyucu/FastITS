@@ -16,7 +16,9 @@ const carrierService = {
       belgeNo,
       ftirsip,
       items,
-      kullanici
+      kullanici,
+      subeKodu,
+      cariKodu
     } = params
 
     try {
@@ -40,10 +42,18 @@ const carrierService = {
           FROM AKTBLITSUTS WITH (NOLOCK)
           WHERE SERI_NO = @seriNo
             AND TURU = 'I'
+            AND SUBE_KODU = @subeKodu
+            AND FTIRSIP = @ftirsip
+            AND FATIRS_NO = @belgeNo
+            AND CARI_KODU = @cariKodu
         `
 
         const checkRequest = pool.request()
         checkRequest.input('seriNo', product.seriNo)
+        checkRequest.input('subeKodu', subeKodu)
+        checkRequest.input('ftirsip', ftirsip)
+        checkRequest.input('belgeNo', belgeNo)
+        checkRequest.input('cariKodu', cariKodu)
 
         const checkResult = await checkRequest.query(checkQuery)
 
@@ -124,12 +134,12 @@ const carrierService = {
               SERI_NO, STOK_KODU, GTIN, MIAD, LOT_NO,
               HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
               CARRIER_LABEL, CONTAINER_TYPE,
-              TURU, KAYIT_TARIHI, DURUM, KULLANICI
+              TURU, KAYIT_TARIHI, KAYIT_KULLANICI,SUBE_KODU
             ) VALUES (
               @seriNo, @stokKodu, @gtin, @miad, @lot,
               @harRecno, @fatirs_no, @ftirsip, @cariKodu,
               @carrierLabel, 'C',
-              'I', GETDATE(), 'A', @kullanici
+              'I', GETDATE(), @kullanici, @subeKodu
             )
           `
 
@@ -153,9 +163,10 @@ const carrierService = {
           insertRequest.input('harRecno', matchingItem.straInc)
           insertRequest.input('fatirs_no', belgeNo)
           insertRequest.input('ftirsip', ftirsip)
-          insertRequest.input('cariKodu', matchingItem.cariKodu || '')
+          insertRequest.input('cariKodu', matchingItem.cariKodu)
           insertRequest.input('carrierLabel', carrierLabel)
-          insertRequest.input('kullanici', kullanici || 'SYSTEM')
+          insertRequest.input('kullanici', kullanici)
+          insertRequest.input('subeKodu', subeKodu)
 
           await insertRequest.query(insertQuery)
           savedCount++
@@ -187,10 +198,12 @@ const carrierService = {
     try {
       const pool = await getConnection()
 
-      // docId'yi parse et (format: SUBE_KODU-FTIRSIP-FATIRS_NO)
-      const parts = docId.split('-')
+      // docId'yi parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+      const parts = docId.split('|')
+      const subeKodu = parts[0]
       const ftirsip = parts[1]
       const belgeNo = parts[2]
+      const cariKodu = parts[3]
 
       // Önce bu koli barkoduna sahip kayıtları ve GTIN bilgilerini al
       const selectQuery = `
@@ -200,6 +213,8 @@ const carrierService = {
           AND FATIRS_NO = @belgeNo
           AND FTIRSIP = @ftirsip
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
+          AND CARI_KODU = @cariKodu
         GROUP BY GTIN
       `
 
@@ -207,6 +222,8 @@ const carrierService = {
       selectRequest.input('carrierLabel', carrierLabel)
       selectRequest.input('belgeNo', belgeNo)
       selectRequest.input('ftirsip', ftirsip)
+      selectRequest.input('subeKodu', subeKodu)
+      selectRequest.input('cariKodu', cariKodu)
 
       const selectResult = await selectRequest.query(selectQuery)
 
@@ -233,12 +250,16 @@ const carrierService = {
           AND FATIRS_NO = @belgeNo
           AND FTIRSIP = @ftirsip
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
+          AND CARI_KODU = @cariKodu
       `
 
       const deleteRequest = pool.request()
       deleteRequest.input('carrierLabel', carrierLabel)
       deleteRequest.input('belgeNo', belgeNo)
       deleteRequest.input('ftirsip', ftirsip)
+      deleteRequest.input('subeKodu', subeKodu)
+      deleteRequest.input('cariKodu', cariKodu)
 
       await deleteRequest.query(deleteQuery)
 

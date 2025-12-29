@@ -9,7 +9,7 @@ const itsService = {
   /**
    * AKTBLITSUTS Kayıtlarını Getir (Belirli bir kalem için) - ITS
    */
-  async getRecords(subeKodu, belgeNo, straInc) {
+  async getRecords(subeKodu, belgeNo, straInc, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -32,6 +32,9 @@ const itsService = {
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
           AND HAR_RECNO = @straInc
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
+          AND SUBE_KODU = @subeKodu
           AND TURU = 'I'
         ORDER BY SERI_NO
       `
@@ -39,6 +42,9 @@ const itsService = {
       const request = pool.request()
       request.input('belgeNo', belgeNo)
       request.input('straInc', straInc)
+      request.input('ftirsip', ftirsip)
+      request.input('cariKodu', cariKodu)
+      request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
@@ -80,7 +86,8 @@ const itsService = {
       fatirs_no,
       ftirsip,
       cariKodu,
-      kullanici
+      kullanici,
+      subeKodu
     } = params
 
     try {
@@ -94,12 +101,18 @@ const itsService = {
           AND HAR_RECNO = @harRecno
           AND SERI_NO = @seriNo
           AND TURU = 'I'
+          AND SUBE_KODU = @subeKodu
+          AND FTIRSIP = @ftirsip
+          AND CARI_KODU = @cariKodu
       `
 
       const checkRequest = pool.request()
       checkRequest.input('fatirs_no', fatirs_no)
       checkRequest.input('harRecno', harRecno)
       checkRequest.input('seriNo', seriNo)
+      checkRequest.input('subeKodu', subeKodu)
+      checkRequest.input('ftirsip', ftirsip)
+      checkRequest.input('cariKodu', cariKodu)
 
       const checkResult = await checkRequest.query(checkQuery)
 
@@ -112,11 +125,11 @@ const itsService = {
         INSERT INTO AKTBLITSUTS (
           SERI_NO, STOK_KODU, GTIN, MIAD, LOT_NO,
           HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
-          TURU, KAYIT_TARIHI, BILDIRIM, KAYIT_KULLANICI
+          TURU, KAYIT_TARIHI, SUBE_KODU, KAYIT_KULLANICI
         ) VALUES (
           @seriNo, @stokKodu, @gtin, @miad, @lot,
           @harRecno, @fatirs_no, @ftirsip, @cariKodu,
-          'I', GETDATE(), 'A', @kullanici
+          'I', GETDATE(), @subeKodu, @kullanici
         )
       `
 
@@ -130,7 +143,8 @@ const itsService = {
       insertRequest.input('fatirs_no', fatirs_no)
       insertRequest.input('ftirsip', ftirsip)
       insertRequest.input('cariKodu', cariKodu)
-      insertRequest.input('kullanici', kullanici || 'SYSTEM')
+      insertRequest.input('kullanici', kullanici)
+      insertRequest.input('subeKodu', subeKodu)
 
       await insertRequest.query(insertQuery)
 
@@ -144,7 +158,7 @@ const itsService = {
   /**
    * ITS Kayıtlarını Sil
    */
-  async deleteRecords(seriNos, belgeNo, straInc) {
+  async deleteRecords(seriNos, belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -160,12 +174,18 @@ const itsService = {
             AND SERI_NO = @seriNo
             AND TURU = 'I'
             AND CARRIER_LABEL IS NOT NULL
+            AND SUBE_KODU = @subeKodu
+            AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
         `
 
         const checkRequest = pool.request()
         checkRequest.input('belgeNo', belgeNo)
         checkRequest.input('straInc', straInc)
         checkRequest.input('seriNo', seriNo)
+        checkRequest.input('subeKodu', subeKodu)
+        checkRequest.input('ftirsip', ftirsip)
+        checkRequest.input('cariKodu', cariKodu)
 
         const checkResult = await checkRequest.query(checkQuery)
         if (checkResult.recordset.length > 0 && checkResult.recordset[0].CARRIER_LABEL) {
@@ -183,12 +203,18 @@ const itsService = {
               AND HAR_RECNO = @straInc
               AND CARRIER_LABEL = @carrierLabel
               AND TURU = 'I'
+              AND SUBE_KODU = @subeKodu
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
           `
 
           const updateRequest = pool.request()
           updateRequest.input('belgeNo', belgeNo)
           updateRequest.input('straInc', straInc)
           updateRequest.input('carrierLabel', carrierLabel)
+          updateRequest.input('subeKodu', subeKodu)
+          updateRequest.input('ftirsip', ftirsip)
+          updateRequest.input('cariKodu', cariKodu)
 
           await updateRequest.query(updateQuery)
         }
@@ -203,12 +229,18 @@ const itsService = {
             AND HAR_RECNO = @straInc
             AND SERI_NO = @seriNo
             AND TURU = 'I'
+            AND SUBE_KODU = @subeKodu
+            AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
         `
 
         const request = pool.request()
         request.input('belgeNo', belgeNo)
         request.input('straInc', straInc)
         request.input('seriNo', seriNo)
+        request.input('subeKodu', subeKodu)
+        request.input('ftirsip', ftirsip)
+        request.input('cariKodu', cariKodu)
 
         const result = await request.query(query)
         if (result.rowsAffected[0] > 0) {
@@ -256,10 +288,20 @@ const itsService = {
             FROM AKTBLITSUTS WITH (NOLOCK)
             WHERE SERI_NO = @seriNo
               AND TURU = 'I'
+              AND SUBE_KODU = @subeKodu
+              AND FTIRSIP = @ftirsip
+              AND CARI_KODU = @cariKodu
+              AND FATIRS_NO = @belgeNo
+              AND HAR_RECNO = @harRecno
           `
 
           const checkRequest = pool.request()
           checkRequest.input('seriNo', parsed.serialNumber)
+          checkRequest.input('subeKodu', documentInfo.subeKodu)
+          checkRequest.input('ftirsip', documentInfo.ftirsip)
+          checkRequest.input('cariKodu', documentInfo.cariKodu)
+          checkRequest.input('belgeNo', documentInfo.belgeNo)
+          checkRequest.input('harRecno', documentInfo.harRecno)
 
           const checkResult = await checkRequest.query(checkQuery)
 
@@ -274,11 +316,11 @@ const itsService = {
             INSERT INTO AKTBLITSUTS (
               SERI_NO, STOK_KODU, GTIN, MIAD, LOT_NO,
               HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
-              TURU, KAYIT_TARIHI, BILDIRIM, KAYIT_KULLANICI
+              TURU, KAYIT_TARIHI, SUBE_KODU, KAYIT_KULLANICI
             ) VALUES (
               @seriNo, @stokKodu, @gtin, @miad, @lot,
               @harRecno, @fatirs_no, @ftirsip, @cariKodu,
-              'I', GETDATE(), 'A', @kullanici
+              'I', GETDATE(), @subeKodu, @kullanici
             )
           `
 
@@ -292,7 +334,8 @@ const itsService = {
           insertRequest.input('fatirs_no', documentInfo.belgeNo)
           insertRequest.input('ftirsip', documentInfo.ftirsip)
           insertRequest.input('cariKodu', documentInfo.cariKodu)
-          insertRequest.input('kullanici', kullanici || 'SYSTEM')
+          insertRequest.input('subeKodu', documentInfo.subeKodu)
+          insertRequest.input('kullanici', kullanici)
 
           await insertRequest.query(insertQuery)
           results.successCount++
