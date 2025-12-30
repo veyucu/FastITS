@@ -2,8 +2,12 @@ import express from 'express'
 import * as ptsService from '../services/ptsService.js'
 import * as ptsDbService from '../services/ptsDbService.js'
 import { log } from '../utils/logger.js'
+import companyMiddleware from '../middleware/companyMiddleware.js'
 
 const router = express.Router()
+
+// Tüm PTS route'larına company middleware uygula
+router.use(companyMiddleware)
 
 /**
  * GET /api/pts/transfers

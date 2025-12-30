@@ -447,7 +447,7 @@ const DocumentsPage = () => {
         throw new Error(response.message || 'Veri alınamadı')
       }
     } catch (err) {
-      console.error('Sipariş yükleme hatası:', err)
+      console.error('Belge yükleme hatası:', err)
       setError(err.message || 'Sunucuya bağlanılamadı')
       setServerStatus('offline')
       setIsInitialLoad(false)

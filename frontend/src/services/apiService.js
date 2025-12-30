@@ -24,10 +24,12 @@ const apiClient = axios.create({
   }
 })
 
-// Request interceptor - Token ekleme vb.
+// Request interceptor - Token ve Company ekleme
 apiClient.interceptors.request.use(
   (config) => {
     const user = localStorage.getItem('user')
+    const selectedCompany = sessionStorage.getItem('selectedCompany') // sessionStorage - sekme bazlı
+
     if (user) {
       try {
         const userData = JSON.parse(user)
@@ -38,6 +40,20 @@ apiClient.interceptors.request.use(
         console.error('Token parse error:', error)
       }
     }
+
+    // Seçili şirket bilgisini header'a ekle
+    if (selectedCompany) {
+      try {
+        const companyData = JSON.parse(selectedCompany)
+        if (companyData.sirket) {
+          config.headers['X-Company-Code'] = companyData.sirket
+          config.headers['X-Company-Database'] = companyData.sirket
+        }
+      } catch (error) {
+        console.error('Company parse error:', error)
+      }
+    }
+
     return config
   },
   (error) => {
@@ -91,6 +107,39 @@ const apiService = {
       return response.data
     } catch (error) {
       console.error('Get users error:', error)
+      return { success: false, error: error.message }
+    }
+  },
+
+  // Şirket Listesi (SIRKETLER30 tablosundan)
+  getCompanies: async () => {
+    try {
+      const response = await apiClient.get('/auth/companies')
+      return response.data
+    } catch (error) {
+      console.error('Get companies error:', error)
+      return { success: false, error: error.message, data: [] }
+    }
+  },
+
+  // Şirket Ayarları - Tüm şirketler + durum
+  getCompanySettings: async () => {
+    try {
+      const response = await apiClient.get('/companies/settings')
+      return response.data
+    } catch (error) {
+      console.error('Get company settings error:', error)
+      return { success: false, error: error.message }
+    }
+  },
+
+  // Şirket Durumu Güncelle
+  updateCompanyStatus: async (sirket, aktif) => {
+    try {
+      const response = await apiClient.put(`/companies/settings/${encodeURIComponent(sirket)}`, { aktif })
+      return response.data
+    } catch (error) {
+      console.error('Update company status error:', error)
       return { success: false, error: error.message }
     }
   },

@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   Package,
@@ -8,14 +9,22 @@ import {
   Truck,
   Settings,
   MessageSquare,
-  Users
+  Users,
+  Building2
 } from 'lucide-react'
 import usePageTitle from '../hooks/usePageTitle'
 
 const Dashboard = () => {
   usePageTitle('Ana Menü')
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { user, logout, selectedCompany } = useAuth()
+
+  // Şirket seçilmediyse login sayfasına yönlendir (yeni sekme açılınca)
+  useEffect(() => {
+    if (!selectedCompany) {
+      navigate('/login', { replace: true })
+    }
+  }, [selectedCompany, navigate])
 
   const handleLogout = () => {
     logout()
@@ -45,7 +54,12 @@ const Dashboard = () => {
                 <Package className="w-5 md:w-6 h-5 md:h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-lg md:text-2xl font-bold text-slate-100">Fast<span className="text-primary-400">ITS</span></h1>
+                <h1 className="text-lg md:text-2xl font-bold text-slate-100">
+                  Fast<span className="text-primary-400">ITS</span>
+                  {selectedCompany && (
+                    <span className="ml-3 text-base md:text-xl font-semibold text-cyan-400">• {selectedCompany.sirket}</span>
+                  )}
+                </h1>
                 <p className="hidden md:block text-sm text-slate-500">Ürün Hazırlama Sistemi</p>
               </div>
             </div>
@@ -175,6 +189,27 @@ const Dashboard = () => {
                 <div>
                   <h3 className="text-sm md:text-xl font-bold text-slate-100 mb-0.5 md:mb-1">Kullanıcılar</h3>
                   <p className="hidden md:block text-sm text-slate-500">Kullanıcı ve yetki yönetimi</p>
+                </div>
+              </div>
+            </button>
+          )}
+
+          {/* Şirket Ayarları */}
+          {hasPermission('sirketAyarlari') && (
+            <button
+              onClick={() => navigate('/company-settings')}
+              className="bg-dark-800/60 backdrop-blur-sm rounded-xl shadow-dark-lg transition-all p-4 md:p-8 text-left group border border-dark-700 hover:border-cyan-500/50 hover:shadow-cyan-500/10"
+            >
+              <div className="flex flex-col">
+                <div className="flex items-center justify-between mb-2 md:mb-4">
+                  <div className="w-10 md:w-16 h-10 md:h-16 bg-cyan-500/20 rounded-xl flex items-center justify-center group-hover:bg-cyan-600 transition-colors border border-cyan-500/30">
+                    <Building2 className="w-5 md:w-8 h-5 md:h-8 text-cyan-400 group-hover:text-white transition-colors" />
+                  </div>
+                  <ArrowRight className="w-4 md:w-6 h-4 md:h-6 text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-xl font-bold text-slate-100 mb-0.5 md:mb-1">Şirket Ayarları</h3>
+                  <p className="hidden md:block text-sm text-slate-500">Aktif şirket yönetimi</p>
                 </div>
               </div>
             </button>

@@ -1,7 +1,11 @@
 import express from 'express'
 import * as itsDbService from '../services/itsDbService.js'
+import companyMiddleware from '../middleware/companyMiddleware.js'
 
 const router = express.Router()
+
+// Tüm ITS route'larına company middleware uygula
+router.use(companyMiddleware)
 
 /**
  * ITS kayıtlarını listele

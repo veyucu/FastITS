@@ -21,7 +21,8 @@ const userService = {
             YETKI_PTS,
             YETKI_MESAJ_KODLARI,
             YETKI_AYARLAR,
-            YETKI_KULLANICILAR
+            YETKI_KULLANICILAR,
+            YETKI_SIRKETLER
           FROM AKTBLKULLANICI 
           WHERE KULLANICI_ADI = @username 
             AND SIFRE = @password 
@@ -54,7 +55,8 @@ const userService = {
                         mesajKodlari: user.YETKI_MESAJ_KODLARI === true || user.YETKI_MESAJ_KODLARI === 1,
                         ayarlar: user.YETKI_AYARLAR === true || user.YETKI_AYARLAR === 1,
                         kullanicilar: user.YETKI_KULLANICILAR === true || user.YETKI_KULLANICILAR === 1
-                    }
+                    },
+                    authorizedCompanies: user.YETKI_SIRKETLER || null
                 }
             }
         } catch (error) {
@@ -83,6 +85,7 @@ const userService = {
             YETKI_MESAJ_KODLARI,
             YETKI_AYARLAR,
             YETKI_KULLANICILAR,
+            YETKI_SIRKETLER,
             SON_GIRIS,
             OLUSTURMA_TARIHI
           FROM AKTBLKULLANICI 
@@ -106,6 +109,7 @@ const userService = {
                         ayarlar: u.YETKI_AYARLAR === true || u.YETKI_AYARLAR === 1,
                         kullanicilar: u.YETKI_KULLANICILAR === true || u.YETKI_KULLANICILAR === 1
                     },
+                    authorizedCompanies: u.YETKI_SIRKETLER || null,
                     sonGiris: u.SON_GIRIS,
                     olusturmaTarihi: u.OLUSTURMA_TARIHI
                 }))
@@ -133,14 +137,15 @@ const userService = {
                 .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
                 .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
                 .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
+                .input('yetkiSirketler', userData.authorizedCompanies || null)
                 .query(`
           INSERT INTO AKTBLKULLANICI (
             KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, DEPARTMAN,
-            YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR
+            YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR, YETKI_SIRKETLER
           )
           VALUES (
             @username, @password, @name, @email, @role, @department,
-            @yetkiUrunHazirlama, @yetkiPts, @yetkiMesajKodlari, @yetkiAyarlar, @yetkiKullanicilar
+            @yetkiUrunHazirlama, @yetkiPts, @yetkiMesajKodlari, @yetkiAyarlar, @yetkiKullanicilar, @yetkiSirketler
           );
           SELECT SCOPE_IDENTITY() AS ID;
         `)
@@ -169,6 +174,7 @@ const userService = {
                 .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
                 .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
                 .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
+                .input('yetkiSirketler', userData.authorizedCompanies || null)
                 .query(`
           UPDATE AKTBLKULLANICI 
           SET AD_SOYAD = @name, 
@@ -180,7 +186,8 @@ const userService = {
               YETKI_PTS = @yetkiPts,
               YETKI_MESAJ_KODLARI = @yetkiMesajKodlari,
               YETKI_AYARLAR = @yetkiAyarlar,
-              YETKI_KULLANICILAR = @yetkiKullanicilar
+              YETKI_KULLANICILAR = @yetkiKullanicilar,
+              YETKI_SIRKETLER = @yetkiSirketler
           WHERE ID = @id
         `)
 

@@ -1,6 +1,7 @@
-import { getPTSConnection, getConnection } from '../config/database.js'
+import { getPTSConnection, getConnection, getDynamicConnection } from '../config/database.js'
 import sql from 'mssql'
 import { log } from '../utils/logger.js'
+import companySettingsService from './companySettingsService.js'
 
 /**
  * ============================================================================
@@ -13,6 +14,7 @@ import { log } from '../utils/logger.js'
 
 /**
  * Tüm veritabanı tablolarını oluştur ve varsayılan verileri ekle
+ * NOT: ITS tabloları sadece AKTİF şirket veritabanlarında oluşturulur
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function initializeDatabase() {
@@ -25,8 +27,22 @@ export async function initializeDatabase() {
     // Auth tabloları (NETSIS veritabanı)
     await createAuthTables()
 
-    // ITS tabloları (MUHASEBE veritabanı)
-    await createITSTables()
+    // Aktif şirketlerin veritabanlarında ITS tablolarını oluştur
+    console.log('🏢 Aktif şirket veritabanları kontrol ediliyor...')
+    const activeResult = await companySettingsService.getActiveCompanies()
+    if (activeResult.success && activeResult.data.length > 0) {
+      for (const sirket of activeResult.data) {
+        try {
+          console.log(`  📁 ${sirket} veritabanı kontrol ediliyor...`)
+          await createITSTablesForCompany(sirket)
+          console.log(`  ✅ ${sirket} veritabanı hazır`)
+        } catch (err) {
+          console.error(`  ❌ ${sirket} veritabanı hatası:`, err.message)
+        }
+      }
+    } else {
+      console.log('  ⚠️ Aktif şirket bulunamadı - Şirket Ayarlarından aktifleştirin')
+    }
 
     console.log('✅ Veritabanı başlatma tamamlandı!')
     return { success: true }
@@ -133,6 +149,7 @@ async function createAuthTables() {
   // Varsayılan ayarlar
   const varsayilanAyarlar = [
     // ITS Temel Ayarları
+    { name: 'depoAdi', value: '', desc: 'Depo Adı' },
     { name: 'itsGlnNo', value: '', desc: 'ITS GLN No' },
     { name: 'itsUsername', value: '', desc: 'ITS Kullanıcı Adı' },
     { name: 'itsPassword', value: '', desc: 'ITS Şifre' },
@@ -413,6 +430,9 @@ async function createITSTables() {
   log('📋 TBLFATUIRS ve TBLSIPAMAS tabloları kontrol ediliyor...')
 
   const itsUtsKolonlari = [
+    { name: 'FAST_DURUM', type: 'VARCHAR(3) NULL' },
+    { name: 'FAST_TARIH', type: 'DATETIME NULL' },
+    { name: 'FAST_KULLANICI', type: 'VARCHAR(35) NULL' },
     { name: 'ITS_BILDIRIM', type: 'VARCHAR(3) NULL' },
     { name: 'ITS_TARIH', type: 'DATETIME NULL' },
     { name: 'ITS_KULLANICI', type: 'VARCHAR(35) NULL' },
@@ -451,6 +471,99 @@ async function createITSTables() {
   log('✅ ITS tabloları hazır')
 }
 
+// ============================================================================
+// 4. ŞİRKET BAZLI ITS TABLOLARI
+// ============================================================================
+/**
+ * Belirli bir şirketin veritabanında ITS tablolarını oluştur
+ * @param {string} databaseName - Veritabanı adı (şirket)
+ */
+async function createITSTablesForCompany(databaseName) {
+  const pool = await getDynamicConnection(databaseName)
+
+  // ----- AKTBLITSUTS -----
+  const checkTable = await pool.request().query(`
+    SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'AKTBLITSUTS') AND type in (N'U')
+  `)
+
+  if (checkTable.recordset.length === 0) {
+    await pool.request().query(`
+      CREATE TABLE AKTBLITSUTS (
+        RECNO INT IDENTITY(1,1) PRIMARY KEY,
+        HAR_RECNO INT,
+        TURU CHAR(1),
+        FTIRSIP CHAR(1) NOT NULL,
+        FATIRS_NO VARCHAR(15),
+        CARI_KODU VARCHAR(35),
+        STOK_KODU VARCHAR(35),
+        MIKTAR FLOAT,
+        GTIN VARCHAR(15),
+        SERI_NO VARCHAR(25),
+        MIAD DATE,
+        LOT_NO VARCHAR(35),
+        URETIM_TARIHI DATE,
+        CARRIER_LABEL VARCHAR(25),
+        CONTAINER_TYPE CHAR(1),
+        BILDIRIM VARCHAR(20),
+        BILDIRIM_ID VARCHAR(36),
+        BILDIRIM_TARIHI DATETIME,
+        KAYIT_TARIHI DATETIME DEFAULT GETDATE(),
+        KAYIT_KULLANICI VARCHAR(35)
+      )
+    `)
+
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_GTIN ON AKTBLITSUTS(GTIN) INCLUDE (SERI_NO, LOT_NO, MIAD)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_SERI_NO ON AKTBLITSUTS(SERI_NO) INCLUDE (GTIN, BILDIRIM)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_FATIRS_NO ON AKTBLITSUTS(FATIRS_NO, FTIRSIP) INCLUDE (CARI_KODU)`)
+    await pool.request().query(`CREATE NONCLUSTERED INDEX IX_AKTBLITSUTS_CARI_STOK ON AKTBLITSUTS(CARI_KODU, STOK_KODU) INCLUDE (GTIN, SERI_NO, BILDIRIM)`)
+  } else {
+    // Migration: CONTAINER_TYPE kolonu
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLITSUTS') AND name = 'CONTAINER_TYPE')
+        ALTER TABLE AKTBLITSUTS ADD CONTAINER_TYPE CHAR(1) NULL;
+    `)
+  }
+
+  // ----- TBLFATUIRS ve TBLSIPAMAS Migration -----
+  const itsUtsKolonlari = [
+    { name: 'FAST_DURUM', type: 'VARCHAR(3) NULL' },
+    { name: 'FAST_TARIH', type: 'DATETIME NULL' },
+    { name: 'FAST_KULLANICI', type: 'VARCHAR(35) NULL' },
+    { name: 'ITS_BILDIRIM', type: 'VARCHAR(3) NULL' },
+    { name: 'ITS_TARIH', type: 'DATETIME NULL' },
+    { name: 'ITS_KULLANICI', type: 'VARCHAR(35) NULL' },
+    { name: 'UTS_BILDIRIM', type: 'VARCHAR(3) NULL' },
+    { name: 'UTS_TARIH', type: 'DATETIME NULL' },
+    { name: 'UTS_KULLANICI', type: 'VARCHAR(35) NULL' },
+    { name: 'PTS_ID', type: 'BIGINT NULL' },
+    { name: 'PTS_TARIH', type: 'DATETIME NULL' },
+    { name: 'PTS_KULLANICI', type: 'VARCHAR(35) NULL' }
+  ]
+
+  // TBLFATUIRS tablosuna kolonları ekle
+  for (const kolon of itsUtsKolonlari) {
+    await pool.request().query(`
+      IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'TBLFATUIRS') AND type in (N'U'))
+      BEGIN
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('TBLFATUIRS') AND name = '${kolon.name}')
+          ALTER TABLE TBLFATUIRS ADD ${kolon.name} ${kolon.type};
+      END
+    `)
+  }
+
+  // TBLSIPAMAS tablosuna kolonları ekle
+  for (const kolon of itsUtsKolonlari) {
+    await pool.request().query(`
+      IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'TBLSIPAMAS') AND type in (N'U'))
+      BEGIN
+        IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('TBLSIPAMAS') AND name = '${kolon.name}')
+          ALTER TABLE TBLSIPAMAS ADD ${kolon.name} ${kolon.type};
+      END
+    `)
+  }
+}
+
 export default {
   initializeDatabase
 }
+

@@ -2,8 +2,12 @@ import express from 'express'
 import documentService from '../services/documentService.js'
 import { parseITSBarcode, formatMiad } from '../utils/itsParser.js'
 import { log } from '../utils/logger.js'
+import companyMiddleware from '../middleware/companyMiddleware.js'
 
 const router = express.Router()
+
+// Tüm document route'larına company middleware uygula
+router.use(companyMiddleware)
 
 // GET /api/documents - Tüm belgeleri getir (tarih zorunlu)
 router.get('/', async (req, res) => {

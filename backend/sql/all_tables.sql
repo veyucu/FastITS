@@ -57,6 +57,11 @@ BEGIN
     IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLKULLANICI') AND name = 'YETKI_KULLANICILAR')
         ALTER TABLE AKTBLKULLANICI ADD YETKI_KULLANICILAR BIT DEFAULT 0;
     
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLKULLANICI') AND name = 'YETKI_SIRKETLER')
+        ALTER TABLE AKTBLKULLANICI ADD YETKI_SIRKETLER NVARCHAR(500) NULL;
+    -- YETKI_SIRKETLER: Virgülle ayrılmış şirket kodları (örn: "001,002,005")
+    -- NULL veya boş = tüm şirketlere erişim (admin için)
+    
     PRINT '✅ AKTBLKULLANICI yetki kolonları kontrol edildi';
 END
 GO

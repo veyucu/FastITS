@@ -33,9 +33,13 @@ const UsersPage = () => {
             pts: true,
             mesajKodlari: false,
             ayarlar: false,
+            sirketAyarlari: false,
             kullanicilar: false
-        }
+        },
+        authorizedCompanies: ''
     })
+
+    const [companies, setCompanies] = useState([])
 
     const [newPassword, setNewPassword] = useState('')
 
@@ -58,6 +62,14 @@ const UsersPage = () => {
 
     useEffect(() => {
         fetchUsers()
+        // Şirketleri yükle
+        const loadCompanies = async () => {
+            const result = await apiService.getCompanies()
+            if (result.success) {
+                setCompanies(result.data || [])
+            }
+        }
+        loadCompanies()
     }, [])
 
     // Grid Column Definitions
@@ -152,7 +164,8 @@ const UsersPage = () => {
                 mesajKodlari: false,
                 ayarlar: false,
                 kullanicilar: false
-            }
+            },
+            authorizedCompanies: user.authorizedCompanies || ''
         })
         setShowAddModal(true)
     }
@@ -248,7 +261,8 @@ const UsersPage = () => {
                 mesajKodlari: false,
                 ayarlar: false,
                 kullanicilar: false
-            }
+            },
+            authorizedCompanies: ''
         })
     }
 
@@ -410,6 +424,7 @@ const UsersPage = () => {
                                         { key: 'pts', label: 'PTS Yönetimi' },
                                         { key: 'mesajKodlari', label: 'Mesaj Kodları' },
                                         { key: 'ayarlar', label: 'Ayarlar' },
+                                        { key: 'sirketAyarlari', label: 'Şirket Ayarları' },
                                         { key: 'kullanicilar', label: 'Kullanıcılar' }
                                     ].map(({ key, label }) => (
                                         <label key={key} className="flex items-center gap-2 cursor-pointer">
@@ -422,6 +437,41 @@ const UsersPage = () => {
                                             <span className="text-slate-300">{label}</span>
                                         </label>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Şirket Yetkileri */}
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Şirket Yetkileri</label>
+                                <p className="text-xs text-slate-500 mb-2">Boş bırakılırsa tüm şirketlere erişim izni verilir.</p>
+                                <div className="space-y-2 max-h-40 overflow-y-auto bg-dark-900/50 rounded-lg p-3">
+                                    {companies.length === 0 ? (
+                                        <span className="text-slate-500 text-sm">Şirket listesi yükleniyor...</span>
+                                    ) : (
+                                        companies.map(company => {
+                                            const isChecked = formData.authorizedCompanies?.split(',').map(c => c.trim()).includes(company.sirket)
+                                            return (
+                                                <label key={company.sirket} className="flex items-center gap-2 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={isChecked}
+                                                        onChange={() => {
+                                                            const currentCodes = formData.authorizedCompanies ? formData.authorizedCompanies.split(',').map(c => c.trim()).filter(c => c) : []
+                                                            let newCodes
+                                                            if (isChecked) {
+                                                                newCodes = currentCodes.filter(c => c !== company.sirket)
+                                                            } else {
+                                                                newCodes = [...currentCodes, company.sirket]
+                                                            }
+                                                            setFormData({ ...formData, authorizedCompanies: newCodes.join(',') })
+                                                        }}
+                                                        className="w-4 h-4 rounded bg-dark-600 border-dark-500 text-primary-600"
+                                                    />
+                                                    <span className="text-slate-300">{company.sirket}</span>
+                                                </label>
+                                            )
+                                        })
+                                    )}
                                 </div>
                             </div>
                         </div>

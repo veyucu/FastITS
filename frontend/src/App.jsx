@@ -10,6 +10,7 @@ import PTSDetailPage from './pages/PTSDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import MesajKodlariPage from './pages/MesajKodlariPage'
 import UsersPage from './pages/UsersPage'
+import CompanySettingsPage from './pages/CompanySettingsPage'
 
 function App() {
   return (
@@ -88,6 +89,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <UsersPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/company-settings"
+            element={
+              <ProtectedRoute>
+                <CompanySettingsPage />
               </ProtectedRoute>
             }
           />

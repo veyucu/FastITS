@@ -1,4 +1,4 @@
-import db, { getPTSConnection, getConnection } from '../config/database.js'
+import db, { getPTSConnection, getConnection, getCurrentDatabase } from '../config/database.js'
 import sql from 'mssql'
 import iconv from 'iconv-lite'
 import { log } from '../utils/logger.js'
@@ -210,8 +210,8 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     console.log(`✅ Paket bulundu: ${transferId}`)
 
     // Ürün detaylarını getir - AKTBLITSMESAJ ve TBLSTSABIT ile join (tek sorgu)
-    // Database adını config'den al (dinamik)
-    const mainDbName = db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
+    // Database adını aktif şirketten al (dinamik)
+    const mainDbName = getCurrentDatabase() || db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
 
     const productsRequest = ptsPool.request()
     productsRequest.input('transferId', sql.BigInt, BigInt(transferId))
@@ -230,14 +230,14 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
 
     console.log(`✅ ${productsResult.recordset.length} ürün bulundu`)
 
-    // MUHASEBE2025 bağlantısı (sadece cari için)
-    const mainPool = await getConnection()
+    // Şirket veritabanı bağlantısı (cari için)
+    const companyPool = await getConnection()
 
     // Cari bilgisini getir (eğer SOURCE_GLN varsa)
     let cariName = null
     if (masterData.SOURCE_GLN) {
       try {
-        const cariRequest = mainPool.request()
+        const cariRequest = companyPool.request()
         cariRequest.input('gln', sql.VarChar, masterData.SOURCE_GLN)
         const cariResult = await cariRequest.query(`
           SELECT CARI_ISIM FROM TBLCASABIT WITH (NOLOCK) WHERE EMAIL = @gln
@@ -308,8 +308,8 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
     // Tarih filtresi tipine göre sorgu oluştur
     const dateColumn = dateFilterType === 'document' ? 'DOCUMENT_DATE' : 'KAYIT_TARIHI'
 
-    // Database adını config'den al (dinamik)
-    const mainDbName = db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
+    // Database adını aktif şirketten al (dinamik)
+    const mainDbName = getCurrentDatabase() || db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
 
     // Cari GLN kolon bilgisini ayarlardan al (cache'den senkron)
     const cariGlnBilgisi = settingsService.getSetting('cariGlnBilgisi') || 'EMAIL'

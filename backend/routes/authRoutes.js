@@ -1,7 +1,19 @@
 import express from 'express'
 import userService from '../services/userService.js'
+import companyService from '../services/companyService.js'
 
 const router = express.Router()
+
+// GET /api/auth/companies - Tüm şirketleri listele (login sayfası için)
+router.get('/companies', async (req, res) => {
+    try {
+        const result = await companyService.getAllCompanies()
+        res.json(result)
+    } catch (error) {
+        console.error('Companies error:', error)
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
 
 // POST /api/auth/login - Giriş yap
 router.post('/login', async (req, res) => {

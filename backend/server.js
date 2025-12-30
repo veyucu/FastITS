@@ -6,6 +6,7 @@ import ptsRouter from './routes/pts.js';
 import itsRouter from './routes/its.js';
 import settingsRouter from './routes/settings.js';
 import authRouter from './routes/authRoutes.js';
+import companyRouter from './routes/companyRoutes.js';
 import dbInitService from './services/dbInitService.js';
 import settingsService from './services/settingsService.js';
 
@@ -45,6 +46,7 @@ app.use('/api/pts', ptsRouter);
 app.use('/api/its', itsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/companies', companyRouter);
 
 // 404 handler
 app.use((req, res) => {

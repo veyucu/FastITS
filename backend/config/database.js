@@ -63,8 +63,103 @@ const ptsConfig = {
 let mainPool = null
 let ptsPool = null
 
-// Ana veritabanı bağlantısı (MUHASEBE2025)
+// Dinamik veritabanı bağlantı havuzu (şirket bazlı)
+const dynamicPools = new Map()
+
+/**
+ * Dinamik veritabanı bağlantısı (seçilen şirkete göre)
+ * @param {string} databaseName - Bağlanılacak veritabanı adı
+ */
+export const getDynamicConnection = async (databaseName) => {
+  if (!databaseName) {
+    // Database adı yoksa varsayılan bağlantıyı kullan
+    return getConnection()
+  }
+
+  try {
+    // Pool zaten var mı kontrol et
+    if (dynamicPools.has(databaseName)) {
+      const pool = dynamicPools.get(databaseName)
+      if (pool.connected) {
+        return pool
+      }
+      // Bağlantı kopmuşsa yeniden oluştur
+      dynamicPools.delete(databaseName)
+    }
+
+    // Yeni bağlantı oluştur
+    const dynamicConfig = {
+      server: process.env.DB_SERVER || 'NB2',
+      database: databaseName,
+      user: process.env.DB_USER || 'sa',
+      password: process.env.DB_PASSWORD || 'sapass1*',
+      options: {
+        encrypt: false,
+        trustServerCertificate: true,
+        enableArithAbort: true,
+        useUTC: false
+      },
+      pool: {
+        max: parseInt(process.env.DB_POOL_MAX) || 10,
+        min: parseInt(process.env.DB_POOL_MIN) || 0,
+        idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
+      },
+      connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 30000,
+      requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 60000
+    }
+
+    const pool = await new sql.ConnectionPool(dynamicConfig).connect()
+    dynamicPools.set(databaseName, pool)
+    console.log(`✅ Dinamik SQL bağlantısı başarılı (${databaseName})`)
+    return pool
+  } catch (error) {
+    console.error(`❌ Dinamik SQL bağlantı hatası (${databaseName}):`, error)
+    throw error
+  }
+}
+
+/**
+ * Tüm dinamik bağlantıları kapat
+ */
+export const closeDynamicConnections = async () => {
+  for (const [dbName, pool] of dynamicPools) {
+    try {
+      await pool.close()
+      console.log(`${dbName} dinamik bağlantısı kapatıldı`)
+    } catch (error) {
+      console.error(`${dbName} bağlantı kapatma hatası:`, error)
+    }
+  }
+  dynamicPools.clear()
+}
+
+// Aktif veritabanı context'i (request başına ayarlanır)
+let currentDatabase = null
+
+/**
+ * Aktif veritabanını ayarla (middleware tarafından çağrılır)
+ */
+export const setCurrentDatabase = (dbName) => {
+  currentDatabase = dbName?.trim() || null
+}
+
+/**
+ * Aktif veritabanını getir
+ */
+export const getCurrentDatabase = () => currentDatabase
+
+/**
+ * Ana veritabanı bağlantısı
+ * Eğer currentDatabase set edilmişse o veritabanına bağlanır (şirket bazlı)
+ * Set edilmemişse varsayılan veritabanına bağlanır
+ */
 export const getConnection = async () => {
+  // Aktif şirket veritabanı varsa onu kullan
+  if (currentDatabase) {
+    return getDynamicConnection(currentDatabase)
+  }
+
+  // Fallback: varsayılan veritabanı (sadece backend başlangıcında kullanılır)
   try {
     if (!mainPool) {
       mainPool = await sql.connect(mainConfig)
@@ -103,10 +198,12 @@ export const closeConnection = async () => {
       ptsPool = null
       console.log(`${ptsConfig.database} bağlantısı kapatıldı`)
     }
+    // Dinamik bağlantıları da kapat
+    await closeDynamicConnections()
   } catch (error) {
     console.error('Bağlantı kapatma hatası:', error)
   }
 }
 
-export default { getConnection, getPTSConnection, closeConnection, mainConfig, ptsConfig }
+export default { getConnection, getPTSConnection, getDynamicConnection, closeDynamicConnections, closeConnection, mainConfig, ptsConfig }
 

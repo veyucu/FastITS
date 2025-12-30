@@ -58,8 +58,7 @@ function loadPTSConfig(frontendSettings = null) {
     searchUrl: settingsHelper.getSetting('itsPaketSorguUrl', '/pts/app/search'),
     getPackageUrl: settingsHelper.getSetting('itsPaketIndirUrl', '/pts/app/GetPackage'),
     sendPackageUrl: settingsHelper.getSetting('itsPaketGonderUrl', '/pts/app/SendPackage'),
-    checkStatusUrl: settingsHelper.getSetting('itsCheckStatusUrl', '/common/app/verify'),
-    simulationMode: false
+    checkStatusUrl: settingsHelper.getSetting('itsCheckStatusUrl', '/common/app/verify')
   }
 
   return PTS_CONFIG
@@ -80,11 +79,6 @@ async function getAccessToken(settings = null) {
     loadPTSConfig(settings)
   }
 
-  // Simülasyon modu
-  if (PTS_CONFIG.simulationMode) {
-    log('🎭 Simülasyon modunda - Mock token dönülüyor')
-    return 'MOCK_TOKEN_FOR_SIMULATION'
-  }
 
   try {
     log('🔑 Token alınıyor...')
@@ -136,15 +130,6 @@ async function searchPackages(startDate, endDate, settings = null) {
   // Ayarlar verildiyse güncelle
   if (settings) {
     loadPTSConfig(settings)
-  }
-  // Simülasyon modu
-  if (PTS_CONFIG.simulationMode) {
-    log('🎭 Simülasyon modunda - Mock paket listesi dönülüyor')
-    return {
-      success: true,
-      data: ['123456789', '987654321', '555555555'], // Mock transfer ID'ler
-      message: '3 paket bulundu (Simülasyon)'
-    }
   }
 
   try {
@@ -206,37 +191,6 @@ async function downloadPackage(transferId, settings = null) {
   // Ayarlar verildiyse güncelle
   if (settings) {
     loadPTSConfig(settings)
-  }
-  // Simülasyon modu
-  if (PTS_CONFIG.simulationMode) {
-    console.log(`🎭 Simülasyon modunda - Mock paket verisi dönülüyor: ${transferId}`)
-    return {
-      success: true,
-      data: {
-        transferId,
-        documentNumber: `DOC-${transferId}`,
-        documentDate: new Date().toISOString().split('T')[0],
-        sourceGLN: '8680001000000',
-        destinationGLN: PTS_CONFIG.glnNo,
-        products: [
-          {
-            carrierLabel: 'SSCC123456789',
-            gtin: '08699544000015',
-            expirationDate: '2025-12-31',
-            lotNumber: 'LOT123',
-            serialNumber: 'SN001'
-          },
-          {
-            carrierLabel: 'SSCC123456789',
-            gtin: '08699544000015',
-            expirationDate: '2025-12-31',
-            lotNumber: 'LOT123',
-            serialNumber: 'SN002'
-          }
-        ]
-      },
-      message: '2 ürün bulundu (Simülasyon)'
-    }
   }
 
   try {
@@ -463,15 +417,6 @@ async function sendPackage(packageData, settings = null) {
     loadPTSConfig(settings)
   }
 
-  // Simülasyon modu
-  if (PTS_CONFIG.simulationMode) {
-    log('🎭 Simülasyon modunda - Mock transfer ID dönülüyor')
-    return {
-      success: true,
-      transferId: `SIM-${Date.now()}`,
-      message: 'Bildirim başarılı (Simülasyon)'
-    }
-  }
 
   try {
     log('📤 PTS Bildirimi gönderiliyor...')

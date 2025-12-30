@@ -1089,3 +1089,5 @@ export default {
     getAllMesajKodlari,
     getMesajByCode
 }
+
+
