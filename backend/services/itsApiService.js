@@ -7,7 +7,11 @@ import axios from 'axios'
 import { getConnection, getPTSConnection } from '../config/database.js'
 import * as settingsHelper from '../utils/settingsHelper.js'
 import { log } from '../utils/logger.js'
-import { toSqlTurkishChars, fixTurkishChars } from '../utils/stringUtils.js'
+import { toSqlTurkishChars } from '../utils/stringUtils.js'
+import { getMessage } from './itsMessageService.js'
+
+// Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
+// Not: ITS mesajları itsMessageService cache'inden alınıyor
 
 /**
  * Ayarları yükle ve config oluştur
@@ -329,28 +333,14 @@ export const depoAlisBildirimi = async (products, frontendSettings = null) => {
 
         log('✅ ITS Alış Bildirimi yanıtı:', response.data)
 
-        // Durum mesajlarını al
-        let durumMesajlari = {}
-        try {
-            const ptsPool = await getPTSConnection()
-            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
-            mesajResult.recordset.forEach(row => {
-                // Türkçe karakter düzeltmesi uygula
-                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
-            })
-        } catch (e) {
-            log('⚠️ Mesaj kodları alınamadı:', e.message)
-        }
-
-        // Sonuçları işle
+        // Sonuçları işle (mesajlar cache'den alınıyor)
         const results = (response.data?.productList || []).map(item => {
-            // Baştaki sıfırları temizle (00000 -> 0, 00045 -> 45)
             const normalizedUc = String(item.uc).replace(/^0+/, '') || '0'
             return {
                 gtin: item.gtin,
                 seriNo: item.sn,
-                durum: item.uc,  // uc = durum kodu (orijinal değer)
-                durumMesaji: durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
+                durum: item.uc,
+                durumMesaji: getMessage(normalizedUc, normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
             }
         })
 
@@ -424,27 +414,14 @@ export const depoIadeAlisBildirimi = async (karsiGlnNo, products, frontendSettin
 
         log('✅ ITS İade Alış Bildirimi yanıtı:', response.data)
 
-        // Durum mesajlarını al
-        let durumMesajlari = {}
-        try {
-            const ptsPool = await getPTSConnection()
-            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
-            mesajResult.recordset.forEach(row => {
-                // Türkçe karakter düzeltmesi uygula
-                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
-            })
-        } catch (e) {
-            log('⚠️ Mesaj kodları alınamadı:', e.message)
-        }
-
+        // Sonuçları işle (mesajlar cache'den alınıyor)
         const results = (response.data?.productList || []).map(item => {
-            // Baştaki sıfırları temizle (00000 -> 0, 00045 -> 45)
             const normalizedUc = String(item.uc).replace(/^0+/, '') || '0'
             return {
                 gtin: item.gtin,
                 seriNo: item.sn,
                 durum: item.uc,
-                durumMesaji: durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
+                durumMesaji: getMessage(normalizedUc, normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
             }
         })
 
@@ -514,18 +491,7 @@ export const dogrulamaYap = async (products, frontendSettings = null) => {
 
         log('✅ ITS Doğrulama yanıtı:', response.data)
 
-        // Durum mesajlarını al
-        let durumMesajlari = {}
-        try {
-            const ptsPool = await getPTSConnection()
-            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
-            mesajResult.recordset.forEach(row => {
-                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
-            })
-        } catch (e) {
-            log('⚠️ Mesaj kodları alınamadı:', e.message)
-        }
-
+        // Sonuçları işle (mesajlar cache'den alınıyor)
         const results = (response.data?.productList || []).map(item => {
             const normalizedUc = String(item.uc).replace(/^0+/, '') || '0'
             return {
@@ -533,7 +499,7 @@ export const dogrulamaYap = async (products, frontendSettings = null) => {
                 seriNo: item.sn,
                 durum: item.uc,
                 statu: item.status,
-                durumMesaji: durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
+                durumMesaji: getMessage(normalizedUc, normalizedUc == '0' ? 'Başarılı' : `Hata: ${item.uc}`)
             }
         })
 
@@ -597,18 +563,6 @@ export const durumSorgula = async (products, frontendSettings = null) => {
 
         log('✅ ITS Durum Sorgulama yanıtı:', response.data)
 
-        // Mesaj kodlarını al
-        let durumMesajlari = {}
-        try {
-            const ptsPool = await getPTSConnection()
-            const mesajResult = await ptsPool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
-            mesajResult.recordset.forEach(row => {
-                durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
-            })
-        } catch (e) {
-            log('⚠️ Mesaj kodları alınamadı:', e.message)
-        }
-
         // responseObjectList'den parse et (C# kodundaki gibi)
         const responseList = response.data?.responseObjectList || response.data?.productList || []
 
@@ -634,7 +588,7 @@ export const durumSorgula = async (products, frontendSettings = null) => {
                 // GLN'leri parametre olarak ekle
                 const glnParams = glnArray.map((_, i) => `@gln${i}`).join(', ')
                 const query = `
-                    SELECT ${glnColumn} AS GLN_NO, CARI_ISIM 
+                    SELECT ${glnColumn} AS GLN_NO, DBO.TRK(CARI_ISIM) AS CARI_ISIM 
                     FROM TBLCASABIT WITH (NOLOCK) 
                     WHERE ${glnColumn} IN (${glnParams})
                 `
@@ -646,7 +600,7 @@ export const durumSorgula = async (products, frontendSettings = null) => {
 
                 const result = await request.query(query)
                 result.recordset.forEach(row => {
-                    glnCariMap[row.GLN_NO] = fixTurkishChars(row.CARI_ISIM)
+                    glnCariMap[row.GLN_NO] = row.CARI_ISIM
                 })
 
                 log('📋 GLN-Cari eşleşmesi:', Object.keys(glnCariMap).length, 'cari bulundu')
@@ -661,17 +615,18 @@ export const durumSorgula = async (products, frontendSettings = null) => {
         // GLN'i okunabilir isme çevir
         const formatGlnName = (gln) => {
             if (!gln) return null
-            if (gln === bizimGln) return depoAdi  // BİZİM yerine Depo Adı
-            return glnCariMap[gln] || gln  // Cari bulunamazsa GLN'in kendisini göster
+            if (gln === bizimGln) return depoAdi
+            return glnCariMap[gln] || gln
         }
 
+        // Sonuçları map'le (mesajlar cache'den alınıyor)
         const results = responseList.map(item => {
             const normalizedUc = String(item.uc || '').replace(/^0+/, '') || '0'
             const gln1Adi = formatGlnName(item.gln1)
             const gln2Adi = formatGlnName(item.gln2)
 
-            // Mesajı al ve GLN1/GLN2 ifadelerini değiştir
-            let mesaj = durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Kod: ${item.uc}`)
+            // Mesajı cache'den al ve GLN1/GLN2 ifadelerini değiştir
+            let mesaj = getMessage(normalizedUc, normalizedUc == '0' ? 'Başarılı' : `Kod: ${item.uc}`)
             if (gln1Adi) mesaj = mesaj.replace(/GLN1/gi, gln1Adi)
             if (gln2Adi) mesaj = mesaj.replace(/GLN2/gi, gln2Adi)
 
@@ -717,33 +672,65 @@ export const basarisizlariSorgula = async (products, frontendSettings = null) =>
 /**
  * Bildirim Sonuçlarını Veritabanına Kaydet
  * AKTBLITSUTS tablosundaki ilgili kayıtların durumunu güncelle
+ * Temp Table + JOIN ile performanslı toplu güncelleme (tüm SQL Server sürümleriyle uyumlu)
  */
-export const updateBildirimDurum = async (results) => {
+export const updateBildirimDurum = async (results, kullanici) => {
     try {
         const pool = await getConnection()
-        let updatedCount = 0
 
-        for (const item of results) {
-            if (!item.recNo) continue
+        // recNo'su olan kayıtları filtrele
+        const validResults = results.filter(item => item.recNo)
 
-            const query = `
-        UPDATE AKTBLITSUTS
-        SET BILDIRIM = @durum,
-            BILDIRIM_TARIHI = GETDATE()
-        WHERE RECNO = @recNo
-      `
-
-            const request = pool.request()
-            request.input('durum', item.durum || 'B')  // B = Bildirildi
-            request.input('recNo', item.recNo)
-
-            const result = await request.query(query)
-            if (result.rowsAffected[0] > 0) {
-                updatedCount++
-            }
+        if (validResults.length === 0) {
+            return { success: true, updatedCount: 0 }
         }
 
-        log('✅ Bildirim durumları güncellendi:', updatedCount)
+        // SQL Server VALUES limiti: 1000 satır
+        const CHUNK_SIZE = 1000
+
+        // INSERT statement'ları oluştur (1000'lik chunk'lar halinde)
+        const insertStatements = []
+        for (let i = 0; i < validResults.length; i += CHUNK_SIZE) {
+            const chunk = validResults.slice(i, i + CHUNK_SIZE)
+            const valuesList = chunk.map(item =>
+                `(${Number(item.recNo)}, '${String(item.durum || 'B').replace(/'/g, "''")}')`
+            ).join(',\n            ')
+            insertStatements.push(`INSERT INTO #BildirimUpdate (RECNO, DURUM) VALUES ${valuesList};`)
+        }
+
+        // Kullanıcı adını escape et
+        const safeKullanici = kullanici ? String(kullanici).replace(/'/g, "''") : ''
+
+        const query = `
+            -- Temp table oluştur
+            CREATE TABLE #BildirimUpdate (
+                RECNO INT PRIMARY KEY,
+                DURUM NVARCHAR(10)
+            );
+
+            -- Verileri chunk'lar halinde ekle
+            ${insertStatements.join('\n            ')}
+
+            -- JOIN ile toplu güncelle
+            UPDATE A
+            SET A.BILDIRIM = T.DURUM,
+                A.BILDIRIM_TARIHI = GETDATE(),
+                A.BILDIRIM_KULLANICI = '${safeKullanici}'
+            FROM AKTBLITSUTS A
+            INNER JOIN #BildirimUpdate T ON A.RECNO = T.RECNO;
+
+            -- Temp table'ı temizle
+            DROP TABLE #BildirimUpdate;
+        `
+
+        const request = pool.request()
+        const result = await request.query(query)
+
+        // UPDATE statement'ın index'i = 1 (CREATE) + INSERT sayısı + 0 (UPDATE kendi)
+        const updateIndex = 1 + insertStatements.length
+        const updatedCount = result.rowsAffected[updateIndex] || 0
+
+        log('✅ Bildirim durumları toplu güncellendi:', updatedCount)
         return { success: true, updatedCount }
     } catch (error) {
         console.error('❌ Bildirim Durum Güncelleme Hatası:', error.message)
@@ -785,7 +772,7 @@ export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu
 
         const request = pool.request()
         request.input('itsBildirim', itsBildirim)
-        request.input('kullanici', kullanici || 'SYSTEM')
+        request.input('kullanici', kullanici)
         request.input('subeKodu', subeKodu)
         request.input('fatirsNo', fatirs_no)
         request.input('ftirsip', ftirsip)
@@ -821,78 +808,55 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili, k
         log(`📋 PTS Bildirim durumu güncelleniyor: TRANSFER_ID=${transferId}, Sonuç sayısı=${results?.length || 0}, tumBasarili=${tumBasarili}, kullanici=${kullanici}`)
 
         const pool = await getPTSConnection()
-        const ptsPool = pool  // PTS veritabanı bağlantısı
 
         // 1. AKTBLPTSTRA tablosundaki ürünlerin durumunu TOPLU güncelle
-        // Temp table + JOIN ile tek sorguda güncelleme (1000 kayıt = 2 sorgu)
         const validItems = (results || []).filter(item => item.id && item.durum !== undefined)
 
         if (validItems.length > 0) {
             try {
-                // Durum bazlı gruplama - aynı duruma sahip ID'leri grupla
-                const durumGroups = {}
-                validItems.forEach(item => {
-                    const durum = String(item.durum)
-                    if (!durumGroups[durum]) {
-                        durumGroups[durum] = []
-                    }
-                    durumGroups[durum].push(item.id)
-                })
+                // SQL Server VALUES limiti: 1000 satır
+                const CHUNK_SIZE = 1000
 
-                let totalUpdated = 0
-                const durumKeys = Object.keys(durumGroups)
-                log(`📋 ${durumKeys.length} farklı durum kodu için güncelleme yapılacak`)
-
-                // Her durum grubu için tek UPDATE sorgusu
-                for (const durum of durumKeys) {
-                    const ids = durumGroups[durum].map(Number).sort((a, b) => a - b) // Sayıya çevir ve sırala
-                    const minId = ids[0]
-                    const maxId = ids[ids.length - 1]
-                    const isContiguous = (maxId - minId + 1) === ids.length
-
-                    if (isContiguous) {
-                        // ID'ler ardışık - BETWEEN ile tek sorgu (çok hızlı)
-                        const request = ptsPool.request()
-                        request.input('durum', durum)
-                        request.input('transferId', transferId)
-                        request.input('minId', minId)
-                        request.input('maxId', maxId)
-                        request.input('kullanici', kullanici || 'SYSTEM')
-                        const updateQuery = `
-                            UPDATE AKTBLPTSTRA
-                            SET BILDIRIM = @durum,
-                                BILDIRIM_TARIHI = GETDATE(),
-                                BILDIRIM_KULLANICI = @kullanici
-                            WHERE TRANSFER_ID = @transferId
-                              AND ID BETWEEN @minId AND @maxId
-                        `
-                        const result = await request.query(updateQuery)
-                        totalUpdated += result.rowsAffected[0] || 0
-                        log(`📝 Durum ${durum}: ${ids.length} kayıt (BETWEEN ${minId}-${maxId})`)
-                    } else {
-                        // ID'ler ardışık değil - IN ile chunk'lar halinde
-                        const CHUNK_SIZE = 900
-                        for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-                            const chunk = ids.slice(i, i + CHUNK_SIZE)
-                            const idList = chunk.join(',')
-                            const request = ptsPool.request()
-                            request.input('durum', durum)
-                            request.input('transferId', transferId)
-                            request.input('kullanici', kullanici || 'SYSTEM')
-                            const updateQuery = `
-                                UPDATE AKTBLPTSTRA
-                                SET BILDIRIM = @durum,
-                                    BILDIRIM_TARIHI = GETDATE(),
-                                    BILDIRIM_KULLANICI = @kullanici
-                                WHERE TRANSFER_ID = @transferId
-                                  AND ID IN (${idList})
-                            `
-                            const result = await request.query(updateQuery)
-                            totalUpdated += result.rowsAffected[0] || 0
-                        }
-                        log(`📝 Durum ${durum}: ${ids.length} kayıt (IN chunks)`)
-                    }
+                // INSERT statement'ları oluştur
+                const insertStatements = []
+                for (let i = 0; i < validItems.length; i += CHUNK_SIZE) {
+                    const chunk = validItems.slice(i, i + CHUNK_SIZE)
+                    const valuesList = chunk.map(item =>
+                        `(${Number(item.id)}, '${String(item.durum).replace(/'/g, "''")}')`
+                    ).join(',')
+                    insertStatements.push(`INSERT INTO #PTSBildirimUpdate (ID, DURUM) VALUES ${valuesList};`)
                 }
+
+                const query = `
+                    -- Temp table oluştur
+                    CREATE TABLE #PTSBildirimUpdate (
+                        ID INT PRIMARY KEY,
+                        DURUM NVARCHAR(10)
+                    );
+
+                    -- Verileri chunk'lar halinde ekle
+                    ${insertStatements.join('\n                    ')}
+
+                    -- JOIN ile toplu güncelle
+                    UPDATE A
+                    SET A.BILDIRIM = T.DURUM,
+                        A.BILDIRIM_TARIHI = GETDATE(),
+                        A.BILDIRIM_KULLANICI = @kullanici
+                    FROM AKTBLPTSTRA A
+                    INNER JOIN #PTSBildirimUpdate T ON A.ID = T.ID
+                    WHERE A.TRANSFER_ID = @transferId;
+
+                    -- Temp table'ı temizle
+                    DROP TABLE #PTSBildirimUpdate;
+                `
+
+                const request = pool.request()
+                request.input('transferId', transferId)
+                request.input('kullanici', kullanici)
+
+                const result = await request.query(query)
+                const updateIndex = 1 + insertStatements.length
+                const totalUpdated = result.rowsAffected[updateIndex] || 0
 
                 log(`✅ AKTBLPTSTRA: ${totalUpdated}/${validItems.length} kayıt güncellendi`)
             } catch (batchError) {
@@ -911,10 +875,10 @@ export const updatePTSBildirimDurum = async (transferId, results, tumBasarili, k
                 BILDIRIM_KULLANICI = @kullanici
             WHERE TRANSFER_ID = @transferId
         `
-        const masRequest = ptsPool.request()
+        const masRequest = pool.request()
         masRequest.input('durum', masDurum)
         masRequest.input('transferId', transferId)
-        masRequest.input('kullanici', kullanici || 'SYSTEM')
+        masRequest.input('kullanici', kullanici)
         const masResult = await masRequest.query(masQuery)
 
         if (masResult.rowsAffected[0] > 0) {
@@ -1030,12 +994,12 @@ export const getAllMesajKodlari = async () => {
     try {
         const pool = await getPTSConnection()
 
-        const query = `SELECT ID, MESAJ FROM AKTBLITSMESAJ ORDER BY ID`
+        const query = `SELECT ID, DBO.TRK(MESAJ) AS MESAJ FROM AKTBLITSMESAJ ORDER BY ID`
         const result = await pool.request().query(query)
 
         const records = result.recordset.map(row => ({
             id: row.ID,
-            mesaj: fixTurkishChars(row.MESAJ)
+            mesaj: row.MESAJ // DBO.TRK SQL'de uygulandı
         }))
 
         return {

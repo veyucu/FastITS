@@ -14,6 +14,7 @@ const BulkScanModal = ({
   docType,
   ftirsip,
   cariKodu,
+  subeKodu,
   items = [],
   onSuccess,
   playSuccessSound,
@@ -52,13 +53,13 @@ const BulkScanModal = ({
   const getKullanici = () => {
     try {
       const userData = JSON.parse(localStorage.getItem('user') || '{}')
-      return userData.username || 'SYSTEM'
+      return userData.username
     } catch {
       return 'SYSTEM'
     }
   }
 
-  // Toplu okutma işlemi
+  // Toplu okutma işlemi - TEK API çağrısı ile
   const handleBulkScan = async () => {
     const lines = barcodeText.split('\n').filter(line => line.trim())
 
@@ -70,97 +71,96 @@ const BulkScanModal = ({
     setLoading(true)
     setResults(null)
 
-    const successItems = []
-    const errorItems = []
-    const kullanici = getKullanici()
+    const parsedBarcodes = []
+    const parseErrors = []
 
+    // 1. Tüm barkodları frontend'de parse et
     for (let i = 0; i < lines.length; i++) {
       const barcode = lines[i].trim()
 
-      try {
-        // Barkodu parse et
-        const parsed = parseITSBarcode(barcode)
+      const parsed = parseITSBarcode(barcode)
 
-        if (!parsed) {
-          errorItems.push({
-            line: i + 1,
-            barcode: barcode.substring(0, 30) + '...',
-            message: 'Geçersiz ITS karekod formatı'
-          })
-          continue
-        }
-
-        // Ürünü bul
-        const matchedItem = items.find(item => {
-          const itemGtin = item.gtin?.replace(/^0+/, '') || ''
-          const parsedGtin = parsed.gtin?.replace(/^0+/, '') || ''
-          return itemGtin === parsedGtin
-        })
-
-        if (!matchedItem) {
-          errorItems.push({
-            line: i + 1,
-            barcode: barcode.substring(0, 30) + '...',
-            message: `GTIN ${parsed.gtin} belgede bulunamadı`
-          })
-          continue
-        }
-
-        // API'ye kaydet
-        const response = await apiService.saveITSBarcode({
-          kayitTipi: 'ITS',
-          gtin: parsed.gtin,
-          seriNo: parsed.serialNumber,
-          miad: parsed.expiryDate,
-          lotNo: parsed.lotNumber,
-          stokKodu: matchedItem.stokKodu,
-          straInc: matchedItem.straInc,
-          tarih: matchedItem.tarih,
-          gckod: matchedItem.gckod,
-          belgeNo: documentNo,
-          belgeTip: docType,
-          subeKodu: matchedItem.subeKodu,
-          ilcGtin: matchedItem.ilcGtin,
-          expectedQuantity: matchedItem.miktar,
-          ftirsip: ftirsip,
-          cariKodu: cariKodu,
-          kullanici: kullanici
-        })
-
-        if (response.success) {
-          successItems.push({
-            line: i + 1,
-            barcode: barcode.substring(0, 30) + '...',
-            stokKodu: matchedItem.stokKodu
-          })
-        } else {
-          errorItems.push({
-            line: i + 1,
-            barcode: barcode.substring(0, 30) + '...',
-            message: response.message || 'Kaydetme hatası'
-          })
-        }
-      } catch (error) {
-        errorItems.push({
+      if (!parsed) {
+        parseErrors.push({
           line: i + 1,
           barcode: barcode.substring(0, 30) + '...',
-          message: error.message || 'Beklenmeyen hata'
+          message: 'Geçersiz ITS karekod formatı'
+        })
+        continue
+      }
+
+      // Ürünü bul
+      const matchedItem = items.find(item => {
+        const parsedGtin = parsed.gtin?.replace(/^0+/, '') || ''
+        const itemGtin = (item.barcode || '')?.replace(/^0+/, '')
+        return itemGtin === parsedGtin || item.stokKodu === parsed.gtin
+      })
+
+      if (!matchedItem) {
+        parseErrors.push({
+          line: i + 1,
+          barcode: barcode.substring(0, 30) + '...',
+          message: `GTIN ${parsed.gtin} belgede bulunamadı`
+        })
+        continue
+      }
+
+      parsedBarcodes.push({
+        line: i + 1,
+        seriNo: parsed.serialNumber,
+        gtin: parsed.gtin,
+        miad: parsed.expiryDate,
+        lot: parsed.lotNumber,
+        stokKodu: matchedItem.stokKodu,
+        harRecno: matchedItem.itemId
+      })
+    }
+
+    // 2. Parse edilen barkodları teke API çağrısı ile kaydet
+    let apiResult = { successCount: 0, duplicateCount: 0, errors: [] }
+
+    if (parsedBarcodes.length > 0) {
+      // subeKodu prop'tan gelmemişse documentId'den parse et
+      const effectiveSubeKodu = subeKodu || documentId?.split('|')[0]
+
+      const documentInfo = {
+        belgeNo: documentNo,
+        ftirsip: ftirsip,
+        cariKodu: cariKodu,
+        subeKodu: effectiveSubeKodu,
+        stokKodu: parsedBarcodes[0]?.stokKodu,
+        harRecno: parsedBarcodes[0]?.harRecno
+      }
+
+      const response = await apiService.saveITSBarcodeBulk(parsedBarcodes, documentInfo)
+
+      if (response.success) {
+        apiResult = response
+      } else {
+        parseErrors.push({
+          line: 0,
+          barcode: '-',
+          message: response.message || 'Toplu kayıt hatası'
         })
       }
     }
 
+    // 3. Sonuçları birleştir
+    const allErrors = [...parseErrors, ...(apiResult.errors || [])]
+
     setResults({
       totalCount: lines.length,
-      successCount: successItems.length,
-      errorCount: errorItems.length,
-      errors: errorItems
+      successCount: apiResult.successCount || 0,
+      errorCount: allErrors.length,
+      duplicateCount: apiResult.duplicateCount || 0,
+      errors: allErrors
     })
 
-    if (successItems.length > 0) {
+    if (apiResult.successCount > 0) {
       playSuccessSound?.()
       onSuccess?.()
     }
-    if (errorItems.length > 0) {
+    if (allErrors.length > 0) {
       playErrorSound?.()
     }
 
@@ -229,7 +229,7 @@ const BulkScanModal = ({
               <div
                 ref={lineNumbersRef}
                 className="w-10 bg-dark-700 text-dark-400 text-right pr-2 py-2 font-mono text-sm overflow-hidden select-none"
-                style={{ lineHeight: '1.5' }}
+                style={{ lineHeight: '1.5', whiteSpace: 'pre-line' }}
               >
                 {Array.from({ length: Math.max(barcodeText.split('\n').length, 10) }, (_, i) => i + 1).join('\n')}
               </div>

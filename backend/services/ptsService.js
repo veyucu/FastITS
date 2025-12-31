@@ -1,39 +1,13 @@
 import axios from 'axios'
 import AdmZip from 'adm-zip'
 import xml2js from 'xml2js'
-import iconv from 'iconv-lite'
 import * as ptsDbService from './ptsDbService.js'
 import * as settingsHelper from '../utils/settingsHelper.js'
 import { log } from '../utils/logger.js'
+import { getMessage } from './itsMessageService.js'
 
-/**
- * Türkçe karakter düzeltme fonksiyonu - SQL Server CP1254 to UTF-8
- */
-const fixTurkishChars = (str) => {
-  if (!str || typeof str !== 'string') return str
-  try {
-    let fixed = str
-    try {
-      const buf = Buffer.from(fixed, 'latin1')
-      fixed = iconv.decode(buf, 'cp1254')
-    } catch (e) { /* iconv hatası - devam et */ }
-    if (fixed.includes('?') || fixed.match(/[\u0080-\u00FF]/)) {
-      const charMap = {
-        'Ä°': 'İ', 'Ä±': 'ı', 'ÅŸ': 'ş', 'Åž': 'Ş',
-        'Ã§': 'ç', 'Ã‡': 'Ç', 'ÄŸ': 'ğ', 'Äž': 'Ğ',
-        'Ã¼': 'ü', 'Ãœ': 'Ü', 'Ã¶': 'ö', 'Ã–': 'Ö',
-        'Â': '', '�': '', '\\u00DD': 'İ', '\\u00FD': 'ı',
-        '\\u00DE': 'Ş', '\\u00FE': 'ş', '\\u00D0': 'Ğ', '\\u00F0': 'ğ',
-      }
-      for (const [wrong, correct] of Object.entries(charMap)) {
-        fixed = fixed.split(wrong).join(correct)
-      }
-    }
-    return fixed.trim()
-  } catch (error) {
-    return str
-  }
-}
+// Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
+// Not: ITS mesajları itsMessageService cache'inden alınıyor
 
 // PTS Web Servis Entegrasyonu - Ayarlardan yüklenir
 let PTS_CONFIG = null
@@ -194,8 +168,6 @@ async function downloadPackage(transferId, settings = null) {
   }
 
   try {
-    console.log(`📥 Paket indiriliyor: ${transferId}`)
-
     const token = await getAccessToken()
     if (!token) {
       return {
@@ -350,15 +322,6 @@ async function downloadPackage(transferId, settings = null) {
       }
     }
 
-    console.log(`✅ Paket parse edildi:`, {
-      transferId,
-      documentNumber: packageInfo.documentNumber,
-      documentDate: packageInfo.documentDate,
-      sourceGLN: packageInfo.sourceGLN,
-      destinationGLN: packageInfo.destinationGLN,
-      productCount: packageInfo.products.length
-    })
-
     // NOT: Veritabanına kaydetme işlemi route'da yapılıyor (kayitKullanici bilgisiyle birlikte)
     // Bu fonksiyon sadece paketi indirip parse ediyor
 
@@ -385,7 +348,7 @@ async function downloadPackage(transferId, settings = null) {
  */
 async function queryPackage(transferId, settings = null) {
   try {
-    console.log(`🔍 Paket sorgulanıyor: ${transferId}`)
+    (`🔍 Paket sorgulanıyor: ${transferId}`)
 
     // Paketi indir ve detaylarını döndür
     return await downloadPackage(transferId, settings)
@@ -608,20 +571,6 @@ async function durumSorgula(transferId, products, settings = null) {
     // Response'dan ürün listesini al
     const responseList = response.data?.responseObjectList || response.data?.productList || []
 
-    // Mesaj kodlarını AKTBLITSMESAJ tablosundan al
-    let durumMesajlari = {}
-    try {
-      const db = await import('../config/database.js')
-      const pool = await db.getPTSConnection()
-      const mesajResult = await pool.request().query('SELECT ID, MESAJ FROM AKTBLITSMESAJ')
-      mesajResult.recordset.forEach(row => {
-        durumMesajlari[row.ID] = fixTurkishChars(row.MESAJ)
-      })
-      log(`📋 ${Object.keys(durumMesajlari).length} mesaj kodu yüklendi`)
-    } catch (e) {
-      log('⚠️ Mesaj kodları alınamadı:', e.message)
-    }
-
     // Benzersiz GLN'leri topla (bizimGln hariç)
     const uniqueGlns = new Set()
     responseList.forEach(item => {
@@ -645,7 +594,7 @@ async function durumSorgula(transferId, products, settings = null) {
         // GLN'leri parametre olarak ekle
         const glnParams = glnArray.map((_, i) => `@gln${i}`).join(', ')
         const query = `
-          SELECT ${glnColumn} AS GLN_NO, CARI_ISIM 
+          SELECT ${glnColumn} AS GLN_NO, DBO.TRK(CARI_ISIM) AS CARI_ISIM 
           FROM TBLCASABIT WITH (NOLOCK) 
           WHERE ${glnColumn} IN (${glnParams})
         `
@@ -657,7 +606,7 @@ async function durumSorgula(transferId, products, settings = null) {
 
         const result = await request.query(query)
         result.recordset.forEach(row => {
-          glnCariMap[row.GLN_NO] = fixTurkishChars(row.CARI_ISIM)
+          glnCariMap[row.GLN_NO] = row.CARI_ISIM
         })
 
         log('📋 GLN-Cari eşleşmesi:', Object.keys(glnCariMap).length, 'cari bulundu')
@@ -672,18 +621,18 @@ async function durumSorgula(transferId, products, settings = null) {
     // GLN'i okunabilir isme çevir
     const formatGlnName = (gln) => {
       if (!gln) return null
-      if (gln === bizimGln) return depoAdi  // BİZİM yerine Depo Adı
-      return glnCariMap[gln] || gln  // Cari bulunamazsa GLN'in kendisini göster
+      if (gln === bizimGln) return depoAdi
+      return glnCariMap[gln] || gln
     }
 
-    // Sonuçları map'le
+    // Sonuçları map'le (mesajlar cache'den alınıyor)
     const results = responseList.map(item => {
       const normalizedUc = String(item.uc || '').replace(/^0+/, '') || '0'
       const gln1Adi = formatGlnName(item.gln1)
       const gln2Adi = formatGlnName(item.gln2)
 
-      // Mesajı al ve GLN1/GLN2 ifadelerini değiştir
-      let mesaj = durumMesajlari[normalizedUc] || durumMesajlari[item.uc] || (normalizedUc == '0' ? 'Başarılı' : `Kod: ${item.uc}`)
+      // Mesajı cache'den al ve GLN1/GLN2 ifadelerini değiştir
+      let mesaj = getMessage(normalizedUc, normalizedUc == '0' ? 'Başarılı' : `Kod: ${item.uc}`)
       if (gln1Adi) mesaj = mesaj.replace(/GLN1/gi, gln1Adi)
       if (gln2Adi) mesaj = mesaj.replace(/GLN2/gi, gln2Adi)
 

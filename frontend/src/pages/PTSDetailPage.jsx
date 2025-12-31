@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ArrowLeft, Package, ChevronDown, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Clock, CheckCircle, AlertCircle, XCircle, Info, Send, Search, Filter } from 'lucide-react'
 import {
   useReactTable,
@@ -33,6 +33,11 @@ const getStatusStyle = (status) => {
 const PTSDetailPage = () => {
   const { transferId } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // PTSPage'den gelen master bilgileri (backend'de AKTBLPTSMAS sorgulanmaz)
+  const masterDataFromState = location.state?.masterData || null
+
   usePageTitle('PTS Detay')
 
   const [loading, setLoading] = useState(true)
@@ -91,7 +96,11 @@ const PTSDetailPage = () => {
 
       if (response.success && response.data) {
         const data = response.data
-        setPackageData(data)
+        // Master bilgilerini state'den al, sadece products backend'den gelir
+        setPackageData({
+          ...masterDataFromState,
+          products: data.products
+        })
 
         const onlyProducts = (data.products || [])
           .filter(p => p.SERIAL_NUMBER)
@@ -129,7 +138,11 @@ const PTSDetailPage = () => {
 
       if (response.success && response.data) {
         const data = response.data
-        setPackageData(data)
+        // Master bilgilerini state'den al, sadece products backend'den gelir
+        setPackageData({
+          ...masterDataFromState,
+          products: data.products
+        })
 
         const onlyProducts = (data.products || [])
           .filter(p => p.SERIAL_NUMBER)
@@ -610,8 +623,6 @@ const PTSDetailPage = () => {
               <div
                 className="bg-primary-500/10 border border-primary-500/30 rounded px-2 py-0.5 flex flex-col items-center cursor-pointer"
                 onClick={() => isMobile && setShowTooltip(!showTooltip)}
-                onMouseEnter={() => !isMobile && setShowTooltip(true)}
-                onMouseLeave={() => !isMobile && setShowTooltip(false)}
               >
                 <div className="flex items-center gap-1">
                   <span className="text-[9px] text-primary-400/70 uppercase">Transfer</span>
@@ -674,7 +685,6 @@ const PTSDetailPage = () => {
                     <span className="text-[9px] text-amber-400/70 uppercase">Cari</span>
                     <span className="text-amber-400 text-xs font-medium truncate max-w-[180px]">
                       {packageData.SOURCE_GLN_NAME}
-                      {packageData.SOURCE_GLN_IL && ` / ${packageData.SOURCE_GLN_IL}`}
                     </span>
                   </div>
                 )}
@@ -711,7 +721,7 @@ const PTSDetailPage = () => {
                 ) : (
                   <Send className="w-3.5 h-3.5" />
                 )}
-                <span className="hidden sm:inline">Alım</span>
+                <span className="hidden sm:inline">Alım Bildirimi</span>
               </button>
 
               <button

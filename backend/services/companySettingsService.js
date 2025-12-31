@@ -2,18 +2,29 @@
  * Company Settings Service - Şirket Ayarları Servisi
  * AKTBLAYAR tablosundaki 'aktifSirketler' ayarı üzerinden aktif şirket yönetimi
  * Aktif şirketler virgülle ayrılmış liste olarak saklanır
+ * Not: Aktif şirketler cache'leniyor, her sorguda DB'ye gidilmiyor
  */
 
 import { getPTSConnection } from '../config/database.js'
 
 const AYAR_ADI = 'aktifSirketler'
 
+// Cache for aktif şirketler (sonsuz - sadece ayar değişince invalidate olur)
+let activeCompaniesCache = null
+
 const companySettingsService = {
     /**
-     * Aktif şirketleri getir (virgülle ayrılmış listeden array'e çevir)
+     * Aktif şirketleri getir (cache'den veya DB'den)
+     * Cache bir kez yüklenir ve ayar değişene kadar tutulur
+     * @param {boolean} forceRefresh - Cache'i yoksay ve DB'den oku
      */
-    async getActiveCompanies() {
+    async getActiveCompanies(forceRefresh = false) {
         try {
+            // Cache varsa kullan
+            if (!forceRefresh && activeCompaniesCache !== null) {
+                return { success: true, data: activeCompaniesCache, cached: true }
+            }
+
             const pool = await getPTSConnection()
             const result = await pool.request()
                 .input('ayarAdi', AYAR_ADI)
@@ -24,6 +35,7 @@ const companySettingsService = {
                 `)
 
             if (result.recordset.length === 0 || !result.recordset[0].AYAR_DEGERI) {
+                activeCompaniesCache = []
                 return { success: true, data: [] }
             }
 
@@ -33,11 +45,24 @@ const companySettingsService = {
                 .map(s => s.trim())
                 .filter(s => s.length > 0)
 
+            // Cache'e kaydet
+            activeCompaniesCache = sirketler
+            console.log('📋 Aktif şirketler cache güncellendi:', sirketler.length, 'şirket')
+
             return { success: true, data: sirketler }
         } catch (error) {
             console.error('❌ Aktif şirketler hatası:', error)
             return { success: false, error: error.message, data: [] }
         }
+    },
+
+    /**
+     * Cache'i invalidate et (güncelleme sonrası çağrılır)
+     */
+    invalidateCache() {
+        activeCompaniesCache = null
+        cacheLoadedAt = null
+        console.log('🔄 Aktif şirketler cache invalidate edildi')
     },
 
     /**
@@ -76,8 +101,8 @@ const companySettingsService = {
         try {
             const pool = await getPTSConnection()
 
-            // Mevcut aktif şirketleri al
-            const mevcutResult = await this.getActiveCompanies()
+            // Mevcut aktif şirketleri al (forceRefresh ile güncel veri al)
+            const mevcutResult = await this.getActiveCompanies(true)
             let sirketler = mevcutResult.data || []
 
             if (aktif) {
@@ -107,6 +132,17 @@ const companySettingsService = {
                         INSERT (AYAR_ADI, AYAR_DEGERI, ACIKLAMA) 
                         VALUES (@ayarAdi, @ayarDegeri, 'Aktif Şirketler (virgülle ayrılmış)');
                 `)
+
+            // Cache'i invalidate et
+            this.invalidateCache()
+
+            // companyService cache'ini de invalidate et (circular dependency nedeniyle dynamic import)
+            try {
+                const companyService = await import('./companyService.js')
+                companyService.default.invalidateCache()
+            } catch (e) {
+                console.log('⚠️ companyService cache invalidate edilemedi')
+            }
 
             return { success: true }
         } catch (error) {

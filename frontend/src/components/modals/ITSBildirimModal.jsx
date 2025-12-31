@@ -257,8 +257,7 @@ const ITSBildirimModal = ({
                 subeKodu: document?.subeKodu,
                 fatirsNo: document?.documentNo,
                 ftirsip: document?.docType || docType,
-                cariKodu: document?.customerCode,
-                kullanici: localStorage.getItem('username') || 'SYSTEM'
+                cariKodu: document?.customerCode
             }
 
             let result

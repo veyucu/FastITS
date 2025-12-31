@@ -1,47 +1,10 @@
 import { getConnection } from '../config/database.js'
 import sql from 'mssql'
-import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import iconv from 'iconv-lite'
-import { log } from '../utils/logger.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-/**
- * Türkçe karakter düzeltme fonksiyonu
- */
-function fixTurkishChars(str) {
-  if (!str || typeof str !== 'string') return str
-
-  try {
-    // CP1254 (Turkish) encoding'den UTF-8'e dönüştür
-    const buffer = Buffer.from(str, 'binary')
-    return iconv.decode(buffer, 'cp1254')
-  } catch (error) {
-    return str
-  }
-}
-
-/**
- * Object içindeki string değerleri düzeltme
- */
-function fixObjectStrings(obj) {
-  if (!obj || typeof obj !== 'object') return obj
-
-  const fixed = {}
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'string') {
-      fixed[key] = fixTurkishChars(value)
-    } else if (value && typeof value === 'object') {
-      fixed[key] = fixObjectStrings(value)
-    } else {
-      fixed[key] = value
-    }
-  }
-  return fixed
-}
 
 /**
  * ITS kaydı ekler
@@ -159,13 +122,10 @@ export async function listITSRecords(filters = {}) {
 
     const result = await request.query(query)
 
-    // Türkçe karakter düzeltmesi
-    const records = result.recordset.map(record => fixObjectStrings(record))
-
     return {
       success: true,
-      data: records,
-      count: records.length
+      data: result.recordset,
+      count: result.recordset.length
     }
   } catch (error) {
     console.error('❌ ITS kayıtları listeleme hatası:', error)
@@ -210,11 +170,9 @@ export async function getITSRecord(recno) {
       return { success: false, message: 'Kayıt bulunamadı' }
     }
 
-    const record = fixObjectStrings(result.recordset[0])
-
     return {
       success: true,
-      data: record
+      data: result.recordset[0]
     }
   } catch (error) {
     console.error('❌ ITS kaydı getirme hatası:', error)
@@ -336,24 +294,52 @@ export async function deleteITSRecord(recno) {
 
 /**
  * Toplu bildirim durumu güncelleme
+ * Temp Table + JOIN ile performanslı (tüm SQL Server sürümleriyle uyumlu)
  */
 export async function updateBulkNotificationStatus(recnos, bildirimId, bildirimTarihi, durum) {
   try {
     const pool = await getConnection()
 
-    await pool.request()
-      .input('recnos', sql.VarChar(sql.MAX), recnos.join(','))
-      .input('bildirimId', sql.VarChar(36), bildirimId)
-      .input('bildirimTarihi', sql.DateTime, bildirimTarihi)
-      .input('durum', sql.VarChar(20), durum)
-      .query(`
-        UPDATE AKTBLITSUTS 
-        SET 
-          BILDIRIM_ID = @bildirimId,
-          BILDIRIM_TARIHI = @bildirimTarihi,
-          BILDIRIM = @durum
-        WHERE RECNO IN (SELECT value FROM STRING_SPLIT(@recnos, ','))
-      `)
+    if (!recnos || recnos.length === 0) {
+      return { success: true, message: 'Güncellenecek kayıt yok' }
+    }
+
+    // SQL Server VALUES limiti: 1000 satır
+    const CHUNK_SIZE = 1000
+
+    // INSERT statement'ları oluştur
+    const insertStatements = []
+    for (let i = 0; i < recnos.length; i += CHUNK_SIZE) {
+      const chunk = recnos.slice(i, i + CHUNK_SIZE)
+      const valuesList = chunk.map(recno => `(${Number(recno)})`).join(',')
+      insertStatements.push(`INSERT INTO #BulkUpdate (RECNO) VALUES ${valuesList};`)
+    }
+
+    const query = `
+      -- Temp table oluştur
+      CREATE TABLE #BulkUpdate (RECNO INT PRIMARY KEY);
+
+      -- Verileri chunk'lar halinde ekle
+      ${insertStatements.join('\n      ')}
+
+      -- JOIN ile toplu güncelle
+      UPDATE A
+      SET A.BILDIRIM_ID = @bildirimId,
+          A.BILDIRIM_TARIHI = @bildirimTarihi,
+          A.BILDIRIM = @durum
+      FROM AKTBLITSUTS A
+      INNER JOIN #BulkUpdate T ON A.RECNO = T.RECNO;
+
+      -- Temp table'ı temizle
+      DROP TABLE #BulkUpdate;
+    `
+
+    const request = pool.request()
+    request.input('bildirimId', sql.VarChar(36), bildirimId)
+    request.input('bildirimTarihi', sql.DateTime, bildirimTarihi)
+    request.input('durum', sql.VarChar(20), durum)
+
+    await request.query(query)
 
     return { success: true, message: 'Toplu güncelleme tamamlandı' }
   } catch (error) {

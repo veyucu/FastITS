@@ -116,13 +116,8 @@ const DocumentDetailPage = () => {
   const [utsModalMessage, setUtsModalMessage] = useState(null) // Modal içi mesajlar için
   const [utsHasChanges, setUtsHasChanges] = useState(false) // Grid'de değişiklik var mı?
 
-  // Toplu Okutma Modal State'leri
+  // Toplu Okutma Modal State
   const [showBulkScanModal, setShowBulkScanModal] = useState(false)
-  const [bulkBarcodeText, setBulkBarcodeText] = useState('')
-  const [bulkScanLoading, setBulkScanLoading] = useState(false)
-  const [bulkScanResults, setBulkScanResults] = useState(null)
-  const bulkTextareaRef = useRef(null)
-  const bulkLineNumbersRef = useRef(null)
 
   // PTS Bildirimi Modal State'leri
   const [showPTSModal, setShowPTSModal] = useState(false)
@@ -269,7 +264,7 @@ const DocumentDetailPage = () => {
     // FAST_DURUM güncelle
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const kullanici = user.username || 'SYSTEM'
+      const kullanici = user.username
 
       await apiService.updateFastDurum(document.id, allSuccess ? 'OK' : 'NOK', kullanici)
 
@@ -783,11 +778,7 @@ const DocumentDetailPage = () => {
       width: 150,
       cellClass: 'text-center font-semibold',
       editable: true,
-      cellEditor: 'agDateStringCellEditor',
-      cellEditorParams: {
-        min: '2000-01-01',
-        max: '2099-12-31'
-      },
+      cellEditor: 'agTextCellEditor',  // agDateStringCellEditor yerine text editor kullan
       valueGetter: (params) => {
         // Grid'e YYYY-MM-DD formatında göster (edit için)
         const data = params.data
@@ -1002,91 +993,6 @@ const DocumentDetailPage = () => {
 
     setBarcodeInput('')
     barcodeInputRef.current?.focus()
-  }
-
-  // Toplu Okutma - Scroll Senkronizasyonu
-  const handleBulkTextareaScroll = () => {
-    if (bulkTextareaRef.current && bulkLineNumbersRef.current) {
-      bulkLineNumbersRef.current.scrollTop = bulkTextareaRef.current.scrollTop
-    }
-  }
-
-  // Toplu ITS Karekod Okutma İşlemi
-  const handleBulkScan = async () => {
-    if (!bulkBarcodeText.trim()) {
-      setMessage({ type: 'warning', text: '⚠️ Lütfen karekod girin' })
-      return
-    }
-
-    setBulkScanLoading(true)
-    setBulkScanResults(null)
-
-    // Satırlara ayır ve boş satırları temizle
-    const lines = bulkBarcodeText
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0)
-
-    if (lines.length === 0) {
-      setMessage({ type: 'warning', text: '⚠️ Geçerli karekod bulunamadı' })
-      setBulkScanLoading(false)
-      return
-    }
-
-    const results = {
-      total: lines.length,
-      success: 0,
-      failed: 0,
-      errors: []
-    }
-
-    // Her satır için işlem yap (Sadece ITS Karekod)
-    for (let i = 0; i < lines.length; i++) {
-      const barcode = lines[i]
-
-      try {
-        // ITS Karekod kontrolü (Sadece ITS desteklenir)
-        const isITSBarcode = barcode.startsWith('01') && barcode.length > 30
-
-        if (!isITSBarcode) {
-          throw new Error('Sadece ITS karekod (2D barkod) desteklenir!')
-        }
-
-        // ITS işlemi
-        await handleITSBarcodeProcess(barcode)
-
-        results.success++
-      } catch (error) {
-        results.failed++
-        results.errors.push(`${i + 1}. satır: ${error.message || 'Bilinmeyen hata'}`)
-      }
-    }
-
-    setBulkScanResults(results)
-    setBulkScanLoading(false)
-
-    // Belgeyi yenile
-    const response = await apiService.getDocumentById(document.id)
-    if (response.success && response.data) {
-      setDocument(response.data)
-      setItems(response.data.items || [])
-      updateStats(response.data.items || [])
-    }
-
-    // Başarı/hata mesajı
-    if (results.failed === 0) {
-      setMessage({ type: 'success', text: `✅ ${results.success} barkod başarıyla işlendi!` })
-      playSuccessSound()
-      // Modal'ı kapat
-      setTimeout(() => {
-        setShowBulkScanModal(false)
-        setBulkBarcodeText('')
-        setBulkScanResults(null)
-      }, 2000)
-    } else {
-      setMessage({ type: 'warning', text: `⚠️ ${results.success} başarılı, ${results.failed} başarısız` })
-      playWarningSound()
-    }
   }
 
   // ITS barkod işlemi (toplu okutma için)
@@ -1347,7 +1253,6 @@ const DocumentDetailPage = () => {
       if (parts.length === 2 && !isNaN(parts[0])) {
         quantity = parseInt(parts[0])
         actualBarcode = parts[1]
-        console.log(`📦 Toplu okutma: ${quantity} adet - Barkod: ${actualBarcode}`)
       }
     }
 
@@ -1750,16 +1655,44 @@ const DocumentDetailPage = () => {
       const response = await apiService.getUTSBarcodeRecords(document.id, item.itemId)
 
       if (response.success) {
-        // Kayıtlara uretimTarihiDisplay ve benzersiz id ekle (YYMMDD -> YYYY-MM-DD)
+        // Kayıtlara uretimTarihiDisplay ve benzersiz id ekle
         const enrichedRecords = (response.data || []).map((record, index) => {
           let uretimTarihiDisplay = ''
-          if (record.uretimTarihi && record.uretimTarihi.length === 6) {
-            const yy = record.uretimTarihi.substring(0, 2)
-            const mm = record.uretimTarihi.substring(2, 4)
-            const dd = record.uretimTarihi.substring(4, 6)
-            const yyyy = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
-            uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
+
+          if (record.uretimTarihi) {
+            const ut = record.uretimTarihi
+
+            // ISO date string formatı (2025-12-31T00:00:00.000Z veya benzeri)
+            if (typeof ut === 'string' && ut.includes('T')) {
+              const date = new Date(ut)
+              if (!isNaN(date.getTime())) {
+                const yyyy = date.getFullYear()
+                const mm = String(date.getMonth() + 1).padStart(2, '0')
+                const dd = String(date.getDate()).padStart(2, '0')
+                uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
+              }
+            }
+            // YYMMDD formatı (6 karakter)
+            else if (typeof ut === 'string' && ut.length === 6 && /^\d{6}$/.test(ut)) {
+              const yy = ut.substring(0, 2)
+              const mm = ut.substring(2, 4)
+              const dd = ut.substring(4, 6)
+              const yyyy = parseInt(yy) > 50 ? `19${yy}` : `20${yy}`
+              uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
+            }
+            // YYYY-MM-DD formatı (zaten doğru format)
+            else if (typeof ut === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(ut)) {
+              uretimTarihiDisplay = ut
+            }
+            // Date objesi
+            else if (ut instanceof Date && !isNaN(ut.getTime())) {
+              const yyyy = ut.getFullYear()
+              const mm = String(ut.getMonth() + 1).padStart(2, '0')
+              const dd = String(ut.getDate()).padStart(2, '0')
+              uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
+            }
           }
+
           return {
             ...record,
             id: record.siraNo || `existing-${Date.now()}-${index}`, // Benzersiz ID ekle
@@ -2625,6 +2558,10 @@ const DocumentDetailPage = () => {
         documentId={document?.id}
         documentNo={document?.documentNo}
         docType={document?.docType}
+        ftirsip={document?.docType}
+        cariKodu={document?.customerCode}
+        subeKodu={document?.subeKodu}
+        items={items}
         onSuccess={fetchDocument}
         playSuccessSound={playSuccessSound}
         playErrorSound={playErrorSound}

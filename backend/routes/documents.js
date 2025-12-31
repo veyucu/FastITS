@@ -1,5 +1,6 @@
 import express from 'express'
 import documentService from '../services/documentService.js'
+import itsService from '../services/itsService.js'
 import { parseITSBarcode, formatMiad } from '../utils/itsParser.js'
 import { log } from '../utils/logger.js'
 import companyMiddleware from '../middleware/companyMiddleware.js'
@@ -166,14 +167,10 @@ router.get('/:documentId/item/:itemId/its-records', async (req, res) => {
     // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
     const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
-    // Kayıt tipi belirle
-    const kayitTipi = ftirsip === '6' ? 'M' : 'A'
-
     const records = await documentService.getITSBarcodeRecords(
       subeKodu,
       fatirs_no,
       itemId,
-      kayitTipi,
       ftirsip,
       cariKodu
     )
@@ -254,7 +251,7 @@ router.delete('/:documentId/item/:itemId/its-records', async (req, res) => {
     else if (turu === 'UTS') turuMapped = 'U'
     else if (turu === 'DGR') turuMapped = 'D'
 
-    log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, cariKodu, straInc: itemId, turu, turuMapped })
+    log('📋 Parse edilmiş değerler:', { subeKodu, ftirsip, fatirs_no, cariKodu, harRecno: itemId, turu, turuMapped })
 
     const result = await documentService.deleteITSBarcodeRecords(
       seriNos,
@@ -325,68 +322,135 @@ router.delete('/:documentId/item/:itemId/uts-records', async (req, res) => {
   }
 })
 
-// POST /api/documents/its-barcode - ITS Karekod Okut ve Kaydet
-router.post('/its-barcode', async (req, res) => {
+// POST /api/documents/its-barcode-bulk - Toplu ITS Karekod Kaydet (Batch INSERT)
+router.post('/its-barcode-bulk', async (req, res) => {
   try {
     const {
-      barcode,      // ITS 2D Karekod
-      documentId,   // Belge ID (SUBE_KODU-FTIRSIP-FATIRS_NO)
-      itemId,       // INCKEYNO
-      stokKodu,
-      belgeTip,     // STHAR_HTUR
-      gckod,        // STHAR_GCKOD
-      belgeNo,
-      belgeTarihi,
-      docType,      // '6' = Sipariş, '1'/'2' = Fatura
-      expectedQuantity  // Beklenen miktar (kalem miktarı)
+      barcodes,     // Array of pre-parsed barcodes: [{seriNo, gtin, miad, lot, stokKodu, line}, ...]
+      documentInfo  // {belgeNo, ftirsip, cariKodu, subeKodu, harRecno, stokKodu}
     } = req.body
 
-    log('📱 ITS Karekod İsteği:', { barcode, documentId, itemId, expectedQuantity })
+    log('📦 Toplu ITS Karekod İsteği:', { count: barcodes?.length, belgeNo: documentInfo?.belgeNo, kullanici: req.username })
 
-    // 1. Karekodu parse et
-    const parseResult = parseITSBarcode(barcode)
-
-    if (!parseResult.success) {
+    if (!barcodes || !Array.isArray(barcodes) || barcodes.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'Karekod parse edilemedi: ' + parseResult.error
+        message: 'Barkod listesi boş veya geçersiz'
       })
     }
 
-    const parsedData = parseResult.data
+    if (!documentInfo?.belgeNo || !documentInfo?.ftirsip || !documentInfo?.cariKodu || !documentInfo?.subeKodu) {
+      console.log('❌ Eksik field:', { belgeNo: documentInfo?.belgeNo, ftirsip: documentInfo?.ftirsip, cariKodu: documentInfo?.cariKodu, subeKodu: documentInfo?.subeKodu })
+      return res.status(400).json({
+        success: false,
+        message: `Belge bilgileri eksik: ${!documentInfo?.belgeNo ? 'belgeNo ' : ''}${!documentInfo?.ftirsip ? 'ftirsip ' : ''}${!documentInfo?.cariKodu ? 'cariKodu ' : ''}${!documentInfo?.subeKodu ? 'subeKodu' : ''}`
+      })
+    }
 
-    // 2. Belge ID'sini parse et
-    const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
+    // itsService.bulkSave çağır - kullanıcı req.username'den alınır
+    const result = await itsService.bulkSave(barcodes, documentInfo, req.username)
 
-    // 3. KAYIT_TIPI belirle
-    const kayitTipi = docType === '6' ? 'M' : 'A' // Sipariş = M, Fatura = A
+    log('✅ Toplu ITS Kayıt Sonucu:', result)
+    res.json({
+      success: true,
+      ...result
+    })
 
-    // 4. AKTBLITSUTS'a kaydet
+  } catch (error) {
+    console.error('❌ Toplu ITS Kayıt Hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Toplu kayıt başarısız',
+      error: error.message
+    })
+  }
+})
+
+router.post('/its-barcode', async (req, res) => {
+  try {
+    const {
+      barcode,      // ITS 2D Karekod (opsiyonel - frontend parse ettiyse)
+      documentId,   // Belge ID (SUBE_KODU-FTIRSIP-FATIRS_NO)
+      itemId,       // INCKEYNO (opsiyonel - eski format)
+      harRecno,     // HAR_RECNO (yeni format)
+      stokKodu,
+      belgeTip,     // STHAR_HTUR (opsiyonel)
+      gckod,        // STHAR_GCKOD (opsiyonel)
+      belgeNo,
+      belgeTarihi,  // (opsiyonel)
+      docType,      // '6' = Sipariş, '1'/'2' = Fatura (opsiyonel)
+      expectedQuantity,  // Beklenen miktar
+      // Frontend'den pre-parsed gelebilir:
+      seriNo,
+      miad,
+      lotNo,
+      ilcGtin,
+      subeKodu: subeKoduFromBody,
+      ftirsip: ftirsipFromBody,
+      cariKodu: cariKoduFromBody
+    } = req.body
+
+    let parsedData
+    let subeKodu, ftirsip, cariKodu
+
+    // Frontend parse etmiş mi?
+    if (seriNo && miad && lotNo && ilcGtin) {
+      // Pre-parsed data geldi
+      log('📱 ITS Karekod İsteği (pre-parsed):', { seriNo, ilcGtin, harRecno: (harRecno || itemId) })
+      parsedData = {
+        seriNo,
+        miad,
+        lot: lotNo,
+        barkod: ilcGtin
+      }
+      subeKodu = subeKoduFromBody
+      ftirsip = ftirsipFromBody
+      cariKodu = cariKoduFromBody
+    } else if (barcode && documentId) {
+      // Eski format: raw barcode parse et
+      log('📱 ITS Karekod İsteği (raw):', { barcode, documentId, itemId, expectedQuantity })
+
+      const parseResult = parseITSBarcode(barcode)
+      if (!parseResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: 'Karekod parse edilemedi: ' + parseResult.error
+        })
+      }
+      parsedData = parseResult.data
+
+      // Belge ID'sini parse et
+      const parts = documentId.split('|')
+      subeKodu = parts[0]
+      ftirsip = parts[1]
+      cariKodu = parts[3]
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Eksik parametre: barcode+documentId veya seriNo+miad+lotNo+ilcGtin gerekli'
+      })
+    }
+
+    // AKTBLITSUTS'a kaydet
     const saveResult = await documentService.saveITSBarcode({
-      kayitTipi,
       seriNo: parsedData.seriNo,
       stokKodu,
-      straInc: itemId,
-      tarih: belgeTarihi,
-      miad: parsedData.miad,        // MIAD (YYMMDD formatında)
-      lotNo: parsedData.lot,          // LOT_NO
-      gckod,
-      miktar: 1,
+      harRecno: harRecno || itemId,
+      miad: parsedData.miad,
+      lotNo: parsedData.lot,
       belgeNo,
-      belgeTip,
       subeKodu,
-      depoKod: '0',
-      ilcGtin: parsedData.barkod,  // Okutulan Barkod
-      expectedQuantity,            // Miktar kontrolü için
-      ftirsip,                     // Belge tipi: '6'=Sipariş, '2'=Alış, '1'=Satış
-      cariKodu,         // Belgedeki CARI_KODU (documentId'den alındı)
-      kullanici: req.body.kullanici        // Sisteme giriş yapan kullanıcı (ZORUNLU)
+      ilcGtin: parsedData.barkod,
+      expectedQuantity,
+      ftirsip,
+      cariKodu,
+      kullanici: req.body.kullanici
     })
 
     // Duplicate kontrolü
     if (!saveResult.success) {
       log('⚠️ ITS Karekod kaydedilemedi:', saveResult.error, saveResult.message)
-      return res.status(400).json(saveResult) // error ve message'ı frontend'e gönder
+      return res.status(400).json(saveResult)
     }
 
     log('✅ ITS Karekod başarıyla kaydedildi!')
@@ -445,7 +509,7 @@ router.post('/uts-barcode', async (req, res) => {
       seriNo,
       lotNo,
       stokKodu,
-      straInc: itemId,
+      harRecno: itemId,
       tarih: belgeTarihi,
       uretimTarihi,
       gckod,
@@ -516,7 +580,7 @@ router.post('/uts-records/bulk-save', async (req, res) => {
       originalRecords,
       kayitTipi,
       stokKodu,
-      straInc: itemId,
+      harRecno: itemId,
       tarih: belgeTarihi,
       belgeNo,
       belgeTip,
@@ -663,7 +727,7 @@ router.post('/dgr-barcode', async (req, res) => {
     const saveResult = await documentService.saveDGRBarcode({
       kayitTipi,
       stokKodu,     // SERI_NO = Stok Kodu
-      straInc: itemId,
+      harRecno: itemId,
       tarih: belgeTarihi,
       gckod,
       belgeNo,
@@ -749,7 +813,7 @@ router.post('/:id/pts-preview', async (req, res) => {
       documentNumber: document.documentNo,
       documentDate: document.documentDate ? new Date(document.documentDate).toISOString().split('T')[0] : '',
       sourceGLN: PTS_CONFIG?.glnNo || '',
-      destinationGLN: document.glnNo || document.email || '',
+      destinationGLN: document.glnNo,
       note: note || '',
       products: itsRecords.map(r => ({
         seriNo: r.seriNo,
@@ -976,7 +1040,7 @@ router.post('/:id/its-satis-bildirimi', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate)
+        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
       }
 
       // Belge ITS durumunu güncelle (tüm satırlar başarılı ise OK, değilse NOK)
@@ -985,7 +1049,7 @@ router.post('/:id/its-satis-bildirimi', async (req, res) => {
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
-          belgeInfo.ftirsip || '1',
+          belgeInfo.ftirsip,
           belgeInfo.cariKodu,
           tumBasarili,
           belgeInfo.kullanici
@@ -1036,7 +1100,7 @@ router.post('/:id/its-satis-iptal', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate)
+        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
       }
 
       // Belge ITS durumunu güncelle
@@ -1045,7 +1109,7 @@ router.post('/:id/its-satis-iptal', async (req, res) => {
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
-          belgeInfo.ftirsip || '1',
+          belgeInfo.ftirsip,
           belgeInfo.cariKodu,
           tumBasarili,
           belgeInfo.kullanici
@@ -1093,7 +1157,7 @@ router.post('/:id/its-alis-bildirimi', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate)
+        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
       }
 
       // Belge ITS durumunu güncelle
@@ -1102,7 +1166,7 @@ router.post('/:id/its-alis-bildirimi', async (req, res) => {
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
-          belgeInfo.ftirsip || '2',
+          belgeInfo.ftirsip,
           belgeInfo.cariKodu,
           tumBasarili,
           belgeInfo.kullanici
@@ -1153,7 +1217,7 @@ router.post('/:id/its-iade-alis', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate)
+        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
       }
 
       // Belge ITS durumunu güncelle
@@ -1162,7 +1226,7 @@ router.post('/:id/its-iade-alis', async (req, res) => {
         await itsApiService.updateBelgeITSDurum(
           belgeInfo.subeKodu,
           belgeInfo.fatirsNo,
-          belgeInfo.ftirsip || '2',
+          belgeInfo.ftirsip,
           belgeInfo.cariKodu,
           tumBasarili,
           belgeInfo.kullanici

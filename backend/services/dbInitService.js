@@ -89,7 +89,8 @@ async function createAuthTables() {
     'YETKI_PTS',
     'YETKI_MESAJ_KODLARI',
     'YETKI_AYARLAR',
-    'YETKI_KULLANICILAR'
+    'YETKI_KULLANICILAR',
+    'YETKI_SIRKET_AYARLARI'
   ]
 
   for (const col of yetkiKolonlari) {

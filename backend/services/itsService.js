@@ -1,6 +1,7 @@
 import { getConnection } from '../config/database.js'
-import { fixObjectStrings } from '../utils/stringUtils.js'
 import sql from 'mssql'
+
+// Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 
 /**
  * ITS (İlaç Takip Sistemi) işlemleri servisi
@@ -9,7 +10,7 @@ const itsService = {
   /**
    * AKTBLITSUTS Kayıtlarını Getir (Belirli bir kalem için) - ITS
    */
-  async getRecords(subeKodu, belgeNo, straInc, ftirsip, cariKodu) {
+  async getRecords(subeKodu, belgeNo, harRecno, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -31,7 +32,7 @@ const itsService = {
           KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
-          AND HAR_RECNO = @straInc
+          AND HAR_RECNO = @harRecno
           AND FTIRSIP = @ftirsip
           AND CARI_KODU = @cariKodu
           AND SUBE_KODU = @subeKodu
@@ -41,14 +42,14 @@ const itsService = {
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
-      request.input('straInc', straInc)
+      request.input('harRecno', harRecno)
       request.input('ftirsip', ftirsip)
       request.input('cariKodu', cariKodu)
       request.input('subeKodu', subeKodu)
 
       const result = await request.query(query)
 
-      const records = result.recordset.map(row => fixObjectStrings({
+      const records = result.recordset.map(row => ({
         recno: row.RECNO,
         seriNo: row.SERI_NO,
         stokKodu: row.STOK_KODU,
@@ -158,7 +159,7 @@ const itsService = {
   /**
    * ITS Kayıtlarını Sil
    */
-  async deleteRecords(seriNos, belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
+  async deleteRecords(seriNos, belgeNo, harRecno, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -170,7 +171,7 @@ const itsService = {
           SELECT CARRIER_LABEL
           FROM AKTBLITSUTS WITH (NOLOCK)
           WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
+            AND HAR_RECNO = @harRecno
             AND SERI_NO = @seriNo
             AND TURU = 'I'
             AND CARRIER_LABEL IS NOT NULL
@@ -181,7 +182,7 @@ const itsService = {
 
         const checkRequest = pool.request()
         checkRequest.input('belgeNo', belgeNo)
-        checkRequest.input('straInc', straInc)
+        checkRequest.input('harRecno', harRecno)
         checkRequest.input('seriNo', seriNo)
         checkRequest.input('subeKodu', subeKodu)
         checkRequest.input('ftirsip', ftirsip)
@@ -200,7 +201,7 @@ const itsService = {
             UPDATE AKTBLITSUTS
             SET CARRIER_LABEL = NULL, CONTAINER_TYPE = NULL
             WHERE FATIRS_NO = @belgeNo
-              AND HAR_RECNO = @straInc
+              AND HAR_RECNO = @harRecno
               AND CARRIER_LABEL = @carrierLabel
               AND TURU = 'I'
               AND SUBE_KODU = @subeKodu
@@ -210,7 +211,7 @@ const itsService = {
 
           const updateRequest = pool.request()
           updateRequest.input('belgeNo', belgeNo)
-          updateRequest.input('straInc', straInc)
+          updateRequest.input('harRecno', harRecno)
           updateRequest.input('carrierLabel', carrierLabel)
           updateRequest.input('subeKodu', subeKodu)
           updateRequest.input('ftirsip', ftirsip)
@@ -226,7 +227,7 @@ const itsService = {
         const query = `
           DELETE FROM AKTBLITSUTS
           WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
+            AND HAR_RECNO = @harRecno
             AND SERI_NO = @seriNo
             AND TURU = 'I'
             AND SUBE_KODU = @subeKodu
@@ -236,7 +237,7 @@ const itsService = {
 
         const request = pool.request()
         request.input('belgeNo', belgeNo)
-        request.input('straInc', straInc)
+        request.input('harRecno', harRecno)
         request.input('seriNo', seriNo)
         request.input('subeKodu', subeKodu)
         request.input('ftirsip', ftirsip)
@@ -257,98 +258,118 @@ const itsService = {
   },
 
   /**
-   * Toplu ITS Karekod Kaydet
+   * Toplu ITS Karekod Kaydet - Batch INSERT ile optimize edilmiş
    */
-  async bulkSave(barcodes, documentInfo, kullanici) {
+  async bulkSave(parsedBarcodes, documentInfo, kullanici) {
     const results = {
-      totalCount: barcodes.length,
+      totalCount: parsedBarcodes.length,
       successCount: 0,
       errorCount: 0,
+      duplicateCount: 0,
       errors: []
+    }
+
+    if (!parsedBarcodes || parsedBarcodes.length === 0) {
+      return results
     }
 
     try {
       const pool = await getConnection()
 
-      for (let i = 0; i < barcodes.length; i++) {
-        const barcode = barcodes[i].trim()
-        if (!barcode) continue
+      // SQL Server parametre limiti: 2100, güvenli chunk boyutu: 500
+      const CHECK_CHUNK_SIZE = 500
+      const INSERT_CHUNK_SIZE = 100 // Her kayıt için ~10 parametre, güvenli limit
 
-        try {
-          const parsed = this.parseBarcode(barcode)
-          if (!parsed) {
-            results.errors.push({ line: i + 1, message: 'Geçersiz karekod formatı' })
-            results.errorCount++
-            continue
-          }
+      // 1. Mevcut seri numaralarını chunk'lar halinde kontrol et
+      const existingSerials = new Set()
+      const allSeriNos = parsedBarcodes.map(p => p.seriNo)
 
-          // Mükerrer kontrolü
-          const checkQuery = `
-            SELECT COUNT(*) as count
-            FROM AKTBLITSUTS WITH (NOLOCK)
-            WHERE SERI_NO = @seriNo
-              AND TURU = 'I'
-              AND SUBE_KODU = @subeKodu
-              AND FTIRSIP = @ftirsip
-              AND CARI_KODU = @cariKodu
-              AND FATIRS_NO = @belgeNo
-              AND HAR_RECNO = @harRecno
-          `
+      for (let i = 0; i < allSeriNos.length; i += CHECK_CHUNK_SIZE) {
+        const chunk = allSeriNos.slice(i, i + CHECK_CHUNK_SIZE)
 
-          const checkRequest = pool.request()
-          checkRequest.input('seriNo', parsed.serialNumber)
-          checkRequest.input('subeKodu', documentInfo.subeKodu)
-          checkRequest.input('ftirsip', documentInfo.ftirsip)
-          checkRequest.input('cariKodu', documentInfo.cariKodu)
-          checkRequest.input('belgeNo', documentInfo.belgeNo)
-          checkRequest.input('harRecno', documentInfo.harRecno)
+        const existingQuery = `
+          SELECT SERI_NO
+          FROM AKTBLITSUTS WITH (NOLOCK)
+          WHERE FATIRS_NO = @belgeNo
+            AND FTIRSIP = @ftirsip
+            AND CARI_KODU = @cariKodu
+            AND SUBE_KODU = @subeKodu
+            AND TURU = 'I'
+            AND SERI_NO IN (${chunk.map((_, idx) => `@s${idx}`).join(',')})
+        `
 
-          const checkResult = await checkRequest.query(checkQuery)
+        const existingRequest = pool.request()
+        existingRequest.input('belgeNo', documentInfo.belgeNo)
+        existingRequest.input('ftirsip', documentInfo.ftirsip)
+        existingRequest.input('cariKodu', documentInfo.cariKodu)
+        existingRequest.input('subeKodu', documentInfo.subeKodu)
+        chunk.forEach((sn, idx) => existingRequest.input(`s${idx}`, sn))
 
-          if (checkResult.recordset[0].count > 0) {
-            results.errors.push({ line: i + 1, message: 'Bu seri numarası zaten kayıtlı' })
-            results.errorCount++
-            continue
-          }
-
-          // Kaydet
-          const insertQuery = `
-            INSERT INTO AKTBLITSUTS (
-              SERI_NO, STOK_KODU, GTIN, MIAD, LOT_NO,
-              HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
-              TURU, KAYIT_TARIHI, SUBE_KODU, KAYIT_KULLANICI
-            ) VALUES (
-              @seriNo, @stokKodu, @gtin, @miad, @lot,
-              @harRecno, @fatirs_no, @ftirsip, @cariKodu,
-              'I', GETDATE(), @subeKodu, @kullanici
-            )
-          `
-
-          const insertRequest = pool.request()
-          insertRequest.input('seriNo', parsed.serialNumber)
-          insertRequest.input('stokKodu', documentInfo.stokKodu)
-          insertRequest.input('gtin', parsed.gtin)
-          insertRequest.input('miad', parsed.expiryDate)
-          insertRequest.input('lot', parsed.lotNumber)
-          insertRequest.input('harRecno', documentInfo.harRecno)
-          insertRequest.input('fatirs_no', documentInfo.belgeNo)
-          insertRequest.input('ftirsip', documentInfo.ftirsip)
-          insertRequest.input('cariKodu', documentInfo.cariKodu)
-          insertRequest.input('subeKodu', documentInfo.subeKodu)
-          insertRequest.input('kullanici', kullanici)
-
-          await insertRequest.query(insertQuery)
-          results.successCount++
-
-        } catch (error) {
-          results.errors.push({ line: i + 1, message: error.message })
-          results.errorCount++
-        }
+        const existingResult = await existingRequest.query(existingQuery)
+        existingResult.recordset.forEach(r => existingSerials.add(r.SERI_NO))
       }
 
+      // 2. Yeni kayıtları filtrele
+      const newRecords = []
+      parsedBarcodes.forEach((p, index) => {
+        if (existingSerials.has(p.seriNo)) {
+          results.duplicateCount++
+          results.errors.push({ line: p.line || index + 1, message: 'Bu seri numarası zaten kayıtlı' })
+        } else {
+          newRecords.push(p)
+        }
+      })
+
+      if (newRecords.length === 0) {
+        results.errorCount = results.duplicateCount
+        return results
+      }
+
+      // 3. Batch INSERT - küçük chunk'lar halinde
+      for (let i = 0; i < newRecords.length; i += INSERT_CHUNK_SIZE) {
+        const chunk = newRecords.slice(i, i + INSERT_CHUNK_SIZE)
+
+        // VALUES listesi oluştur
+        const valuesList = chunk.map((record, idx) => {
+          return `(@seri${idx}, @stok${idx}, @gtin${idx}, @miad${idx}, @lot${idx}, @harRecno, @fatirs_no, @ftirsip, @cariKodu, 'I', GETDATE(), @subeKodu, @kullanici, 1)`
+        }).join(',\n        ')
+
+        const insertQuery = `
+          INSERT INTO AKTBLITSUTS (
+            SERI_NO, STOK_KODU, GTIN, MIAD, LOT_NO,
+            HAR_RECNO, FATIRS_NO, FTIRSIP, CARI_KODU,
+            TURU, KAYIT_TARIHI, SUBE_KODU, KAYIT_KULLANICI, MIKTAR
+          ) VALUES ${valuesList}
+        `
+
+        const insertRequest = pool.request()
+        insertRequest.input('harRecno', documentInfo.harRecno)
+        insertRequest.input('fatirs_no', documentInfo.belgeNo)
+        insertRequest.input('ftirsip', documentInfo.ftirsip)
+        insertRequest.input('cariKodu', documentInfo.cariKodu)
+        insertRequest.input('subeKodu', documentInfo.subeKodu)
+        insertRequest.input('kullanici', kullanici)
+
+        chunk.forEach((record, idx) => {
+          insertRequest.input(`seri${idx}`, record.seriNo)
+          insertRequest.input(`stok${idx}`, record.stokKodu || documentInfo.stokKodu)
+          insertRequest.input(`gtin${idx}`, record.gtin)
+          insertRequest.input(`miad${idx}`, record.miad || null)
+          insertRequest.input(`lot${idx}`, record.lot || '')
+        })
+
+        await insertRequest.query(insertQuery)
+        results.successCount += chunk.length
+      }
+
+      results.errorCount = results.duplicateCount
+
+      console.log(`✅ Toplu ITS Kayıt: ${results.successCount}/${results.totalCount} başarılı, ${results.duplicateCount} mükerrer`)
       return results
+
     } catch (error) {
       console.error('❌ Toplu ITS Kayıt Hatası:', error)
+      console.error('documentInfo:', documentInfo)
       throw error
     }
   },

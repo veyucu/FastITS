@@ -2,25 +2,37 @@
  * Company Service - Şirket Yönetimi Servisi
  * NETSIS.SIRKETLER30 tablosundan şirket listesi ve kullanıcı yetkilendirmesi
  * Not: SIRKETLER30 tablosunda sadece SIRKET kolonu var ve bu aynı zamanda veritabanı adı
+ * Not: Şirket listesi cache'leniyor, her sorguda DB'ye gidilmiyor
  */
 
 import sql from 'mssql'
 import { getPTSConnection } from '../config/database.js'
 import companySettingsService from './companySettingsService.js'
 
+// Cache for şirket listesi (sonsuz - sadece ayar değişince invalidate olur)
+let companiesCache = null
+
 const companyService = {
     /**
      * Aktif şirketleri getir
      * Login sayfasındaki dropdown için kullanılır
+     * Cache bir kez yüklenir ve ayar değişene kadar tutulur
      * NOT: Hiç aktif şirket yoksa TÜM şirketler gösterilir (ilk kurulum için)
      */
-    async getAllCompanies() {
+    async getAllCompanies(forceRefresh = false) {
         try {
+            // Cache varsa kullan
+            if (!forceRefresh && companiesCache !== null) {
+                return { success: true, data: companiesCache, cached: true }
+            }
+
             const pool = await getPTSConnection()
 
-            // Aktif şirketleri al (AKTBLAYAR'dan)
+            // Aktif şirketleri al (AKTBLAYAR'dan - bu da cache'li)
             const aktifResult = await companySettingsService.getActiveCompanies()
             const aktifSirketler = aktifResult.data || []
+
+            let resultData = []
 
             // Aktif şirket varsa sadece onları döndür
             if (aktifSirketler.length > 0) {
@@ -38,33 +50,42 @@ const companyService = {
                     ORDER BY SIRKET
                 `)
 
-                return {
-                    success: true,
-                    data: result.recordset.map(row => ({
-                        sirket: row.SIRKET?.trim()
-                    }))
-                }
-            }
+                resultData = result.recordset.map(row => ({
+                    sirket: row.SIRKET?.trim()
+                }))
+            } else {
+                // Hiç aktif şirket yoksa TÜM şirketleri getir (fallback)
+                console.log('⚠️ Aktif şirket yok - tüm şirketler gösteriliyor')
+                const allResult = await pool.request()
+                    .query(`
+                        SELECT SIRKET
+                        FROM SIRKETLER30 WITH (NOLOCK)
+                        ORDER BY SIRKET
+                    `)
 
-            // Hiç aktif şirket yoksa TÜM şirketleri getir (fallback)
-            console.log('⚠️ Aktif şirket yok - tüm şirketler gösteriliyor')
-            const allResult = await pool.request()
-                .query(`
-                    SELECT SIRKET
-                    FROM SIRKETLER30 WITH (NOLOCK)
-                    ORDER BY SIRKET
-                `)
-
-            return {
-                success: true,
-                data: allResult.recordset.map(row => ({
+                resultData = allResult.recordset.map(row => ({
                     sirket: row.SIRKET?.trim()
                 }))
             }
+
+            // Cache'e kaydet
+            companiesCache = resultData
+            console.log('📋 Şirket listesi cache güncellendi:', resultData.length, 'şirket')
+
+            return { success: true, data: resultData }
         } catch (error) {
             console.error('❌ Şirket listesi hatası:', error)
             return { success: false, error: error.message, data: [] }
         }
+    },
+
+    /**
+     * Cache'i invalidate et
+     */
+    invalidateCache() {
+        companiesCache = null
+        cacheLoadedAt = null
+        console.log('🔄 Şirket listesi cache invalidate edildi')
     },
 
     /**

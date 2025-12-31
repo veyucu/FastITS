@@ -761,7 +761,19 @@ const PTSPage = () => {
                 if (transferId) {
                   // Geri gelince otomatik yenileme için işaretle
                   localStorage.setItem('pts_autoLoad', 'true')
-                  navigate(`/pts/${transferId}`)
+                  // Master bilgilerini state olarak geçir (backend'de AKTBLPTSMAS sorgulanmasın)
+                  navigate(`/pts/${transferId}`, {
+                    state: {
+                      masterData: {
+                        TRANSFER_ID: transferId,
+                        DOCUMENT_NUMBER: event.data.DOCUMENT_NUMBER,
+                        DOCUMENT_DATE: event.data.DOCUMENT_DATE,
+                        SOURCE_GLN: event.data.SOURCE_GLN,
+                        SOURCE_GLN_NAME: event.data.SOURCE_GLN_NAME,
+                        BILDIRIM: event.data.BILDIRIM
+                      }
+                    }
+                  })
                 }
               }}
             />

@@ -54,6 +54,12 @@ apiClient.interceptors.request.use(
       }
     }
 
+    // Kullanıcı adını header'a ekle
+    const username = localStorage.getItem('username')
+    if (username) {
+      config.headers['X-Username'] = username
+    }
+
     return config
   },
   (error) => {
@@ -297,6 +303,25 @@ const apiService = {
       return {
         success: false,
         message: error.response?.data?.message || error.message || 'ITS karekod kaydedilemedi'
+      }
+    }
+  },
+
+  // Toplu ITS Karekod Kaydet (Batch INSERT)
+  saveITSBarcodeBulk: async (barcodes, documentInfo) => {
+    try {
+      log('📦 Toplu ITS Karekod gönderiliyor:', { count: barcodes.length, belgeNo: documentInfo.belgeNo })
+      const response = await apiClient.post('/documents/its-barcode-bulk', {
+        barcodes,
+        documentInfo
+      })
+      log('✅ Toplu ITS Karekod yanıtı:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Toplu ITS Karekod hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Toplu kayıt başarısız'
       }
     }
   },
@@ -681,16 +706,6 @@ const apiService = {
     }
   },
 
-  // Tüm PTS transferlerini getir
-  getPTSTransfers: async () => {
-    try {
-      const response = await apiClient.get('/pts/transfers')
-      return response.data
-    } catch (error) {
-      console.error('❌ PTS transfer listesi getirme hatası:', error)
-      throw error
-    }
-  },
 
   // PTS paketlerini listele (tarih aralığı ve filtre tipi ile)
   listPTSPackages: async (startDate, endDate, dateFilterType = 'created') => {

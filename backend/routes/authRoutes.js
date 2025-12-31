@@ -98,5 +98,25 @@ router.delete('/users/:id', async (req, res) => {
     }
 })
 
+// POST /api/auth/reset-admin - Admin şifresini sıfırla (geliştirme için)
+router.post('/reset-admin', async (req, res) => {
+    try {
+        const { getPTSConnection } = await import('../config/database.js')
+        const pool = await getPTSConnection()
+
+        // Admin kullanıcısının şifresini admin123 olarak sıfırla
+        await pool.request().query(`
+            UPDATE AKTBLKULLANICI 
+            SET SIFRE = 'admin123', AKTIF = 1 
+            WHERE KULLANICI_ADI = 'admin'
+        `)
+
+        res.json({ success: true, message: 'Admin şifresi sıfırlandı: admin123' })
+    } catch (error) {
+        console.error('Reset admin error:', error)
+        res.status(500).json({ success: false, error: error.message })
+    }
+})
+
 export default router
 

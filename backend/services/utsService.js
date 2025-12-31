@@ -1,5 +1,6 @@
 import { getConnection } from '../config/database.js'
-import { fixObjectStrings } from '../utils/stringUtils.js'
+
+// Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 
 /**
  * UTS (Ürün Takip Sistemi) işlemleri servisi
@@ -47,7 +48,7 @@ const utsService = {
 
       const result = await request.query(query)
 
-      const records = result.recordset.map(row => fixObjectStrings({
+      const records = result.recordset.map(row => ({
         siraNo: row.RECNO,
         recno: row.RECNO,
         seriNo: row.SERI_NO || '',

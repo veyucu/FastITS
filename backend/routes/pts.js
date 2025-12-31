@@ -10,24 +10,6 @@ const router = express.Router()
 router.use(companyMiddleware)
 
 /**
- * GET /api/pts/transfers
- * Tüm PTS transferlerini getir
- */
-router.get('/transfers', async (req, res) => {
-  try {
-    const transfers = await ptsDbService.getAllTransfers()
-    res.json(transfers)
-  } catch (error) {
-    console.error('❌ PTS transfer listesi getirme hatası:', error)
-    res.status(500).json({
-      success: false,
-      message: 'Transfer listesi alınamadı',
-      error: error.message
-    })
-  }
-})
-
-/**
  * POST /api/pts/search
  * Tarih aralığında paket listesi sorgula
  */
@@ -134,18 +116,17 @@ router.post('/download-bulk-stream', async (req, res) => {
       const transferIdStr = String(transferId)
 
       try {
-        // Daha önce indirilmiş mi kontrol et
-        console.log(`🔍 Kontrol ediliyor: ${transferIdStr} (${i + 1}/${transferIds.length})`)
-        const existingCheck = await ptsDbService.getPackageData(transferIdStr)
+        // Daha önce indirilmiş mi kontrol et (hızlı kontrol)
+        const existingCheck = await ptsDbService.checkPackageExists(transferIdStr)
 
-        if (existingCheck.success && existingCheck.data) {
+        if (existingCheck.exists) {
           results.skipped++
           results.packages.push({
             transferId: transferIdStr,
             status: 'skipped',
             message: 'Daha önce indirilmiş'
           })
-          console.log(`⏭️  ${transferIdStr} zaten veritabanında, atlanıyor`)
+          console.log(`⏭️ ${transferIdStr} zaten veritabanında, atlanıyor`)
 
           // Progress güncelle
           sendProgress({
@@ -330,9 +311,9 @@ router.post('/download-bulk-old', async (req, res) => {
       const transferIdStr = String(transferId)
 
       try {
-        const existingCheck = await ptsDbService.getPackageData(transferIdStr)
+        const existingCheck = await ptsDbService.checkPackageExists(transferIdStr)
 
-        if (existingCheck.success && existingCheck.data) {
+        if (existingCheck.exists) {
           results.skipped++
           continue
         }
@@ -508,7 +489,6 @@ router.get('/database/list', async (req, res) => {
 router.get('/database/:transferId', async (req, res) => {
   try {
     const { transferId } = req.params
-    const { cariGlnColumn, stockBarcodeColumn } = req.query
 
     if (!transferId) {
       return res.status(400).json({
@@ -517,7 +497,7 @@ router.get('/database/:transferId', async (req, res) => {
       })
     }
 
-    const result = await ptsDbService.getPackageData(transferId, cariGlnColumn, stockBarcodeColumn)
+    const result = await ptsDbService.getPackageDetails(transferId)
     res.json(result)
 
   } catch (error) {

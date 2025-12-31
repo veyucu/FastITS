@@ -28,6 +28,7 @@ const UsersPage = () => {
         email: '',
         department: '',
         role: 'user',
+        aktif: true,
         permissions: {
             urunHazirlama: true,
             pts: true,
@@ -158,11 +159,13 @@ const UsersPage = () => {
             email: user.email || '',
             department: user.department || '',
             role: user.role || 'user',
+            aktif: user.aktif !== false,
             permissions: user.permissions || {
                 urunHazirlama: true,
                 pts: true,
                 mesajKodlari: false,
                 ayarlar: false,
+                sirketAyarlari: false,
                 kullanicilar: false
             },
             authorizedCompanies: user.authorizedCompanies || ''
@@ -255,11 +258,13 @@ const UsersPage = () => {
             email: '',
             department: '',
             role: 'user',
+            aktif: true,
             permissions: {
                 urunHazirlama: true,
                 pts: true,
                 mesajKodlari: false,
                 ayarlar: false,
+                sirketAyarlari: false,
                 kullanicilar: false
             },
             authorizedCompanies: ''

@@ -1,7 +1,70 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { AgGridReact } from 'ag-grid-react'
 import { XCircle } from 'lucide-react'
 import apiService from '../../services/apiService'
+
+// Custom Date Cell Editor - Maskelenmiş tarih girişi (DD.MM.YYYY)
+const DateCellEditor = forwardRef((props, ref) => {
+  const inputRef = useRef(null)
+  const [value, setValue] = useState(props.value || '')
+
+  useEffect(() => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  }, [])
+
+  const handleChange = (e) => {
+    let input = e.target.value
+
+    // Sadece rakam ve nokta kabul et
+    input = input.replace(/[^\d.]/g, '')
+
+    // Noktaları kaldır ve sadece rakamları al
+    const digits = input.replace(/\./g, '')
+
+    // Maksimum 8 rakam (DDMMYYYY)
+    const limited = digits.slice(0, 8)
+
+    // Otomatik nokta ekle (DD.MM.YYYY)
+    let formatted = ''
+    for (let i = 0; i < limited.length; i++) {
+      if (i === 2 || i === 4) {
+        formatted += '.'
+      }
+      formatted += limited[i]
+    }
+
+    setValue(formatted)
+  }
+
+  useImperativeHandle(ref, () => ({
+    getValue() {
+      return value
+    },
+    isCancelAfterEnd() {
+      return false
+    }
+  }))
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={handleChange}
+      placeholder="GG.AA.YYYY"
+      maxLength={10}
+      className="w-full h-full px-2 text-center rounded focus:outline-none font-mono"
+      style={{
+        fontSize: '14px',
+        backgroundColor: '#1e293b',
+        color: '#f1f5f9',
+        border: '2px solid #3b82f6'
+      }}
+    />
+  )
+})
+DateCellEditor.displayName = 'DateCellEditor'
 
 /**
  * UTS Kayıtları Modal Componenti
@@ -73,10 +136,40 @@ const UTSModal = ({
     {
       headerName: 'Üretim Tarihi',
       field: 'uretimTarihiDisplay',
-      width: 130,
+      width: 150,
       editable: true,
-      cellEditor: 'agDateStringCellEditor',
-      cellClass: 'text-center font-mono'
+      cellEditor: DateCellEditor,
+      cellClass: 'text-center font-mono',
+      valueGetter: (params) => {
+        // YYYY-MM-DD -> DD.MM.YYYY formatına çevir
+        const val = params.data?.uretimTarihiDisplay
+        if (!val) return ''
+        if (val.includes('-')) {
+          const [yyyy, mm, dd] = val.split('-')
+          return `${dd}.${mm}.${yyyy}`
+        }
+        return val
+      },
+      valueSetter: (params) => {
+        const newValue = params.newValue?.trim() || ''
+
+        // Boş değer kabul et
+        if (!newValue) {
+          params.data.uretimTarihiDisplay = ''
+          return true
+        }
+
+        // DD.MM.YYYY formatı -> YYYY-MM-DD olarak kaydet
+        const ddmmyyyy = newValue.match(/^(\d{2})\.(\d{2})\.(\d{4})$/)
+        if (ddmmyyyy) {
+          const [, dd, mm, yyyy] = ddmmyyyy
+          params.data.uretimTarihiDisplay = `${yyyy}-${mm}-${dd}`
+          return true
+        }
+
+        // Geçersiz format
+        return false
+      }
     },
     {
       headerName: 'Miktar',
@@ -363,6 +456,24 @@ const UTSModal = ({
           )}
 
           {/* Records Grid */}
+          <style>{`
+            .ag-theme-alpine .ag-cell-inline-editing {
+              background-color: #1e293b !important;
+              border: none !important;
+              padding: 0 !important;
+            }
+            .ag-theme-alpine .ag-cell-edit-wrapper {
+              background-color: #1e293b !important;
+            }
+            .ag-theme-alpine .ag-text-field-input {
+              background-color: #1e293b !important;
+              color: #f1f5f9 !important;
+              border: 2px solid #3b82f6 !important;
+            }
+            .ag-theme-alpine .ag-popup-editor {
+              background-color: #1e293b !important;
+            }
+          `}</style>
           <div className="ag-theme-alpine flex-1 mb-4">
             {loading ? (
               <div className="flex items-center justify-center h-full">

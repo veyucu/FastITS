@@ -22,6 +22,7 @@ const userService = {
             YETKI_MESAJ_KODLARI,
             YETKI_AYARLAR,
             YETKI_KULLANICILAR,
+            YETKI_SIRKET_AYARLARI,
             YETKI_SIRKETLER
           FROM AKTBLKULLANICI 
           WHERE KULLANICI_ADI = @username 
@@ -54,7 +55,8 @@ const userService = {
                         pts: user.YETKI_PTS === true || user.YETKI_PTS === 1,
                         mesajKodlari: user.YETKI_MESAJ_KODLARI === true || user.YETKI_MESAJ_KODLARI === 1,
                         ayarlar: user.YETKI_AYARLAR === true || user.YETKI_AYARLAR === 1,
-                        kullanicilar: user.YETKI_KULLANICILAR === true || user.YETKI_KULLANICILAR === 1
+                        kullanicilar: user.YETKI_KULLANICILAR === true || user.YETKI_KULLANICILAR === 1,
+                        sirketAyarlari: user.YETKI_SIRKET_AYARLARI === true || user.YETKI_SIRKET_AYARLARI === 1
                     },
                     authorizedCompanies: user.YETKI_SIRKETLER || null
                 }
@@ -85,6 +87,7 @@ const userService = {
             YETKI_MESAJ_KODLARI,
             YETKI_AYARLAR,
             YETKI_KULLANICILAR,
+            YETKI_SIRKET_AYARLARI,
             YETKI_SIRKETLER,
             SON_GIRIS,
             OLUSTURMA_TARIHI
@@ -107,7 +110,8 @@ const userService = {
                         pts: u.YETKI_PTS === true || u.YETKI_PTS === 1,
                         mesajKodlari: u.YETKI_MESAJ_KODLARI === true || u.YETKI_MESAJ_KODLARI === 1,
                         ayarlar: u.YETKI_AYARLAR === true || u.YETKI_AYARLAR === 1,
-                        kullanicilar: u.YETKI_KULLANICILAR === true || u.YETKI_KULLANICILAR === 1
+                        kullanicilar: u.YETKI_KULLANICILAR === true || u.YETKI_KULLANICILAR === 1,
+                        sirketAyarlari: u.YETKI_SIRKET_AYARLARI === true || u.YETKI_SIRKET_AYARLARI === 1
                     },
                     authorizedCompanies: u.YETKI_SIRKETLER || null,
                     sonGiris: u.SON_GIRIS,
@@ -137,15 +141,16 @@ const userService = {
                 .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
                 .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
                 .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
+                .input('yetkiSirketAyarlari', userData.permissions?.sirketAyarlari ? 1 : 0)
                 .input('yetkiSirketler', userData.authorizedCompanies || null)
                 .query(`
           INSERT INTO AKTBLKULLANICI (
             KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, DEPARTMAN,
-            YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR, YETKI_SIRKETLER
+            YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR, YETKI_SIRKET_AYARLARI, YETKI_SIRKETLER
           )
           VALUES (
             @username, @password, @name, @email, @role, @department,
-            @yetkiUrunHazirlama, @yetkiPts, @yetkiMesajKodlari, @yetkiAyarlar, @yetkiKullanicilar, @yetkiSirketler
+            @yetkiUrunHazirlama, @yetkiPts, @yetkiMesajKodlari, @yetkiAyarlar, @yetkiKullanicilar, @yetkiSirketAyarlari, @yetkiSirketler
           );
           SELECT SCOPE_IDENTITY() AS ID;
         `)
@@ -174,6 +179,7 @@ const userService = {
                 .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
                 .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
                 .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
+                .input('yetkiSirketAyarlari', userData.permissions?.sirketAyarlari ? 1 : 0)
                 .input('yetkiSirketler', userData.authorizedCompanies || null)
                 .query(`
           UPDATE AKTBLKULLANICI 
@@ -187,6 +193,7 @@ const userService = {
               YETKI_MESAJ_KODLARI = @yetkiMesajKodlari,
               YETKI_AYARLAR = @yetkiAyarlar,
               YETKI_KULLANICILAR = @yetkiKullanicilar,
+              YETKI_SIRKET_AYARLARI = @yetkiSirketAyarlari,
               YETKI_SIRKETLER = @yetkiSirketler
           WHERE ID = @id
         `)

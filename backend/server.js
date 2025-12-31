@@ -9,6 +9,8 @@ import authRouter from './routes/authRoutes.js';
 import companyRouter from './routes/companyRoutes.js';
 import dbInitService from './services/dbInitService.js';
 import settingsService from './services/settingsService.js';
+import { loadMessages } from './services/itsMessageService.js';
+import userMiddleware from './middleware/userMiddleware.js';
 
 dotenv.config();
 
@@ -19,6 +21,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(userMiddleware); // Her istekte req.username doldurulur
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -79,6 +82,9 @@ async function startServer() {
     // Ayarları yükle ve cache'le (bir seferlik)
     console.log('⚙️ Ayarlar yükleniyor...');
     await settingsService.loadSettings();
+
+    // ITS mesajlarını yükle ve cache'le (239 sabit kayıt)
+    await loadMessages();
 
     // Server'ı başlat
     app.listen(PORT, () => {

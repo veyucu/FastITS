@@ -1,53 +1,12 @@
 import db, { getPTSConnection, getConnection, getCurrentDatabase } from '../config/database.js'
 import sql from 'mssql'
-import iconv from 'iconv-lite'
 import { log } from '../utils/logger.js'
 import settingsService from './settingsService.js'
 
 /**
- * Türkçe karakter düzeltme fonksiyonu - SQL Server CP1254 to UTF-8
- */
-const fixTurkishChars = (str) => {
-  if (!str || typeof str !== 'string') return str
-
-  try {
-    let fixed = str
-
-    try {
-      const buf = Buffer.from(fixed, 'latin1')
-      fixed = iconv.decode(buf, 'cp1254')
-    } catch (e) {
-      // iconv hatası - devam et
-    }
-
-    if (fixed.includes('?') || fixed.match(/[\u0080-\u00FF]/)) {
-      const charMap = {
-        'Ä°': 'İ', 'Ä±': 'ı',
-        'ÅŸ': 'ş', 'Åž': 'Ş',
-        'Ã§': 'ç', 'Ã‡': 'Ç',
-        'ÄŸ': 'ğ', 'Äž': 'Ğ',
-        'Ã¼': 'ü', 'Ãœ': 'Ü',
-        'Ã¶': 'ö', 'Ã–': 'Ö',
-        'Â': '', '�': '',
-        '\u00DD': 'İ', '\u00FD': 'ı',
-        '\u00DE': 'Ş', '\u00FE': 'ş',
-        '\u00D0': 'Ğ', '\u00F0': 'ğ',
-      }
-
-      for (const [wrong, correct] of Object.entries(charMap)) {
-        fixed = fixed.split(wrong).join(correct)
-      }
-    }
-
-    return fixed.trim()
-  } catch (error) {
-    return str
-  }
-}
-
-/**
  * PTS Veritabanı Servisi
  * XML paket verilerini AKTBLPTSMAS ve AKTBLPTSTRA tablolarına kaydeder
+ * Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
  */
 
 /**
@@ -113,10 +72,10 @@ async function savePackageData(packageData) {
       await insertRequest.query(`
         INSERT INTO AKTBLPTSMAS (
           TRANSFER_ID, DOCUMENT_NUMBER, DOCUMENT_DATE, SOURCE_GLN, DESTINATION_GLN,
-          ACTION_TYPE, SHIP_TO, NOTE, VERSION, KALEM_SAYISI, URUN_ADEDI, KAYIT_KULLANICI
+          ACTION_TYPE, SHIP_TO, NOTE, VERSION, KALEM_SAYISI, URUN_ADEDI, KAYIT_KULLANICI,KAYIT_TARIHI
         ) VALUES (
           @transferId, @documentNumber, @documentDate, @sourceGLN, @destinationGLN,
-          @actionType, @shipTo, @note, @version, @kalemSayisi, @urunAdedi, @kayitKullanici
+          @actionType, @shipTo, @note, @version, @kalemSayisi, @urunAdedi, @kayitKullanici,GETDATE()
         )
       `)
 
@@ -181,36 +140,45 @@ async function savePackageData(packageData) {
 }
 
 /**
- * Transfer ID ile paket verilerini getir (sadece varlık kontrolü için)
+ * Paketin veritabanında var olup olmadığını hızlıca kontrol et
  * @param {string} transferId - Transfer ID
- * @param {string} cariGlnColumn - Cari GLN kolon adı (kullanılmıyor, geriye dönük uyumluluk için)
- * @param {string} stockBarcodeColumn - Stok barkod kolon adı (kullanılmıyor, geriye dönük uyumluluk için)
+ * @returns {Promise<Object>} { exists: boolean }
+ */
+async function checkPackageExists(transferId) {
+  try {
+    const ptsPool = await getPTSConnection()
+    const request = ptsPool.request()
+    request.input('transferId', sql.BigInt, BigInt(transferId))
+
+    const result = await request.query(`
+      SELECT 1 FROM AKTBLPTSMAS WITH (NOLOCK) WHERE TRANSFER_ID = @transferId
+    `)
+
+    return {
+      success: true,
+      exists: result.recordset.length > 0
+    }
+  } catch (error) {
+    console.error('❌ Paket varlık kontrolü hatası:', error)
+    return {
+      success: false,
+      exists: false,
+      error: error.message
+    }
+  }
+}
+
+/**
+ * Transfer ID ile paket ürünlerini getir (PTSDetailPage için)
+ * Master bilgileri frontend'den gelir, sadece ürünleri döndürür
+ * @param {string} transferId - Transfer ID
  * @returns {Promise<Object>}
  */
-async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', stockBarcodeColumn = 'TBLSTSABIT.STOK_KODU') {
+async function getPackageDetails(transferId) {
   try {
     const ptsPool = await getPTSConnection()
 
-    // Master kayıt kontrolü (NETSIS.AKTBLPTSMAS)
-    const masterRequest = ptsPool.request()
-    masterRequest.input('transferId', sql.BigInt, BigInt(transferId))
-    const masterResult = await masterRequest.query(`
-      SELECT * FROM AKTBLPTSMAS WHERE TRANSFER_ID = @transferId
-    `)
-
-    if (masterResult.recordset.length === 0) {
-      console.log(`❌ Paket bulunamadı: ${transferId}`)
-      return {
-        success: false,
-        message: 'Paket bulunamadı'
-      }
-    }
-
-    const masterData = masterResult.recordset[0]
-    console.log(`✅ Paket bulundu: ${transferId}`)
-
     // Ürün detaylarını getir - AKTBLITSMESAJ ve TBLSTSABIT ile join (tek sorgu)
-    // Database adını aktif şirketten al (dinamik)
     const mainDbName = getCurrentDatabase() || db.mainConfig?.database || process.env.DB_NAME || 'MUHASEBE2025'
 
     const productsRequest = ptsPool.request()
@@ -220,83 +188,39 @@ async function getPackageData(transferId, cariGlnColumn = 'TBLCASABIT.EMAIL', st
     const productsResult = await productsRequest.query(`
       SELECT 
         p.*,
-        m.MESAJ AS DURUM_MESAJI,
-        s.STOK_ADI
+        DBO.TRK(m.MESAJ) AS DURUM_MESAJI,
+        DBO.TRK(s.STOK_ADI) AS STOK_ADI
       FROM AKTBLPTSTRA p WITH (NOLOCK)
       LEFT JOIN AKTBLITSMESAJ m WITH (NOLOCK) ON TRY_CAST(p.BILDIRIM AS INT) = m.ID
       LEFT JOIN ${mainDbName}.dbo.TBLSTSABIT s WITH (NOLOCK) ON '0'+s.STOK_KODU = p.GTIN
       WHERE p.TRANSFER_ID = @transferId
     `)
 
-    console.log(`✅ ${productsResult.recordset.length} ürün bulundu`)
-
-    // Şirket veritabanı bağlantısı (cari için)
-    const companyPool = await getConnection()
-
-    // Cari bilgisini getir (eğer SOURCE_GLN varsa)
-    let cariName = null
-    if (masterData.SOURCE_GLN) {
-      try {
-        const cariRequest = companyPool.request()
-        cariRequest.input('gln', sql.VarChar, masterData.SOURCE_GLN)
-        const cariResult = await cariRequest.query(`
-          SELECT CARI_ISIM FROM TBLCASABIT WITH (NOLOCK) WHERE EMAIL = @gln
-        `)
-        if (cariResult.recordset.length > 0) {
-          cariName = fixTurkishChars(cariResult.recordset[0].CARI_ISIM)
-        }
-      } catch (e) {
-        console.warn('⚠️ Cari bilgisi alınamadı:', e.message)
-      }
-    }
-
-    // Ürünlere Türkçe karakter düzeltmesi uygula
-    const enrichedProducts = productsResult.recordset.map(p => {
-      return {
-        ...p,
-        STOK_ADI: p.STOK_ADI ? fixTurkishChars(p.STOK_ADI) : null,
-        DURUM_MESAJI: p.DURUM_MESAJI ? fixTurkishChars(p.DURUM_MESAJI) : null
-      }
-    })
-
-    // GTIN olan ürünleri logla (debug)
-    log('🔍 GTIN olan ilk 3 ürün:')
-    const productsWithGtin = enrichedProducts.filter(p => p.GTIN)
-    productsWithGtin.slice(0, 3).forEach(p => {
-      console.log(`  GTIN: ${p.GTIN} -> STOK_ADI: ${p.STOK_ADI || 'NULL'}`)
-    })
-
-    // GTIN olmayan ürün sayısı
-    const withoutGtin = enrichedProducts.filter(p => !p.GTIN).length
-    console.log(`⚠️ GTIN olmayan ürün sayısı: ${withoutGtin}/${enrichedProducts.length}`)
-
-    // Sonucu döndür
+    // Sadece products döndür (Türkçe karakter düzeltmesi SQL'de DBO.TRK ile yapılıyor)
     return {
       success: true,
       data: {
-        ...masterData,
-        SOURCE_GLN_NAME: cariName,
-        products: enrichedProducts
+        products: productsResult.recordset
       }
     }
 
   } catch (error) {
-    console.error('❌ Paket getirme hatası:', error)
+    console.error('❌ Paket detayları getirme hatası:', error)
     return {
       success: false,
-      message: 'Paket getirilemedi',
+      message: 'Paket detayları getirilemedi',
       error: error.message
     }
   }
 }
 
 /**
- * Tüm paketleri listele (tarih filtreli)
- * @param {Date} startDate - Başlangıç tarihi
- * @param {Date} endDate - Bitiş tarihi
- * @param {String} dateFilterType - Tarih filtresi tipi (created/document)
- * @returns {Promise<Object>}
- */
+   * Tüm paketleri listele (tarih filtreli)
+   * @param {Date} startDate - Başlangıç tarihi
+   * @param {Date} endDate - Bitiş tarihi
+   * @param {String} dateFilterType - Tarih filtresi tipi (created/document)
+   * @returns {Promise<Object>}
+   */
 async function listPackages(startDate, endDate, dateFilterType = 'created') {
   try {
     const totalStartTime = Date.now()
@@ -322,7 +246,7 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
         p.*,
         ISNULL(p.KALEM_SAYISI, 0) AS UNIQUE_GTIN_COUNT,
         ISNULL(p.URUN_ADEDI, 0) AS TOTAL_PRODUCT_COUNT,
-        c.CARI_ISIM AS SOURCE_GLN_NAME
+        DBO.TRK(c.CARI_ISIM) AS SOURCE_GLN_NAME
       FROM AKTBLPTSMAS p WITH (NOLOCK)
       LEFT JOIN ${mainDbName}.dbo.TBLCASABIT c WITH (NOLOCK) ON c.${glnColumn} = p.SOURCE_GLN
     `
@@ -343,10 +267,9 @@ async function listPackages(startDate, endDate, dateFilterType = 'created') {
 
     log(`⏱️ SQL sorgu süresi: ${queryEndTime - queryStartTime}ms`)
 
-    // Paketleri düzenle (Türkçe karakter düzeltme)
+    // Paketleri düzenle (Türkçe karakter düzeltmesi SQL'de DBO.TRK ile yapılıyor)
     const packages = result.recordset.map(pkg => ({
       ...pkg,
-      SOURCE_GLN_NAME: pkg.SOURCE_GLN_NAME ? fixTurkishChars(pkg.SOURCE_GLN_NAME) : null,
       UNIQUE_GTIN_COUNT: pkg.UNIQUE_GTIN_COUNT || 0,
       TOTAL_PRODUCT_COUNT: pkg.TOTAL_PRODUCT_COUNT || 0
     }))
@@ -622,42 +545,6 @@ async function getCarrierDetails(transferId, carrierLabel) {
 }
 
 /**
- * Tüm PTS transferlerini getir
- */
-export async function getAllTransfers() {
-  try {
-    const pool = await getPTSConnection()
-
-    const query = `
-      SELECT 
-        TRANSFER_ID,
-        GONDERICI_GLN,
-        ALICI_GLN,
-        DURUM,
-        KAYIT_TARIHI,
-        GUNCELLEME_TARIHI
-      FROM AKTBLPTSMAS WITH (NOLOCK)
-      ORDER BY KAYIT_TARIHI DESC
-    `
-
-    const result = await pool.request().query(query)
-
-    return result.recordset.map(row => ({
-      TRANSFER_ID: row.TRANSFER_ID,
-      GONDERICI_GLN: row.GONDERICI_GLN,
-      ALICI_GLN: row.ALICI_GLN,
-      BILDIRIM: row.BILDIRIM,
-      KAYIT_TARIHI: row.KAYIT_TARIHI,
-      GUNCELLEME_TARIHI: row.GUNCELLEME_TARIHI
-    }))
-
-  } catch (error) {
-    console.error('❌ Transfer listesi getirme hatası:', error)
-    throw error
-  }
-}
-
-/**
  * Koli barkodundan hiyerarşik olarak tüm ürünleri getir
  * @param {string} carrierLabel - Koli barkodu
  * @param {Array<string>} stockCodes - Belgedeki stok kodları (filtre için)
@@ -768,7 +655,8 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
 
 export {
   savePackageData,
-  getPackageData,
+  checkPackageExists,
+  getPackageDetails,
   listPackages,
   getProductsByCarrierLabel,
   getCarrierDetails,

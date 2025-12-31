@@ -18,8 +18,8 @@ const mainConfig = {
   },
   pool: {
     max: parseInt(process.env.DB_POOL_MAX) || 10,
-    min: parseInt(process.env.DB_POOL_MIN) || 0,
-    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
+    min: parseInt(process.env.DB_POOL_MIN) || 2,
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 120000
   },
   connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 30000,
   requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 60000,
@@ -46,8 +46,8 @@ const ptsConfig = {
   },
   pool: {
     max: parseInt(process.env.DB_POOL_MAX) || 10,
-    min: parseInt(process.env.DB_POOL_MIN) || 0,
-    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
+    min: parseInt(process.env.DB_POOL_MIN) || 2,
+    idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 120000
   },
   connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 30000,
   requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 60000,
@@ -101,8 +101,8 @@ export const getDynamicConnection = async (databaseName) => {
       },
       pool: {
         max: parseInt(process.env.DB_POOL_MAX) || 10,
-        min: parseInt(process.env.DB_POOL_MIN) || 0,
-        idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000
+        min: parseInt(process.env.DB_POOL_MIN) || 2,
+        idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 120000
       },
       connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 30000,
       requestTimeout: parseInt(process.env.DB_REQUEST_TIMEOUT) || 60000
