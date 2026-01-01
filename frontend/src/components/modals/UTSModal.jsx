@@ -330,7 +330,7 @@ const UTSModal = ({
         belgeTarihiFormatted = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
       }
 
-      // API'yi çağır
+      // API'yi çağır (kullanıcı backend'de context'ten alınıyor)
       const result = await apiService.saveUTSRecords({
         records: validRows,
         originalRecords: originalRecords,
@@ -344,8 +344,8 @@ const UTSModal = ({
         docType: document.docType,
         expectedQuantity: selectedItem.quantity,
         barcode: selectedItem.barcode || selectedItem.stokKodu,
-        cariKodu: document.customerCode,
-        kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER'
+        cariKodu: document.customerCode
+        // kullanici artık context'ten alınıyor
       })
 
       if (result.success) {

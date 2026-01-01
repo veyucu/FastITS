@@ -1,20 +1,29 @@
 /**
- * User Middleware - Aktif kullanıcı bilgisini request'e ekler
- * Frontend her istekte X-Username header'ı gönderir
+ * User Middleware - Aktif kullanıcı bilgisini request context'e ekler
+ * AsyncLocalStorage kullanarak tüm servislerden erişilebilir kılar
  */
 
-const userMiddleware = (req, res, next) => {
-    // Header'dan kullanıcı bilgisini al ve trim yap
-    const username = req.headers['x-username']?.trim()
+import { runWithContext } from '../utils/requestContext.js'
 
-    if (username) {
-        req.username = username
-    } else {
-        // Varsayılan kullanıcı (fallback)
-        req.username = 'SYSTEM'
+const userMiddleware = (req, res, next) => {
+    // Header'dan kullanıcı ve şirket bilgisini al
+    const username = req.headers['x-username']?.trim() || ''
+    const database = req.headers['x-company-database']?.trim() || process.env.DB_NAME || 'MUHASEBE2025'
+
+    // Context objesi oluştur
+    const context = {
+        username,
+        database
     }
 
-    next()
+    // req objesine de ekle (geriye uyumluluk için)
+    req.username = username
+    req.companyDb = database
+
+    // AsyncLocalStorage context'i içinde devam et
+    runWithContext(context, () => {
+        next()
+    })
 }
 
 export default userMiddleware

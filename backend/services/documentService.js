@@ -2,6 +2,7 @@ import db, { getConnection } from '../config/database.js'
 import { getCarrierProductsRecursive } from './ptsDbService.js'
 import sql from 'mssql'
 import settingsService from './settingsService.js'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 // Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 
@@ -957,9 +958,11 @@ const documentService = {
         ilcGtin,
         expectedQuantity,  // Beklenen miktar (kalem miktarı)
         ftirsip,
-        cariKodu,
-        kullanici
+        cariKodu
       } = data
+
+      // Kullanıcıyı context'ten al
+      const kullanici = getCurrentUsername()
 
       log('💾 ITS Karekod Kaydediliyor (AKTBLITSUTS):', data)
 
@@ -1162,9 +1165,11 @@ const documentService = {
         expectedQuantity,  // Beklenen miktar
         ftirsip,      // Belge tipi
         cariKodu,     // Cari kodu
-        kullanici,    // Kullanıcı (ZORUNLU)
         miktar = 1    // Kullanıcı "100*BARKOD" gönderirse miktar=100
       } = data
+
+      // Kullanıcıyı context'ten al
+      const kullanici = getCurrentUsername()
 
       log('💾 DGR Barkod Kaydediliyor (AKTBLITSUTS):', data)
 
@@ -1372,9 +1377,11 @@ const documentService = {
         ilcGtin,      // GTIN
         expectedQuantity,  // Beklenen miktar
         ftirsip,      // Belge tipi
-        cariKodu,     // Cari kodu
-        kullanici     // Kullanıcı
+        cariKodu      // Cari kodu
       } = data
+
+      // Kullanıcıyı context'ten al
+      const kullanici = getCurrentUsername()
 
       log('💾 UTS Barkod Kaydediliyor (AKTBLITSUTS):', data)
 
@@ -1627,9 +1634,11 @@ const documentService = {
         ilcGtin,
         expectedQuantity,
         ftirsip,          // Belge tipi
-        cariKodu,         // Belgedeki CARI_KODU
-        kullanici         // Sisteme giriş yapan kullanıcı
+        cariKodu          // Belgedeki CARI_KODU
       } = data
+
+      // Kullanıcıyı context'ten al
+      const kullanici = getCurrentUsername()
 
       log('💾 UTS Toplu Kayıt İşlemi Başlıyor...')
       log('Toplam Kayıt:', records.length)
@@ -1791,7 +1800,10 @@ const documentService = {
     try {
       const pool = await getConnection()
 
-      const { carrierLabel, docId, ftirsip, cariKodu, kullanici } = data
+      const { carrierLabel, docId, ftirsip, cariKodu } = data
+
+      // Kullanıcıyı context'ten al
+      const kullanici = getCurrentUsername()
 
       if (!carrierLabel) {
         throw new Error('Koli barkodu zorunludur')
@@ -2156,9 +2168,10 @@ const documentService = {
   },
 
   // Belgenin PTS durumunu güncelle
-  async updateDocumentPTSStatus(subeKodu, fatirs_no, ftirsip, cariKodu, ptsId, kullanici) {
+  async updateDocumentPTSStatus(subeKodu, fatirs_no, ftirsip, cariKodu, ptsId) {
     try {
       const pool = await getConnection()
+      const kullanici = getCurrentUsername() // Context'ten al
 
       // TBLFATUIRS tablosunda PTS alanlarını güncelle
       const query = `
@@ -2191,9 +2204,10 @@ const documentService = {
   },
 
   // Belgenin FAST durumunu güncelle
-  async updateDocumentFastStatus(subeKodu, fatirs_no, ftirsip, cariKodu, status, kullanici) {
+  async updateDocumentFastStatus(subeKodu, fatirs_no, ftirsip, cariKodu, status) {
     try {
       const pool = await getConnection()
+      const kullanici = getCurrentUsername() // Context'ten al
 
       // Sipariş mi yoksa fatura mı?
       const isSiparis = ftirsip === '6'

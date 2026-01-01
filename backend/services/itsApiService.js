@@ -9,6 +9,7 @@ import * as settingsHelper from '../utils/settingsHelper.js'
 import { log } from '../utils/logger.js'
 import { toSqlTurkishChars } from '../utils/stringUtils.js'
 import { getMessage } from './itsMessageService.js'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 // Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 // Not: ITS mesajları itsMessageService cache'inden alınıyor
@@ -674,9 +675,10 @@ export const basarisizlariSorgula = async (products, frontendSettings = null) =>
  * AKTBLITSUTS tablosundaki ilgili kayıtların durumunu güncelle
  * Temp Table + JOIN ile performanslı toplu güncelleme (tüm SQL Server sürümleriyle uyumlu)
  */
-export const updateBildirimDurum = async (results, kullanici) => {
+export const updateBildirimDurum = async (results) => {
     try {
         const pool = await getConnection()
+        const kullanici = getCurrentUsername() // Context'ten al
 
         // recNo'su olan kayıtları filtrele
         const validResults = results.filter(item => item.recNo)
@@ -747,11 +749,11 @@ export const updateBildirimDurum = async (results, kullanici) => {
  * @param {string} ftirsip - Belge tipi (1=Satış Faturası, 2=Alış Faturası, 6=Sipariş)
  * @param {string} cariKodu - Cari kodu
  * @param {boolean} tumBasarili - Tüm satırlar başarılı mı (DURUM = 1)?
- * @param {string} kullanici - Aktif kullanıcı adı
  */
-export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu, tumBasarili, kullanici) => {
+export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu, tumBasarili) => {
     try {
         const pool = await getConnection()
+        const kullanici = getCurrentUsername() // Context'ten al
 
         // Belge tipi: '6' = Sipariş (TBLSIPAMAS), diğerleri = Fatura (TBLFATUIRS)
         const tableName = ftirsip === '6' ? 'TBLSIPAMAS' : 'TBLFATUIRS'
@@ -781,8 +783,8 @@ export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu
         const result = await request.query(query)
 
         if (result.rowsAffected[0] > 0) {
-            log(`✅ Belge ITS durumu güncellendi: ${tableName} -> ${itsDurum}`)
-            return { success: true, itsDurum }
+            log(`✅ Belge ITS durumu güncellendi: ${tableName} -> ${itsBildirim}`)
+            return { success: true, itsBildirim }
         } else {
             log(`⚠️ Belge bulunamadı: ${tableName}, FATIRS_NO=${fatirs_no}, CARI_KODU=${cariKodu}`)
             return { success: false, message: 'Belge bulunamadı' }
@@ -803,8 +805,9 @@ export const updateBelgeITSDurum = async (subeKodu, fatirs_no, ftirsip, cariKodu
  * @param {Array} results - Bildirim sonuçları [{id, durum}]
  * @param {boolean} tumBasarili - Tüm satırlar başarılı mı?
  */
-export const updatePTSBildirimDurum = async (transferId, results, tumBasarili, kullanici = null) => {
+export const updatePTSBildirimDurum = async (transferId, results, tumBasarili) => {
     try {
+        const kullanici = getCurrentUsername() // Context'ten al
         log(`📋 PTS Bildirim durumu güncelleniyor: TRANSFER_ID=${transferId}, Sonuç sayısı=${results?.length || 0}, tumBasarili=${tumBasarili}, kullanici=${kullanici}`)
 
         const pool = await getPTSConnection()

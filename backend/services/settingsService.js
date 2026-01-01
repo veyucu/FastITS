@@ -30,7 +30,6 @@ const settingsService = {
       }
 
       settingsLoaded = true
-      console.log('✅ Ayarlar yüklendi:', Object.keys(cachedSettings).length, 'adet')
       return cachedSettings
     } catch (error) {
       console.error('❌ Ayar yükleme hatası:', error)

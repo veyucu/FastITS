@@ -330,7 +330,7 @@ router.post('/its-barcode-bulk', async (req, res) => {
       documentInfo  // {belgeNo, ftirsip, cariKodu, subeKodu, harRecno, stokKodu}
     } = req.body
 
-    log('📦 Toplu ITS Karekod İsteği:', { count: barcodes?.length, belgeNo: documentInfo?.belgeNo, kullanici: req.username })
+    log('📦 Toplu ITS Karekod İsteği:', { count: barcodes?.length, belgeNo: documentInfo?.belgeNo })
 
     if (!barcodes || !Array.isArray(barcodes) || barcodes.length === 0) {
       return res.status(400).json({
@@ -347,8 +347,8 @@ router.post('/its-barcode-bulk', async (req, res) => {
       })
     }
 
-    // itsService.bulkSave çağır - kullanıcı req.username'den alınır
-    const result = await itsService.bulkSave(barcodes, documentInfo, req.username)
+    // itsService.bulkSave çağır - kullanıcı context'ten alınır
+    const result = await itsService.bulkSave(barcodes, documentInfo)
 
     log('✅ Toplu ITS Kayıt Sonucu:', result)
     res.json({
@@ -443,8 +443,8 @@ router.post('/its-barcode', async (req, res) => {
       ilcGtin: parsedData.barkod,
       expectedQuantity,
       ftirsip,
-      cariKodu,
-      kullanici: req.body.kullanici
+      cariKodu
+      // kullanici artık context'ten alınıyor
     })
 
     // Duplicate kontrolü
@@ -520,8 +520,8 @@ router.post('/uts-barcode', async (req, res) => {
       ilcGtin: barcode,
       expectedQuantity,
       ftirsip,                     // Belge tipi: '6'=Sipariş, '2'=Alış, '1'=Satış
-      cariKodu: req.body.cariKodu,         // Belgedeki CARI_KODU (ZORUNLU)
-      kullanici: req.body.kullanici        // Sisteme giriş yapan kullanıcı (ZORUNLU)
+      cariKodu: req.body.cariKodu   // Belgedeki CARI_KODU (ZORUNLU)
+      // kullanici artık context'ten alınıyor
     })
 
     if (!saveResult.success) {
@@ -589,8 +589,8 @@ router.post('/uts-records/bulk-save', async (req, res) => {
       ilcGtin: barcode,
       expectedQuantity,
       ftirsip,                              // Belge tipi: '6'=Sipariş, '2'=Alış, '1'=Satış
-      cariKodu: req.body.cariKodu,          // Belgedeki CARI_KODU
-      kullanici: req.body.kullanici         // Sisteme giriş yapan kullanıcı
+      cariKodu: req.body.cariKodu          // Belgedeki CARI_KODU
+      // kullanici artık context'ten alınıyor
     })
 
     res.json({
@@ -616,11 +616,10 @@ router.post('/carrier-barcode', async (req, res) => {
       carrierLabel,  // Koli barkodu
       docId,         // Belge ID (KAYITNO)
       ftirsip,       // Belge tipi
-      cariKodu,      // Cari kodu
-      kullanici      // Kullanıcı adı
+      cariKodu       // Cari kodu
     } = req.body
 
-    log('📦 Koli Barkodu İsteği:', { carrierLabel, docId, ftirsip, cariKodu, kullanici })
+    log('📦 Koli Barkodu İsteği:', { carrierLabel, docId, ftirsip, cariKodu })
 
     if (!carrierLabel) {
       return res.status(400).json({
@@ -636,20 +635,12 @@ router.post('/carrier-barcode', async (req, res) => {
       })
     }
 
-    if (!kullanici) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kullanıcı bilgisi zorunludur'
-      })
-    }
-
     // Koli barkodundan ürünleri kaydet
     const result = await documentService.saveCarrierBarcode({
       carrierLabel,
       docId,
       ftirsip,
-      cariKodu,
-      kullanici
+      cariKodu
     })
 
     res.json(result)
@@ -736,8 +727,8 @@ router.post('/dgr-barcode', async (req, res) => {
       ilcGtin: barcode,  // Okutulan Barkod
       expectedQuantity,   // Miktar kontrolü için
       ftirsip,            // Belge tipi: '6'=Sipariş, '2'=Alış, '1'=Satış
-      cariKodu: req.body.cariKodu || '',  // Belgedeki CARI_KODU
-      kullanici: req.body.kullanici || ''  // Sisteme giriş yapan kullanıcı
+      cariKodu: req.body.cariKodu || ''  // Belgedeki CARI_KODU
+      // kullanici artık context'ten alınıyor
     })
 
     if (!saveResult.success) {
@@ -772,15 +763,16 @@ router.post('/dgr-barcode', async (req, res) => {
 router.post('/:id/pts-preview', async (req, res) => {
   try {
     const { id } = req.params
-    const { kullanici, note, settings } = req.body
+    const { note, settings } = req.body
+    // kullanici artık context'ten alınıyor
 
-    log('📝 PTS XML Önizleme İsteği:', { documentId: id, kullanici, note })
+    log('📝 PTS XML Önizleme İsteği:', { documentId: id, note })
 
-    // Document ID parse et
-    const [subeKodu, ftirsip, fatirs_no] = id.split('-')
+    // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
+    const [subeKodu, ftirsip, fatirs_no, cariKodu] = id.split('|')
 
     // Belge bilgilerini al
-    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no)
+    const document = await documentService.getDocumentById(subeKodu, ftirsip, fatirs_no, cariKodu)
     if (!document) {
       return res.status(404).json({
         success: false,
@@ -789,7 +781,7 @@ router.post('/:id/pts-preview', async (req, res) => {
     }
 
     // Belgedeki tüm ITS kayıtlarını al
-    const itsRecords = await documentService.getAllITSRecordsForDocument(subeKodu, fatirs_no, ftirsip)
+    const itsRecords = await documentService.getAllITSRecordsForDocument(subeKodu, fatirs_no, ftirsip, cariKodu)
 
     if (!itsRecords || itsRecords.length === 0) {
       return res.status(400).json({
@@ -912,9 +904,10 @@ function generatePTSNotificationXMLForPreview(packageData) {
 router.post('/:id/pts-notification', async (req, res) => {
   try {
     const { id } = req.params
-    const { kullanici, settings } = req.body
+    const { settings } = req.body
+    // kullanici artık context'ten alınıyor
 
-    log('📤 PTS Bildirimi İsteği:', { documentId: id, kullanici })
+    log('📤 PTS Bildirimi İsteği:', { documentId: id })
 
     // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
     const [subeKodu, ftirsip, fatirs_no, cariKodu] = id.split('|')
@@ -980,8 +973,8 @@ router.post('/:id/pts-notification', async (req, res) => {
       fatirs_no,
       ftirsip,
       cariKodu,
-      result.transferId,
-      kullanici
+      result.transferId
+      // kullanici artık context'ten alınıyor
     )
 
     log('✅ PTS Bildirimi başarılı:', result.transferId)
@@ -1040,7 +1033,7 @@ router.post('/:id/its-satis-bildirimi', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
+        await itsApiService.updateBildirimDurum(recordsToUpdate)
       }
 
       // Belge ITS durumunu güncelle (tüm satırlar başarılı ise OK, değilse NOK)
@@ -1051,8 +1044,7 @@ router.post('/:id/its-satis-bildirimi', async (req, res) => {
           belgeInfo.fatirsNo,
           belgeInfo.ftirsip,
           belgeInfo.cariKodu,
-          tumBasarili,
-          belgeInfo.kullanici
+          tumBasarili
         )
       }
     }
@@ -1100,7 +1092,7 @@ router.post('/:id/its-satis-iptal', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
+        await itsApiService.updateBildirimDurum(recordsToUpdate)
       }
 
       // Belge ITS durumunu güncelle
@@ -1111,8 +1103,7 @@ router.post('/:id/its-satis-iptal', async (req, res) => {
           belgeInfo.fatirsNo,
           belgeInfo.ftirsip,
           belgeInfo.cariKodu,
-          tumBasarili,
-          belgeInfo.kullanici
+          tumBasarili
         )
       }
     }
@@ -1157,7 +1148,7 @@ router.post('/:id/its-alis-bildirimi', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
+        await itsApiService.updateBildirimDurum(recordsToUpdate)
       }
 
       // Belge ITS durumunu güncelle
@@ -1168,8 +1159,7 @@ router.post('/:id/its-alis-bildirimi', async (req, res) => {
           belgeInfo.fatirsNo,
           belgeInfo.ftirsip,
           belgeInfo.cariKodu,
-          tumBasarili,
-          belgeInfo.kullanici
+          tumBasarili
         )
       }
     }
@@ -1217,7 +1207,7 @@ router.post('/:id/its-iade-alis', async (req, res) => {
       })).filter(r => r.recNo)
 
       if (recordsToUpdate.length > 0) {
-        await itsApiService.updateBildirimDurum(recordsToUpdate, req.username)
+        await itsApiService.updateBildirimDurum(recordsToUpdate)
       }
 
       // Belge ITS durumunu güncelle
@@ -1228,8 +1218,7 @@ router.post('/:id/its-iade-alis', async (req, res) => {
           belgeInfo.fatirsNo,
           belgeInfo.ftirsip,
           belgeInfo.cariKodu,
-          tumBasarili,
-          belgeInfo.kullanici
+          tumBasarili
         )
       }
     }
@@ -1336,21 +1325,15 @@ router.post('/:id/its-basarisiz-sorgula', async (req, res) => {
 router.post('/:id/fast-durum', async (req, res) => {
   try {
     const { id } = req.params
-    const { status, kullanici } = req.body
+    const { status } = req.body
+    // kullanici artık context'ten alınıyor
 
-    log('📋 FAST Durum Güncelleme İsteği:', { documentId: id, status, kullanici })
+    log('📋 FAST Durum Güncelleme İsteği:', { documentId: id, status })
 
     if (!status || !['OK', 'NOK'].includes(status)) {
       return res.status(400).json({
         success: false,
         message: 'Geçersiz durum değeri. OK veya NOK olmalı.'
-      })
-    }
-
-    if (!kullanici) {
-      return res.status(400).json({
-        success: false,
-        message: 'Kullanıcı bilgisi zorunludur'
       })
     }
 
@@ -1363,8 +1346,8 @@ router.post('/:id/fast-durum', async (req, res) => {
       fatirs_no,
       ftirsip,
       cariKodu,
-      status,
-      kullanici
+      status
+      // kullanici artık context'ten alınıyor
     )
 
     res.json({

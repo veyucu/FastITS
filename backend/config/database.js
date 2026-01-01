@@ -26,7 +26,7 @@ const mainConfig = {
   beforeConnect: (conn) => {
     conn.on('connect', (err) => {
       if (!err) {
-        console.log('SQL Server bağlantısı kuruldu - Türkçe karakter desteği aktif')
+        console.log('SQL Server bağlantısı kuruldu')
       }
     })
   }
@@ -54,7 +54,7 @@ const ptsConfig = {
   beforeConnect: (conn) => {
     conn.on('connect', (err) => {
       if (!err) {
-        console.log('PTS SQL Server bağlantısı kuruldu - Türkçe karakter desteği aktif')
+        console.log('PTS SQL Server bağlantısı kuruldu')
       }
     })
   }

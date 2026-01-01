@@ -296,11 +296,7 @@ const PTSPage = () => {
         status: 'downloading'
       }))
 
-      // SSE ile real-time progress
-      // Kullanıcı bilgisini localStorage'dan al
-      const storedUser = localStorage.getItem('user')
-      const kullanici = storedUser ? JSON.parse(storedUser)?.username : null
-
+      // SSE ile real-time progress (kullanıcı backend'de context'ten alınıyor)
       await apiService.downloadBulkPackagesStream(
         startDate,
         endDate,
@@ -323,8 +319,7 @@ const PTSPage = () => {
             }
           })
         },
-        null, // settings
-        kullanici
+        null // settings
       )
 
       // Mesaj kaldırıldı - modal'da zaten gösteriliyor

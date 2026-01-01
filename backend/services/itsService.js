@@ -1,5 +1,6 @@
 import { getConnection } from '../config/database.js'
 import sql from 'mssql'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 // Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 
@@ -87,9 +88,11 @@ const itsService = {
       fatirs_no,
       ftirsip,
       cariKodu,
-      kullanici,
       subeKodu
     } = params
+
+    // Kullanıcıyı context'ten al
+    const kullanici = getCurrentUsername()
 
     try {
       const pool = await getConnection()
@@ -260,7 +263,7 @@ const itsService = {
   /**
    * Toplu ITS Karekod Kaydet - Batch INSERT ile optimize edilmiş
    */
-  async bulkSave(parsedBarcodes, documentInfo, kullanici) {
+  async bulkSave(parsedBarcodes, documentInfo) {
     const results = {
       totalCount: parsedBarcodes.length,
       successCount: 0,
@@ -275,6 +278,7 @@ const itsService = {
 
     try {
       const pool = await getConnection()
+      const kullanici = getCurrentUsername() // Context'ten al
 
       // SQL Server parametre limiti: 2100, güvenli chunk boyutu: 500
       const CHECK_CHUNK_SIZE = 500

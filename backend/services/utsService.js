@@ -1,4 +1,5 @@
 import { getConnection } from '../config/database.js'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 // Not: Türkçe karakter düzeltmesi SQL'de DBO.TRK fonksiyonu ile yapılıyor
 
@@ -9,7 +10,7 @@ const utsService = {
   /**
    * UTS Kayıtlarını Getir
    */
-  async getRecords(subeKodu, belgeNo, straInc, ftirsip, cariKodu) {
+  async getRecords(subeKodu, belgeNo, harRecno, ftirsip, cariKodu) {
     try {
       const pool = await getConnection()
 
@@ -31,7 +32,7 @@ const utsService = {
           KAYIT_KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
-          AND HAR_RECNO = @straInc
+          AND HAR_RECNO = @harRecno
           AND FTIRSIP = @ftirsip
           AND CARI_KODU = @cariKodu
           AND SUBE_KODU = @subeKodu
@@ -41,7 +42,7 @@ const utsService = {
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
-      request.input('straInc', straInc)
+      request.input('harRecno', harRecno)
       request.input('ftirsip', ftirsip)
       request.input('cariKodu', cariKodu)
       request.input('subeKodu', subeKodu)
@@ -91,9 +92,11 @@ const utsService = {
       expectedQuantity,
       barcode,
       cariKodu,
-      kullanici,
       subeKodu
     } = params
+
+    // Kullanıcıyı context'ten al
+    const kullanici = getCurrentUsername()
 
     try {
       const pool = await getConnection()
@@ -182,7 +185,7 @@ const utsService = {
           updateRequest.input('belgeNo', belgeNo)
           updateRequest.input('harRecno', itemId)
           updateRequest.input('recno', record.siraNo || record.recno)
-          updateRequest.input('kullanici', kullanici || 'SYSTEM')
+          updateRequest.input('kullanici', kullanici)
 
           await updateRequest.query(updateQuery)
         }
@@ -201,7 +204,7 @@ const utsService = {
   /**
    * UTS Kayıtlarını Sil
    */
-  async deleteRecords(records, belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
+  async deleteRecords(records, belgeNo, harRecno, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -209,7 +212,7 @@ const utsService = {
         const query = `
           DELETE FROM AKTBLITSUTS
           WHERE FATIRS_NO = @belgeNo
-            AND HAR_RECNO = @straInc
+            AND HAR_RECNO = @harRecno
             AND RECNO = @recno
             AND FTIRSIP = @ftirsip
             AND CARI_KODU = @cariKodu
@@ -220,7 +223,7 @@ const utsService = {
         const request = pool.request()
         request.input('recno', record.siraNo || record.recno)
         request.input('belgeNo', belgeNo)
-        request.input('straInc', straInc)
+        request.input('harRecno', harRecno)
         request.input('ftirsip', ftirsip)
         request.input('cariKodu', cariKodu)
         request.input('subeKodu', subeKodu)

@@ -20,8 +20,7 @@ router.get('/', async (req, res) => {
       fatirsNo: req.query.fatirsNo,
       gtin: req.query.gtin,
       seriNo: req.query.seriNo,
-      cariKodu: req.query.cariKodu,
-      kullanici: req.query.kullanici
+      cariKodu: req.query.cariKodu
     }
 
     const result = await itsDbService.listITSRecords(filters)

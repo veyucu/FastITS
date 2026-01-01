@@ -61,15 +61,12 @@ const PTSModal = ({
         setResult(null)
 
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            const kullanici = user.username || 'USER'
-
             // Ayarları al
             const settingsResponse = await apiService.getSettings()
             const settings = settingsResponse.success ? settingsResponse.data : null
 
-            // XML önizleme endpoint'ini çağır
-            const response = await apiService.previewPTSNotification(document.id, kullanici, note, settings)
+            // XML önizleme endpoint'ini çağır (kullanıcı backend'de context'ten alınıyor)
+            const response = await apiService.previewPTSNotification(document.id, note, settings)
 
             if (response.success) {
                 setXmlPreview(response.xmlContent)
@@ -110,14 +107,12 @@ const PTSModal = ({
         setResult(null)
 
         try {
-            const user = JSON.parse(localStorage.getItem('user') || '{}')
-            const kullanici = user.username || 'USER'
-
             // Ayarları al
             const settingsResponse = await apiService.getSettings()
             const settings = settingsResponse.success ? settingsResponse.data : null
 
-            const response = await apiService.sendPTSNotification(document.id, kullanici, settings)
+            // PTS bildirimi gönder (kullanıcı backend'de context'ten alınıyor)
+            const response = await apiService.sendPTSNotification(document.id, settings)
 
             setResult(response)
 

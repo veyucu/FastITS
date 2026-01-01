@@ -1,6 +1,7 @@
 import { getConnection } from '../config/database.js'
 import { getCarrierProductsRecursive } from './ptsDbService.js'
 import sql from 'mssql'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 /**
  * Koli (Carrier) işlemleri servisi
@@ -16,10 +17,12 @@ const carrierService = {
       belgeNo,
       ftirsip,
       items,
-      kullanici,
       subeKodu,
       cariKodu
     } = params
+
+    // Kullanıcıyı context'ten al
+    const kullanici = getCurrentUsername()
 
     try {
       const pool = await getConnection()
@@ -160,7 +163,7 @@ const carrierService = {
           insertRequest.input('miad', sql.Date, miadDate)
 
           insertRequest.input('lot', product.lot || '')
-          insertRequest.input('harRecno', matchingItem.straInc)
+          insertRequest.input('harRecno', matchingItem.harRecno)
           insertRequest.input('fatirs_no', belgeNo)
           insertRequest.input('ftirsip', ftirsip)
           insertRequest.input('cariKodu', matchingItem.cariKodu)

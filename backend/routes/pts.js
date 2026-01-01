@@ -44,7 +44,8 @@ router.post('/search', async (req, res) => {
 // SSE ile real-time progress güncellemesi
 router.post('/download-bulk-stream', async (req, res) => {
   try {
-    const { startDate, endDate, settings, kullanici } = req.body
+    const { startDate, endDate, settings } = req.body
+    // kullanici artık context'ten alınıyor
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -92,7 +93,6 @@ router.post('/download-bulk-stream', async (req, res) => {
       return
     }
 
-    console.log(`📦 ${transferIds.length} paket bulundu`)
     sendProgress({
       status: 'downloading',
       total: transferIds.length,
@@ -126,7 +126,6 @@ router.post('/download-bulk-stream', async (req, res) => {
             status: 'skipped',
             message: 'Daha önce indirilmiş'
           })
-          console.log(`⏭️ ${transferIdStr} zaten veritabanında, atlanıyor`)
 
           // Progress güncelle
           sendProgress({
@@ -142,7 +141,6 @@ router.post('/download-bulk-stream', async (req, res) => {
         }
 
         // Paketi indir
-        console.log(`📥 İndiriliyor: ${transferIdStr}`)
         sendProgress({
           status: 'downloading',
           total: results.total,
@@ -156,8 +154,7 @@ router.post('/download-bulk-stream', async (req, res) => {
         const downloadResult = await ptsService.downloadPackage(transferIdStr, settings)
 
         if (downloadResult.success) {
-          // Kullanıcı bilgisini ekle
-          downloadResult.data.kayitKullanici = kullanici || null
+          // kayitKullanici artık ptsDbService'de context'ten alınıyor
           const saveResult = await ptsDbService.savePackageData(downloadResult.data)
 
           if (saveResult.success) {
@@ -167,7 +164,6 @@ router.post('/download-bulk-stream', async (req, res) => {
               status: 'success',
               productCount: downloadResult.data?.products?.length || 0
             })
-            console.log(`✅ ${transferIdStr} veritabanına kaydedildi (${downloadResult.data?.products?.length || 0} ürün)`)
 
             // Progress güncelle
             sendProgress({
@@ -269,7 +265,8 @@ router.post('/download-bulk-stream', async (req, res) => {
 // Eski endpoint (yedek - non-streaming) - Artık kullanılmıyor
 router.post('/download-bulk-old', async (req, res) => {
   try {
-    const { startDate, endDate, settings, kullanici } = req.body
+    const { startDate, endDate, settings } = req.body
+    // kullanici artık context'ten alınıyor
 
     if (!startDate || !endDate) {
       return res.status(400).json({
@@ -321,8 +318,7 @@ router.post('/download-bulk-old', async (req, res) => {
         const downloadResult = await ptsService.downloadPackage(transferIdStr, settings)
 
         if (downloadResult.success) {
-          // Kullanıcı bilgisini ekle
-          downloadResult.data.kayitKullanici = kullanici || null
+          // kayitKullanici artık ptsDbService'de context'ten alınıyor
           const saveResult = await ptsDbService.savePackageData(downloadResult.data)
           if (saveResult.success) results.downloaded++
           else results.failed++
@@ -573,7 +569,8 @@ router.get('/carrier-details/:transferId/:carrierLabel', async (req, res) => {
 router.post('/:transferId/alim-bildirimi', async (req, res) => {
   try {
     const { transferId } = req.params
-    const { products, settings, kullanici } = req.body
+    const { products, settings } = req.body
+    // kullanici artık context'ten alınıyor
 
     log('📥 PTS Alım Bildirimi İsteği:', { transferId, productCount: products?.length })
 
@@ -617,7 +614,7 @@ router.post('/:transferId/alim-bildirimi', async (req, res) => {
 
       // PTS tablolarını güncelle (AKTBLPTSMAS her zaman, AKTBLPTSTRA eşleşenler için)
       try {
-        await itsApiService.updatePTSBildirimDurum(transferId, recordsToUpdate, tumBasarili, kullanici)
+        await itsApiService.updatePTSBildirimDurum(transferId, recordsToUpdate, tumBasarili)
         log('✅ PTS tabloları güncellendi')
       } catch (updateError) {
         log('❌ PTS tablo güncelleme hatası:', updateError.message)
@@ -642,7 +639,8 @@ router.post('/:transferId/alim-bildirimi', async (req, res) => {
 router.post('/:transferId/alim-iade-bildirimi', async (req, res) => {
   try {
     const { transferId } = req.params
-    const { karsiGlnNo, products, settings, kullanici } = req.body
+    const { karsiGlnNo, products, settings } = req.body
+    // kullanici artık context'ten alınıyor
 
     log('🔴 PTS Alım İade Bildirimi İsteği:', { transferId, karsiGlnNo, productCount: products?.length })
 
@@ -689,7 +687,7 @@ router.post('/:transferId/alim-iade-bildirimi', async (req, res) => {
 
       // PTS tablolarını güncelle (AKTBLPTSMAS her zaman, AKTBLPTSTRA eşleşenler için)
       try {
-        await itsApiService.updatePTSBildirimDurum(transferId, recordsToUpdate, tumBasarili, kullanici)
+        await itsApiService.updatePTSBildirimDurum(transferId, recordsToUpdate, tumBasarili)
         log('✅ PTS tabloları güncellendi')
       } catch (updateError) {
         log('❌ PTS tablo güncelleme hatası:', updateError.message)

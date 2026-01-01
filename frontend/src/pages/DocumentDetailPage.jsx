@@ -261,12 +261,9 @@ const DocumentDetailPage = () => {
     // Sonuçları kaydet
     setCompleteResults(results)
 
-    // FAST_DURUM güncelle
+    // FAST_DURUM güncelle (kullanıcı backend'de context'ten alınıyor)
     try {
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const kullanici = user.username
-
-      await apiService.updateFastDurum(document.id, allSuccess ? 'OK' : 'NOK', kullanici)
+      await apiService.updateFastDurum(document.id, allSuccess ? 'OK' : 'NOK')
 
       if (allSuccess) {
         playSuccessSound()
@@ -1044,8 +1041,8 @@ const DocumentDetailPage = () => {
       belgeTarihi: belgeTarihiFormatted,
       docType: document.docType,
       expectedQuantity: item.quantity,
-      cariKodu: document.customerCode,
-      kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER'
+      cariKodu: document.customerCode
+      // kullanici artık context'ten alınıyor
     })
 
     if (!result.success) {
@@ -1111,8 +1108,8 @@ const DocumentDetailPage = () => {
         belgeTarihi: belgeTarihiFormatted,
         docType: document.docType,
         expectedQuantity: item.quantity,
-        cariKodu: document.customerCode,
-        kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER'
+        cariKodu: document.customerCode
+        // kullanıcı artık context'ten alınıyor
       })
 
       if (!result.success) {
@@ -1129,15 +1126,13 @@ const DocumentDetailPage = () => {
       log('📦 Koli barkodu okutuldu:', carrierLabel)
       showMessage('📦 Koli işleniyor...', 'info')
 
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
-      const username = user.username || 'USER'
-
+      // kullanıcı artık backend'de context'ten alınıyor
       const result = await apiService.saveCarrierBarcode({
         carrierLabel,
         docId: id, // Belge KAYITNO
         ftirsip: document.docType,
-        cariKodu: document.customerCode,
-        kullanici: username
+        cariKodu: document.customerCode
+        // kullanıcı artık context'ten alınıyor
       })
 
       if (result.success) {
@@ -1310,8 +1305,8 @@ const DocumentDetailPage = () => {
         belgeTarihi: belgeTarihiFormatted, // Belge tarihi (saat yok)
         docType: document.docType,
         expectedQuantity: item.quantity, // Miktar kontrolü için
-        cariKodu: document.customerCode,    // Belgedeki CARI_KODU
-        kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER' // Sisteme giriş yapan kullanıcı
+        cariKodu: document.customerCode    // Belgedeki CARI_KODU
+        // kullanıcı artık context'ten alınıyor
       })
 
       if (!result.success) {
@@ -1565,8 +1560,8 @@ const DocumentDetailPage = () => {
         belgeTarihi: belgeTarihiFormatted, // Belge tarihi (saat yok)
         docType: document.docType,
         expectedQuantity: item.quantity, // Miktar kontrolü için
-        cariKodu: document.customerCode,    // Belgedeki CARI_KODU
-        kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER' // Sisteme giriş yapan kullanıcı
+        cariKodu: document.customerCode    // Belgedeki CARI_KODU
+        // kullanıcı artık context'ten alınıyor
       })
 
       if (result.success) {
@@ -1924,8 +1919,8 @@ const DocumentDetailPage = () => {
         docType: document.docType,
         expectedQuantity: selectedUTSItem.quantity,
         barcode: selectedUTSItem.barcode || selectedUTSItem.stokKodu,
-        cariKodu: document.customerCode,    // Belgedeki CARI_KODU
-        kullanici: JSON.parse(localStorage.getItem('user') || '{}').username || 'USER' // Sisteme giriş yapan kullanıcı
+        cariKodu: document.customerCode    // Belgedeki CARI_KODU
+        // kullanıcı artık context'ten alınıyor
       })
 
       if (result.success) {

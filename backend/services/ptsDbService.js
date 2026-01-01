@@ -2,6 +2,7 @@ import db, { getPTSConnection, getConnection, getCurrentDatabase } from '../conf
 import sql from 'mssql'
 import { log } from '../utils/logger.js'
 import settingsService from './settingsService.js'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 /**
  * PTS Veritabanı Servisi
@@ -23,7 +24,10 @@ async function savePackageData(packageData) {
 
     try {
       const { transferId, documentNumber, documentDate, sourceGLN, destinationGLN,
-        actionType, shipTo, note, version, products, _rawXML, kayitKullanici } = packageData
+        actionType, shipTo, note, version, products, _rawXML } = packageData
+
+      // Kullanıcıyı context'ten al
+      const kayitKullanici = getCurrentUsername()
 
       // transferId'yi BIGINT'e dönüştür
       const transferIdBigInt = BigInt(transferId)
@@ -36,7 +40,6 @@ async function savePackageData(packageData) {
       `)
 
       if (checkResult.recordset.length > 0) {
-        console.log(`⚠️ Transfer ID ${transferIdBigInt} zaten kayıtlı, atlanıyor...`)
         await transaction.rollback()
         return {
           success: true,
@@ -47,7 +50,6 @@ async function savePackageData(packageData) {
       }
 
       // Yeni kayıt
-      console.log(`💾 Transfer ID ${transferIdBigInt} kaydediliyor...`)
 
       // KALEM ve ADET hesapla (sadece SERIAL_NUMBER olanlar = gerçek ürünler)
       const actualProducts = products ? products.filter(p => p.serialNumber) : []
@@ -81,7 +83,6 @@ async function savePackageData(packageData) {
 
       // Ürünleri ve carrier hiyerarşisini kaydet
       if (products && products.length > 0) {
-        console.log(`📦 ${products.length} ürün kaydediliyor...`)
 
         for (const product of products) {
           const productRequest = new sql.Request(transaction)
@@ -112,8 +113,6 @@ async function savePackageData(packageData) {
       }
 
       await transaction.commit()
-
-      console.log(`✅ Paket kaydedildi: ${transferIdBigInt} (${products?.length || 0} ürün)`)
 
       return {
         success: true,
@@ -324,7 +323,6 @@ async function getProductsByCarrierLabel(carrierLabel) {
     }
 
     const carrierInfo = checkResult.recordset[0]
-    console.log(`📦 Carrier bulundu:`, carrierInfo)
 
     // Recursive CTE ile tüm alt carrier'ları ve ürünleri bul
     const request = pool.request()
@@ -379,8 +377,6 @@ async function getProductsByCarrierLabel(carrierLabel) {
     const products = allRecords.filter(r => r.SERIAL_NUMBER != null)
     const carriers = allRecords.filter(r => r.SERIAL_NUMBER == null)
     const uniqueCarriers = [...new Set(carriers.map(r => r.CARRIER_LABEL).filter(c => c))]
-
-    console.log(`✅ Bulunan: ${products.length} ürün, ${uniqueCarriers.length} carrier`)
 
     return {
       success: true,
@@ -557,7 +553,6 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
 
     // GTIN'leri temizle (leading zeros kaldır) ve SQL için hazırla
     const cleanStockCodes = stockCodes.map(code => code.replace(/^0+/, ''))
-    console.log(`📋 Belgede ${cleanStockCodes.length} GTIN:`, cleanStockCodes.slice(0, 5), cleanStockCodes.length > 5 ? '...' : '')
 
     // GTIN'lerin hem temizlenmiş hem orijinal (başında 0 ile) hallerini oluştur
     const allGtinVariants = []
@@ -595,8 +590,6 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     maxTransferIdRequest.input('carrierLabel', sql.VarChar(25), carrierLabel)
     const maxTransferIdResult = await maxTransferIdRequest.query(maxTransferIdQuery)
 
-    console.log(`⏱️ MAX TRANSFER_ID sorgusu (GTIN filtreli): ${Date.now() - startTime}ms`)
-
     if (maxTransferIdResult.recordset.length === 0 || !maxTransferIdResult.recordset[0].MAX_TRANSFER_ID) {
       return {
         success: false,
@@ -605,7 +598,6 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     }
 
     const maxTransferId = maxTransferIdResult.recordset[0].MAX_TRANSFER_ID
-    console.log(`📦 Koli ${carrierLabel} için TRANSFER_ID: ${maxTransferId}`)
 
     // Direkt sorgu ile ürünleri getir (CTE yerine basit sorgu - GTIN filtreli)
     const cteStartTime = Date.now()
@@ -627,10 +619,6 @@ async function getCarrierProductsRecursive(carrierLabel, stockCodes = []) {
     request.input('maxTransferId', sql.BigInt, maxTransferId)
 
     const result = await request.query(query)
-
-    console.log(`⏱️ Ürün sorgusu (GTIN filtreli): ${Date.now() - cteStartTime}ms`)
-    console.log(`📦 Koli ${carrierLabel} için ${result.recordset.length} kayıt bulundu`)
-    console.log(`⏱️ TOPLAM SÜRE: ${Date.now() - totalStartTime}ms`)
 
     // Sadece ürünleri filtrele (SERIAL_NUMBER olan kayıtlar)
     const products = result.recordset.filter(r => r.SERIAL_NUMBER)

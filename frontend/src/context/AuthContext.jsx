@@ -25,9 +25,15 @@ export const AuthProvider = ({ children }) => {
 
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser))
+        const parsedUser = JSON.parse(storedUser)
+        setUser(parsedUser)
+        // Kullanıcı adını da set et (API header için)
+        if (parsedUser.kullanici) {
+          localStorage.setItem('username', parsedUser.kullanici)
+        }
       } catch (error) {
         localStorage.removeItem('user')
+        localStorage.removeItem('username')
       }
     }
 
@@ -62,6 +68,7 @@ export const AuthProvider = ({ children }) => {
 
         setUser(result.user)
         localStorage.setItem('user', JSON.stringify(result.user))
+        localStorage.setItem('username', username) // Kullanıcı adını ayrıca kaydet (API header için)
 
         // Beni hatırla seçiliyse kullanıcı adı/şifreyi kaydet
         if (rememberMe) {
@@ -105,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null)
     setSelectedCompanyState(null)
     localStorage.removeItem('user')
+    localStorage.removeItem('username') // Kullanıcı adını da temizle
     sessionStorage.removeItem('selectedCompany')
     // rememberedCredentials'ı silme - kullanıcı isterse hatırlasın
   }

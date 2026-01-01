@@ -49,16 +49,6 @@ const BulkScanModal = ({
     }
   }
 
-  // Kullanıcı bilgisini al
-  const getKullanici = () => {
-    try {
-      const userData = JSON.parse(localStorage.getItem('user') || '{}')
-      return userData.username
-    } catch {
-      return 'SYSTEM'
-    }
-  }
-
   // Toplu okutma işlemi - TEK API çağrısı ile
   const handleBulkScan = async () => {
     const lines = barcodeText.split('\n').filter(line => line.trim())

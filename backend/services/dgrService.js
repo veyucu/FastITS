@@ -1,4 +1,5 @@
 import { getConnection } from '../config/database.js'
+import { getCurrentUsername } from '../utils/requestContext.js'
 
 /**
  * DGR (Diğer Ürünler) işlemleri servisi
@@ -16,9 +17,11 @@ const dgrService = {
       fatirs_no,
       ftirsip,
       cariKodu,
-      kullanici,
       subeKodu
     } = params
+
+    // Kullanıcıyı context'ten al
+    const kullanici = getCurrentUsername()
 
     try {
       const pool = await getConnection()
@@ -62,7 +65,7 @@ const dgrService = {
 
         const updateRequest = pool.request()
         updateRequest.input('miktar', newQuantity)
-        updateRequest.input('kullanici', kullanici || 'SYSTEM')
+        updateRequest.input('kullanici', kullanici)
         updateRequest.input('recno', existingRecord.RECNO)
 
         await updateRequest.query(updateQuery)
@@ -111,7 +114,7 @@ const dgrService = {
    * DGR Kayıt Sil
    * DGR ürünlerde SERI_NO boş olduğu için STOK_KODU ile silme yapılır
    */
-  async deleteRecord(stokKodu, belgeNo, straInc, ftirsip, cariKodu, subeKodu, quantity = 1) {
+  async deleteRecord(stokKodu, belgeNo, harRecno, ftirsip, cariKodu, subeKodu, quantity = 1) {
     try {
       const pool = await getConnection()
 
@@ -120,7 +123,7 @@ const dgrService = {
         SELECT RECNO, MIKTAR
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
-          AND HAR_RECNO = @straInc
+          AND HAR_RECNO = @harRecno
           AND STOK_KODU = @stokKodu
           AND SUBE_KODU = @subeKodu
           AND FTIRSIP = @ftirsip
@@ -130,7 +133,7 @@ const dgrService = {
 
       const checkRequest = pool.request()
       checkRequest.input('belgeNo', belgeNo)
-      checkRequest.input('straInc', straInc)
+      checkRequest.input('harRecno', harRecno)
       checkRequest.input('stokKodu', stokKodu)
       checkRequest.input('subeKodu', subeKodu)
       checkRequest.input('ftirsip', ftirsip)
@@ -191,7 +194,7 @@ const dgrService = {
   /**
    * DGR Kayıtlarını Getir
    */
-  async getRecords(belgeNo, straInc, ftirsip, cariKodu, subeKodu) {
+  async getRecords(belgeNo, harRecno, ftirsip, cariKodu, subeKodu) {
     try {
       const pool = await getConnection()
 
@@ -210,7 +213,7 @@ const dgrService = {
           KULLANICI
         FROM AKTBLITSUTS WITH (NOLOCK)
         WHERE FATIRS_NO = @belgeNo
-          AND HAR_RECNO = @straInc
+          AND HAR_RECNO = @harRecno
           AND TURU = 'D'
           AND SUBE_KODU = @subeKodu
           AND FTIRSIP = @ftirsip
@@ -220,7 +223,7 @@ const dgrService = {
 
       const request = pool.request()
       request.input('belgeNo', belgeNo)
-      request.input('straInc', straInc)
+      request.input('harRecno', harRecno)
       request.input('subeKodu', subeKodu)
       request.input('ftirsip', ftirsip)
       request.input('cariKodu', cariKodu)

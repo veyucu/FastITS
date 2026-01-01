@@ -481,8 +481,8 @@ const apiService = {
   },
 
   // Tarih aralığındaki paketleri toplu indir ve veritabanına kaydet
-  // SSE ile real-time progress
-  downloadBulkPackagesStream: async (startDate, endDate, onProgress, settings = null, kullanici = null) => {
+  // SSE ile real-time progress (kullanıcı backend'de context'ten alınıyor)
+  downloadBulkPackagesStream: async (startDate, endDate, onProgress, settings = null) => {
     return new Promise((resolve, reject) => {
       try {
         const url = `${API_BASE_URL}/pts/download-bulk-stream`
@@ -492,9 +492,10 @@ const apiService = {
         fetch(url, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-Username': localStorage.getItem('username') || ''
           },
-          body: JSON.stringify({ startDate, endDate, settings, kullanici })
+          body: JSON.stringify({ startDate, endDate, settings })
         }).then(response => {
           const reader = response.body.getReader()
           const decoder = new TextDecoder()
@@ -751,12 +752,11 @@ const apiService = {
     }
   },
 
-  // PTS Bildirimi Gönder
-  sendPTSNotification: async (documentId, kullanici, settings = null) => {
+  // PTS Bildirimi Gönder (kullanıcı backend'de context'ten alınıyor)
+  sendPTSNotification: async (documentId, settings = null) => {
     try {
-      log('📤 PTS Bildirimi gönderiliyor:', { documentId, kullanici })
+      log('📤 PTS Bildirimi gönderiliyor:', { documentId })
       const response = await apiClient.post(`/documents/${documentId}/pts-notification`, {
-        kullanici,
         settings
       })
       log('✅ PTS Bildirimi yanıtı:', response.data)
@@ -770,12 +770,11 @@ const apiService = {
     }
   },
 
-  // PTS XML Önizleme (web servise göndermeden)
-  previewPTSNotification: async (documentId, kullanici, note = '', settings = null) => {
+  // PTS XML Önizleme (web servise göndermeden) - kullanıcı backend'de context'ten alınıyor
+  previewPTSNotification: async (documentId, note = '', settings = null) => {
     try {
-      log('📝 PTS XML Önizleme isteniyor:', { documentId, kullanici, note })
+      log('📝 PTS XML Önizleme isteniyor:', { documentId, note })
       const response = await apiClient.post(`/documents/${documentId}/pts-preview`, {
-        kullanici,
         note,
         settings
       })
@@ -1030,14 +1029,13 @@ const apiService = {
 
   // ==================== PTS BİLDİRİM İŞLEMLERİ ====================
 
-  // PTS Alım Bildirimi (Mal Alım) - /common/app/accept
-  ptsAlimBildirimi: async (transferId, products, settings = null, kullanici = null) => {
+  // PTS Alım Bildirimi (Mal Alım) - /common/app/accept (kullanıcı backend'de context'ten alınıyor)
+  ptsAlimBildirimi: async (transferId, products, settings = null) => {
     try {
       log('📥 PTS Alım Bildirimi gönderiliyor:', { transferId, productCount: products?.length })
       const response = await apiClient.post(`/pts/${transferId}/alim-bildirimi`, {
         products,
-        settings,
-        kullanici
+        settings
       })
       return response.data
     } catch (error) {
@@ -1049,15 +1047,14 @@ const apiService = {
     }
   },
 
-  // PTS Alım İade Bildirimi (Mal İade) - /common/app/return
-  ptsAlimIadeBildirimi: async (transferId, karsiGlnNo, products, settings = null, kullanici = null) => {
+  // PTS Alım İade Bildirimi (Mal İade) - /common/app/return (kullanıcı backend'de context'ten alınıyor)
+  ptsAlimIadeBildirimi: async (transferId, karsiGlnNo, products, settings = null) => {
     try {
       log('🔴 PTS Alım İade Bildirimi gönderiliyor:', { transferId, karsiGlnNo, productCount: products?.length })
       const response = await apiClient.post(`/pts/${transferId}/alim-iade-bildirimi`, {
         karsiGlnNo,
         products,
-        settings,
-        kullanici
+        settings
       })
       return response.data
     } catch (error) {
@@ -1089,13 +1086,12 @@ const apiService = {
 
   // ==================== BELGE TAMAMLAMA ====================
 
-  // Belge FAST durumunu güncelle (OK/NOK)
-  updateFastDurum: async (documentId, status, kullanici) => {
+  // Belge FAST durumunu güncelle (OK/NOK) - kullanıcı backend'de context'ten alınıyor
+  updateFastDurum: async (documentId, status) => {
     try {
-      log('📋 FAST Durum güncelleniyor:', { documentId, status, kullanici })
+      log('📋 FAST Durum güncelleniyor:', { documentId, status })
       const response = await apiClient.post(`/documents/${documentId}/fast-durum`, {
-        status,
-        kullanici
+        status
       })
       return response.data
     } catch (error) {
