@@ -286,7 +286,21 @@ const DocumentDetailPage = () => {
   }
 
   // Modal completion callbacks
-  const handleITSBildirimComplete = (success) => {
+  const handleITSBildirimComplete = async (success) => {
+    // Belge verilerini yenile (ITS durumu değişmiş olabilir)
+    if (success) {
+      try {
+        const response = await apiService.getDocumentById(document.id)
+        if (response.success && response.data) {
+          setDocument(response.data)
+          setItems(response.data.items || [])
+          updateStats(response.data.items || [])
+        }
+      } catch (error) {
+        console.error('Belge yenileme hatası:', error)
+      }
+    }
+
     if (window._itsCompleteCallback) {
       window._itsCompleteCallback(success)
       delete window._itsCompleteCallback

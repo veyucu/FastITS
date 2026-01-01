@@ -406,16 +406,14 @@ const ITSBildirimModal = ({
                 playSuccessSound?.()
                 // Kayıtları yenile
                 await fetchRecords()
-                // Auto mode callback
-                if (autoAction) {
-                    setTimeout(() => {
-                        onComplete?.(true)
-                    }, 1000) // 1 saniye bekle mesajı göster
-                }
+                // Callback çağır (hem auto hem manuel mod için)
+                setTimeout(() => {
+                    onComplete?.(true)
+                }, autoAction ? 1000 : 500) // Auto modda 1sn, manuel modda 0.5sn bekle
             } else {
                 setMessage({ type: 'error', text: result.message })
                 playErrorSound?.()
-                onComplete?.(false) // Auto mode callback
+                onComplete?.(false)
             }
 
         } catch (error) {
