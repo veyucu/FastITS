@@ -8,6 +8,11 @@ import apiService from '../services/apiService'
 import usePageTitle from '../hooks/usePageTitle'
 
 const DEFAULT_SETTINGS = {
+
+  // Genel ITS Ayarları
+  depoAdi: 'DEPO',  // Bizim GLN'in ekrandaki gösterim adı
+  erpWebServiceUrl: 'http://localhost:5000',
+
   // ITS Ayarları
   itsGlnNo: '',
   itsUsername: '',
@@ -30,9 +35,6 @@ const DEFAULT_SETTINGS = {
   itsPaketGonderUrl: '/pts/app/SendPackage',
   itsDogrulamaUrl: '/reference/app/verification',
 
-  // Genel ITS Ayarları
-  depoAdi: 'DEPO',  // Bizim GLN'in ekrandaki gösterim adı
-
   // UTS Ayarları
   utsNo: '',
   utsId: '',
@@ -45,9 +47,6 @@ const DEFAULT_SETTINGS = {
   utsBekleyenleriSorgulaUrl: '/UTS/uh/rest/bildirim/alma/bekleyenler/sorgula',
   utsBildirimSorgulaUrl: '/UTS/uh/rest/bildirim/sorgula/offset',
   utsStokYapilabilirTekilUrunSorgulaUrl: '/UTS/uh/rest/stokYapilabilirTekilUrun/sorgula',
-
-  // ERP Ayarları
-  erpWebServiceUrl: 'http://localhost:5000',
 
   // Ürün Ayarları
   urunBarkodBilgisi: 'STOK_KODU',
@@ -65,14 +64,16 @@ const SettingsPage = () => {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [showPassword, setShowPassword] = useState(false)
   const [message, setMessage] = useState(null)
-  const [activeTab, setActiveTab] = useState('its')
+  const [activeTab, setActiveTab] = useState('genel')
   const [loading, setLoading] = useState(true)
+  const [hasChanges, setHasChanges] = useState(false)
 
   // Mesaj Kodları için ek state'ler
   const gridRef = useRef(null)
   const [mesajKodlari, setMesajKodlari] = useState([])
   const [mesajLoading, setMesajLoading] = useState(false)
   const [mesajUpdateLoading, setMesajUpdateLoading] = useState(false)
+  const [mesajUpdateTooltip, setMesajUpdateTooltip] = useState(null)
 
   useEffect(() => {
     // Veritabanından ayarları yükle
@@ -109,6 +110,7 @@ const SettingsPage = () => {
       ...prev,
       [field]: value
     }))
+    setHasChanges(true)
   }
 
   const handleSave = async () => {
@@ -119,6 +121,7 @@ const SettingsPage = () => {
       // Backend'e de kaydet
       await apiService.saveSettings(settings)
 
+      setHasChanges(false)
       setMessage({ type: 'success', text: '✅ Ayarlar başarıyla kaydedildi!' })
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
@@ -156,19 +159,22 @@ const SettingsPage = () => {
       return
     }
     setMesajUpdateLoading(true)
+    setMesajUpdateTooltip(null)
     try {
       const response = await apiService.guncellemMesajKodlari()
       if (response.success) {
-        setMessage({ type: 'success', text: response.message })
+        setMesajUpdateTooltip({ type: 'success', text: response.message })
         await fetchMesajKodlari()
       } else {
-        setMessage({ type: 'error', text: response.message || 'Güncelleme başarısız' })
+        setMesajUpdateTooltip({ type: 'error', text: response.message || 'Güncelleme başarısız' })
       }
     } catch (error) {
       console.error('Mesaj kodları güncelleme hatası:', error)
-      setMessage({ type: 'error', text: 'Güncelleme sırasında hata oluştu' })
+      setMesajUpdateTooltip({ type: 'error', text: 'Güncelleme sırasında hata oluştu' })
     } finally {
       setMesajUpdateLoading(false)
+      // Tooltip'i 3 saniye sonra kaldır
+      setTimeout(() => setMesajUpdateTooltip(null), 3000)
     }
   }
 
@@ -217,10 +223,11 @@ const SettingsPage = () => {
 
   return (
     <div className="min-h-screen bg-dark-950">
-      {/* Header */}
+      {/* Header with Tabs */}
       <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
         <div className="px-4 py-2">
           <div className="flex items-center justify-between">
+            {/* Sol - Logo ve Başlık */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/dashboard')}
@@ -232,18 +239,68 @@ const SettingsPage = () => {
                 <Settings className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-lg font-bold text-slate-100">Ayarlar</h1>
+
+              <div className="h-6 w-px bg-dark-600 mx-2"></div>
+
+              {/* Sekmeler */}
+              <div className="flex gap-1">
+                <button
+                  onClick={() => setActiveTab('genel')}
+                  className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${activeTab === 'genel'
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
+                    : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                    }`}
+                >
+                  Genel
+                </button>
+                <button
+                  onClick={() => setActiveTab('its')}
+                  className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${activeTab === 'its'
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                    : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                    }`}
+                >
+                  ITS
+                </button>
+                <button
+                  onClick={() => setActiveTab('uts')}
+                  className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${activeTab === 'uts'
+                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/30'
+                    : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                    }`}
+                >
+                  UTS
+                </button>
+                <button
+                  onClick={() => setActiveTab('mapping')}
+                  className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${activeTab === 'mapping'
+                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/30'
+                    : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                    }`}
+                >
+                  Alan Eşleştirme
+                </button>
+                <button
+                  onClick={() => setActiveTab('mesajkodlari')}
+                  className={`px-3 py-1.5 rounded text-sm font-semibold transition-all ${activeTab === 'mesajkodlari'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600'
+                    }`}
+                >
+                  ITS Mesajlar
+                </button>
+              </div>
             </div>
+
+            {/* Sağ - Butonlar */}
             <div className="flex gap-2">
               <button
-                onClick={handleReset}
-                className="px-3 py-1.5 text-sm bg-dark-700 rounded hover:bg-dark-600 transition-colors flex items-center gap-1.5 text-slate-300 border border-dark-600"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Sıfırla
-              </button>
-              <button
                 onClick={handleSave}
-                className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded font-semibold hover:bg-primary-500 transition-colors flex items-center gap-1.5 shadow-lg shadow-primary-600/30"
+                disabled={!hasChanges}
+                className={`px-3 py-1.5 text-sm rounded font-semibold transition-colors flex items-center gap-1.5 ${hasChanges
+                  ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30'
+                  : 'bg-dark-700 text-slate-500 border border-dark-600 cursor-not-allowed'
+                  }`}
               >
                 <Save className="w-4 h-4" />
                 Kaydet
@@ -266,60 +323,33 @@ const SettingsPage = () => {
       )}
 
       {/* Content */}
-      <div className="container mx-auto px-6 py-6">
-        {/* Tabs */}
-        <div className="bg-dark-800/60 rounded-lg border border-dark-700 mb-6">
-          <div className="flex border-b border-dark-700">
-            <button
-              onClick={() => setActiveTab('its')}
-              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'its'
-                ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
-                : 'text-slate-400 hover:bg-dark-700/30'
-                }`}
-            >
-              🔐 ITS Ayarları
-            </button>
-            <button
-              onClick={() => setActiveTab('uts')}
-              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'uts'
-                ? 'text-rose-400 border-b-2 border-rose-500 bg-dark-700/50'
-                : 'text-slate-400 hover:bg-dark-700/30'
-                }`}
-            >
-              🔴 UTS Ayarları
-            </button>
-            <button
-              onClick={() => setActiveTab('erp')}
-              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'erp'
-                ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
-                : 'text-slate-400 hover:bg-dark-700/30'
-                }`}
-            >
-              🖥️ ERP Ayarları
-            </button>
-            <button
-              onClick={() => setActiveTab('mapping')}
-              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'mapping'
-                ? 'text-primary-400 border-b-2 border-primary-500 bg-dark-700/50'
-                : 'text-slate-400 hover:bg-dark-700/30'
-                }`}
-            >
-              🔗 Alan Eşleştirmeleri
-            </button>
-            <button
-              onClick={() => setActiveTab('mesajkodlari')}
-              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'mesajkodlari'
-                ? 'text-indigo-400 border-b-2 border-indigo-500 bg-dark-700/50'
-                : 'text-slate-400 hover:bg-dark-700/30'
-                }`}
-            >
-              💬 Mesaj Kodları
-            </button>
-          </div>
-        </div>
+      <div className="px-4 py-4">
 
         {/* Tab Content */}
         <div className="bg-dark-800/60 rounded-lg border border-dark-700 p-6">
+          {/* Genel Ayarlar */}
+          {activeTab === 'genel' && (
+            <div>
+              <h2 className="text-xl font-bold text-slate-100 mb-6">Genel Ayarlar</h2>
+              <div className="grid grid-cols-2 gap-6">
+                <InputField
+                  label="Depo Adı (Sorgulama Ekranında Gösterilecek)"
+                  field="depoAdi"
+                  placeholder="DEPO"
+                />
+                <InputField
+                  label="ERP Web Servis Adresi"
+                  field="erpWebServiceUrl"
+                  placeholder="http://localhost:5000"
+                  required
+                />
+              </div>
+              <p className="text-sm text-slate-500 mt-4">
+                💡 Backend API'nizin çalıştığı adres. Genellikle <code className="bg-dark-700 px-2 py-1 rounded text-primary-400">http://localhost:5000</code>
+              </p>
+            </div>
+          )}
+
           {/* ITS Ayarları */}
           {activeTab === 'its' && (
             <div>
@@ -338,11 +368,6 @@ const SettingsPage = () => {
                   field="itsUsername"
                   placeholder="86800010845240000"
                   required
-                />
-                <InputField
-                  label="Depo Adı (Sorgulama Ekranında Gösterilecek)"
-                  field="depoAdi"
-                  placeholder="DEPO"
                 />
               </div>
 
@@ -580,16 +605,40 @@ const SettingsPage = () => {
                     <RefreshCw className={`w-4 h-4 ${mesajLoading ? 'animate-spin' : ''}`} />
                     Yenile
                   </button>
-                  <button
-                    onClick={handleMesajUpdate}
-                    disabled={mesajUpdateLoading}
-                    className="px-3 py-1.5 text-sm rounded text-white bg-indigo-600 hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50 font-semibold"
-                  >
-                    <Download className={`w-4 h-4 ${mesajUpdateLoading ? 'animate-spin' : ''}`} />
-                    {mesajUpdateLoading ? 'Güncelleniyor...' : 'Mesajları Güncelle'}
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={handleMesajUpdate}
+                      disabled={mesajUpdateLoading}
+                      className="px-3 py-1.5 text-sm rounded text-white bg-indigo-600 hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50 font-semibold"
+                    >
+                      <Download className={`w-4 h-4 ${mesajUpdateLoading ? 'animate-spin' : ''}`} />
+                      {mesajUpdateLoading ? 'Güncelleniyor...' : 'Mesajları Güncelle'}
+                    </button>
+                  </div>
                 </div>
               </div>
+
+              {/* Tooltip - PTSPage stili */}
+              {mesajUpdateTooltip && (
+                <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
+                  <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl border backdrop-blur-sm min-w-[300px] max-w-[450px] ${mesajUpdateTooltip.type === 'success'
+                      ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50'
+                      : 'bg-rose-900/90 text-rose-100 border-rose-500/50'
+                    }`}>
+                    <div className="flex-shrink-0">
+                      {mesajUpdateTooltip.type === 'success' && <MessageSquare className="w-5 h-5 text-emerald-400" />}
+                      {mesajUpdateTooltip.type === 'error' && <AlertTriangle className="w-5 h-5 text-rose-400" />}
+                    </div>
+                    <span className="flex-1 text-sm font-medium">{mesajUpdateTooltip.text}</span>
+                    <button
+                      onClick={() => setMesajUpdateTooltip(null)}
+                      className="flex-shrink-0 p-1 rounded hover:bg-white/10 transition-colors"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="ag-theme-alpine" style={{ height: '400px' }}>
                 {mesajLoading ? (
