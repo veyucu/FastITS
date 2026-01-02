@@ -775,6 +775,17 @@ const DocumentsPage = () => {
               <Home className="w-5 h-5 text-slate-300" />
             </button>
 
+            {/* Ürün Hazırlama Logo ve Başlık */}
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-violet-600 rounded flex items-center justify-center shadow-lg shadow-violet-600/30">
+                <Package className="w-5 h-5 text-white" />
+              </div>
+              <div className="leading-tight">
+                <p className="text-xs font-bold text-slate-100">Ürün</p>
+                <p className="text-xs font-bold text-slate-100">Hazırlama</p>
+              </div>
+            </div>
+
             <div className="h-6 w-px bg-dark-600"></div>
 
             {/* Belge Tipi Filtreleri */}
@@ -871,14 +882,14 @@ const DocumentsPage = () => {
 
             {/* Arama ve Yenile */}
             <div className="flex flex-1 gap-2 items-center">
-              <div className="relative flex-1 min-w-[200px]">
+              <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Belge no, cari, şehir ara..."
-                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-dark-600 rounded bg-dark-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-8 pr-2 py-1.5 text-xs border border-dark-600 rounded bg-dark-800 text-slate-100 placeholder-slate-500 focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
 
@@ -932,7 +943,7 @@ const DocumentsPage = () => {
 
       {/* AG Grid - Dark Theme */}
       {!loading && !error && (
-        <div className="flex-1 px-6 py-2">
+        <div className="flex-1 px-3 py-3">
           <div className="ag-theme-alpine no-pagination h-full rounded-xl shadow-dark-lg overflow-hidden border border-dark-700">
             <AgGridReact
               ref={gridRef}

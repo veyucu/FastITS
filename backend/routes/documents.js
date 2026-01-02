@@ -199,14 +199,10 @@ router.get('/:documentId/item/:itemId/uts-records', async (req, res) => {
     // Document ID parse et (format: SUBE_KODU|FTIRSIP|FATIRS_NO|CARI_KODU)
     const [subeKodu, ftirsip, fatirs_no, cariKodu] = documentId.split('|')
 
-    // Kayıt tipi belirle
-    const kayitTipi = ftirsip === '6' ? 'M' : 'A'
-
     const records = await documentService.getUTSBarcodeRecords(
       subeKodu,
       fatirs_no,
       itemId,
-      kayitTipi,
       ftirsip,
       cariKodu
     )

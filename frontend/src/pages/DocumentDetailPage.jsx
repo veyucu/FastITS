@@ -2428,7 +2428,7 @@ const DocumentDetailPage = () => {
       </div>
 
       {/* AG Grid - Dark Theme */}
-      <div className="flex-1 px-6 py-4 relative">
+      <div className="flex-1 px-3 py-3 relative">
         {/* Stacked Messages Overlay - Bottom to Top */}
         {messages.length > 0 && (
           <div className="absolute inset-x-0 bottom-4 top-0 flex flex-col-reverse items-center justify-start gap-2 z-50 overflow-hidden px-4">
@@ -2485,18 +2485,6 @@ const DocumentDetailPage = () => {
         </div>
       </div>
 
-      {/* UTS Kayıtları Modal - uses component */}
-      <UTSModal
-        isOpen={showUTSModal}
-        onClose={handleCloseUTSModal}
-        selectedItem={selectedUTSItem}
-        document={document}
-        records={utsRecords}
-        setRecords={setUtsRecords}
-        originalRecords={originalUtsRecords}
-        setOriginalRecords={setOriginalUtsRecords}
-        loading={utsLoading}
-      />
 
       {/* ITS Karekod Modal - uses component */}
       <ITSModal
@@ -2548,7 +2536,7 @@ const DocumentDetailPage = () => {
       <UTSModal
         isOpen={showUTSModal}
         onClose={(skipWarning) => handleCloseUTSModal(skipWarning)}
-        selectedItem={selectedItem}
+        selectedItem={selectedUTSItem}
         document={document}
         records={utsRecords}
         setRecords={setUtsRecords}

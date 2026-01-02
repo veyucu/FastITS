@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Save, Eye, EyeOff, Home, RefreshCw } from 'lucide-react'
+import { Settings, Save, Eye, EyeOff, Home, RefreshCw, Download, MessageSquare, AlertTriangle } from 'lucide-react'
+import { AgGridReact } from 'ag-grid-react'
+import 'ag-grid-community/styles/ag-grid.css'
+import 'ag-grid-community/styles/ag-theme-alpine.css'
 import apiService from '../services/apiService'
 import usePageTitle from '../hooks/usePageTitle'
 
@@ -65,6 +68,12 @@ const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('its')
   const [loading, setLoading] = useState(true)
 
+  // Mesaj Kodları için ek state'ler
+  const gridRef = useRef(null)
+  const [mesajKodlari, setMesajKodlari] = useState([])
+  const [mesajLoading, setMesajLoading] = useState(false)
+  const [mesajUpdateLoading, setMesajUpdateLoading] = useState(false)
+
   useEffect(() => {
     // Veritabanından ayarları yükle
     const loadSettings = async () => {
@@ -127,6 +136,69 @@ const SettingsPage = () => {
     }
   }
 
+  // Mesaj Kodları Fonksiyonları
+  const fetchMesajKodlari = async () => {
+    setMesajLoading(true)
+    try {
+      const response = await apiService.getMesajKodlari()
+      if (response.success) {
+        setMesajKodlari(response.data || [])
+      }
+    } catch (error) {
+      console.error('Mesaj kodları getirme hatası:', error)
+    } finally {
+      setMesajLoading(false)
+    }
+  }
+
+  const handleMesajUpdate = async () => {
+    if (!confirm('ITS\'den mesaj kodları güncellenecek. Devam etmek istiyor musunuz?')) {
+      return
+    }
+    setMesajUpdateLoading(true)
+    try {
+      const response = await apiService.guncellemMesajKodlari()
+      if (response.success) {
+        setMessage({ type: 'success', text: response.message })
+        await fetchMesajKodlari()
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Güncelleme başarısız' })
+      }
+    } catch (error) {
+      console.error('Mesaj kodları güncelleme hatası:', error)
+      setMessage({ type: 'error', text: 'Güncelleme sırasında hata oluştu' })
+    } finally {
+      setMesajUpdateLoading(false)
+    }
+  }
+
+  // Mesaj Kodları sekmes açıldığında verileri yükle
+  useEffect(() => {
+    if (activeTab === 'mesajkodlari' && mesajKodlari.length === 0) {
+      fetchMesajKodlari()
+    }
+  }, [activeTab])
+
+  // Mesaj Kodları Grid Column Definitions
+  const mesajKodlariColumnDefs = useMemo(() => [
+    {
+      headerName: 'ID',
+      field: 'id',
+      width: 100,
+      cellClass: 'font-mono text-center font-bold text-indigo-400',
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' }
+    },
+    {
+      headerName: 'Mesaj',
+      field: 'mesaj',
+      flex: 1,
+      minWidth: 400,
+      cellStyle: { display: 'flex', alignItems: 'center' },
+      wrapText: true,
+      autoHeight: true
+    }
+  ], [])
+
   const InputField = ({ label, field, placeholder, type = 'text', required = false }) => (
     <div className="mb-4">
       <label className="block text-sm font-semibold text-slate-300 mb-2">
@@ -147,36 +219,33 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-dark-950">
       {/* Header */}
       <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-        <div className="container mx-auto px-6 py-4">
+        <div className="px-4 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-10 h-10 bg-dark-700 rounded-lg flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
+                className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600"
               >
-                <Home className="w-6 h-6 text-slate-300" />
+                <Home className="w-5 h-5 text-slate-300" />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-                  <Settings className="w-7 h-7 text-primary-400" />
-                  Sistem Ayarları
-                </h1>
-                <p className="text-slate-500 mt-1">ITS ve ERP entegrasyon ayarları</p>
+              <div className="w-8 h-8 bg-amber-600 rounded flex items-center justify-center shadow-lg shadow-amber-600/30">
+                <Settings className="w-5 h-5 text-white" />
               </div>
+              <h1 className="text-lg font-bold text-slate-100">Ayarlar</h1>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-dark-700 rounded-lg hover:bg-dark-600 transition-colors flex items-center gap-2 text-slate-300 border border-dark-600"
+                className="px-3 py-1.5 text-sm bg-dark-700 rounded hover:bg-dark-600 transition-colors flex items-center gap-1.5 text-slate-300 border border-dark-600"
               >
                 <RefreshCw className="w-4 h-4" />
                 Sıfırla
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-500 transition-colors flex items-center gap-2 shadow-lg shadow-primary-600/30"
+                className="px-4 py-1.5 text-sm bg-primary-600 text-white rounded font-semibold hover:bg-primary-500 transition-colors flex items-center gap-1.5 shadow-lg shadow-primary-600/30"
               >
-                <Save className="w-5 h-5" />
+                <Save className="w-4 h-4" />
                 Kaydet
               </button>
             </div>
@@ -236,6 +305,15 @@ const SettingsPage = () => {
                 }`}
             >
               🔗 Alan Eşleştirmeleri
+            </button>
+            <button
+              onClick={() => setActiveTab('mesajkodlari')}
+              className={`flex-1 px-6 py-4 font-semibold transition-colors ${activeTab === 'mesajkodlari'
+                ? 'text-indigo-400 border-b-2 border-indigo-500 bg-dark-700/50'
+                : 'text-slate-400 hover:bg-dark-700/30'
+                }`}
+            >
+              💬 Mesaj Kodları
             </button>
           </div>
         </div>
@@ -479,6 +557,74 @@ const SettingsPage = () => {
                 <p className="text-sm text-amber-400">
                   <strong>⚠️ Dikkat:</strong> Bu ayarlar değiştirildiğinde backend'in yeniden başlatılması gerekebilir.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Mesaj Kodları */}
+          {activeTab === 'mesajkodlari' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold text-slate-100">Mesaj Kodları</h2>
+                  <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-300 text-xs font-semibold rounded">
+                    {mesajKodlari.length} Kayıt
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={fetchMesajKodlari}
+                    disabled={mesajLoading}
+                    className="px-3 py-1.5 text-sm rounded text-slate-300 bg-dark-700 hover:bg-dark-600 border border-dark-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${mesajLoading ? 'animate-spin' : ''}`} />
+                    Yenile
+                  </button>
+                  <button
+                    onClick={handleMesajUpdate}
+                    disabled={mesajUpdateLoading}
+                    className="px-3 py-1.5 text-sm rounded text-white bg-indigo-600 hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50 font-semibold"
+                  >
+                    <Download className={`w-4 h-4 ${mesajUpdateLoading ? 'animate-spin' : ''}`} />
+                    {mesajUpdateLoading ? 'Güncelleniyor...' : 'Mesajları Güncelle'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="ag-theme-alpine" style={{ height: '400px' }}>
+                {mesajLoading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="animate-spin w-8 h-8 border-3 border-dark-600 border-t-indigo-500 rounded-full mx-auto mb-2" />
+                      <p className="text-slate-400 text-sm">Kayıtlar yükleniyor...</p>
+                    </div>
+                  </div>
+                ) : mesajKodlari.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-2" />
+                      <p className="text-slate-400">Mesaj kodu bulunamadı</p>
+                      <p className="text-slate-500 text-sm mt-1">
+                        ITS'den mesaj kodlarını çekmek için "Mesajları Güncelle" butonuna tıklayın.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <AgGridReact
+                    ref={gridRef}
+                    rowData={mesajKodlari}
+                    columnDefs={mesajKodlariColumnDefs}
+                    defaultColDef={{
+                      sortable: true,
+                      resizable: true,
+                      filter: true
+                    }}
+                    getRowId={(params) => String(params.data.id)}
+                    animateRows={true}
+                    enableCellTextSelection={true}
+                    suppressCellFocus={true}
+                  />
+                )}
               </div>
             </div>
           )}

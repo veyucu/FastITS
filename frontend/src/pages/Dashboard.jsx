@@ -47,30 +47,24 @@ const Dashboard = () => {
 
       {/* Header - Mobile Responsive */}
       <header className="relative bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-        <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-2 md:py-4">
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-8 md:w-10 h-8 md:h-10 bg-primary-600 rounded-lg flex items-center justify-center shadow-lg shadow-primary-600/30">
-                <Package className="w-5 md:w-6 h-5 md:h-6 text-white" />
+        <div className="px-4 py-2">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary-600 rounded flex items-center justify-center shadow-lg shadow-primary-600/30">
+                <Package className="w-5 h-5 text-white" />
               </div>
-              <div>
-                <h1 className="text-lg md:text-2xl font-bold text-slate-100">
-                  Fast<span className="text-primary-400">ITS</span>
-                  {selectedCompany && (
-                    <span className="ml-3 text-base md:text-xl font-semibold text-cyan-400">• {selectedCompany.sirket}</span>
-                  )}
-                </h1>
-                <p className="hidden md:block text-sm text-slate-500">Ürün Hazırlama Sistemi</p>
-              </div>
+              <h1 className="text-lg font-bold text-slate-100">
+                Fast<span className="text-primary-400">ITS</span>
+                {selectedCompany && (
+                  <span className="ml-2 text-base font-semibold text-cyan-400">• {selectedCompany.sirket}</span>
+                )}
+              </h1>
             </div>
 
-            <div className="flex items-center gap-2 md:gap-4">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-dark-800/80 rounded-lg border border-dark-700">
-                <User className="w-4 md:w-5 h-4 md:h-5 text-slate-400" />
-                <div>
-                  <p className="text-xs md:text-sm font-medium text-slate-200">{user?.name}</p>
-                  <p className="text-[10px] md:text-xs text-slate-500">{user?.role}</p>
-                </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-dark-800/80 rounded-lg border border-dark-700">
+                <User className="w-4 h-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-200">{user?.username}</span>
               </div>
 
               <button

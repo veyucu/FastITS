@@ -546,7 +546,7 @@ const PTSPage = () => {
     <div className="flex flex-col h-screen bg-dark-950">
       {/* Header - Dark Theme - Mobile Responsive */}
       <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-        <div className="px-3 md:px-6 py-2 md:py-3">
+        <div className="px-4 py-2">
           {/* Üst Satır - Logo, Başlık, İşlem Butonları */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* Sol - Başlık (PTS ikonu ve başlığı sadece desktop) */}
@@ -568,26 +568,26 @@ const PTSPage = () => {
             {/* Orta - Arama (Desktop'ta) + İşlem Butonları */}
             <div className="flex items-center gap-2 flex-1 justify-end md:justify-start">
               {/* Arama Input - Sadece Desktop için üst satırda */}
-              <div className="hidden md:block relative flex-1 max-w-md">
+              <div className="hidden md:block relative flex-1">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
                   value={searchText}
                   onChange={(e) => setSearchText(e.target.value)}
                   placeholder="Transfer ID, Belge No, GLN, Cari..."
-                  className="w-full pl-8 pr-2 py-1.5 text-sm bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+                  className="w-full pl-8 pr-2 py-1.5 text-xs bg-dark-800 border border-dark-600 rounded text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
                 />
               </div>
 
               {/* Bildirilenleri Gizle Checkbox - Sadece desktop, indir butonunun solunda */}
-              <label className="hidden md:flex items-center gap-2 cursor-pointer text-sm text-slate-300 hover:text-slate-100 transition-colors flex-shrink-0">
+              <label className="hidden md:flex items-center gap-1.5 px-2 py-0.5 bg-dark-700/50 rounded cursor-pointer hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0">
                 <input
                   type="checkbox"
                   checked={hideNotified}
                   onChange={(e) => setHideNotified(e.target.checked)}
-                  className="w-4 h-4 rounded border-dark-600 bg-dark-800 text-primary-500 focus:ring-primary-500/50 focus:ring-offset-0"
+                  className="w-3.5 h-3.5 text-primary-600 rounded bg-dark-800 border-dark-500 focus:ring-2 focus:ring-primary-500"
                 />
-                <span>Bildirilenleri Gizle</span>
+                <span className="text-[10px] font-medium text-slate-300 text-center leading-tight">Bildirilenleri<br />Gizle</span>
               </label>
 
               {/* İndir Butonu */}
@@ -712,7 +712,7 @@ const PTSPage = () => {
       )}
 
       {/* Paket Listesi - AG Grid Dark Theme */}
-      <div className="flex-1 px-2 md:px-6 py-2 md:py-4 flex flex-col min-h-0">
+      <div className="flex-1 px-3 py-3 flex flex-col min-h-0">
         {listData.length > 0 ? (
           /* Liste Görünümü */
           <div className="ag-theme-alpine ag-pagination-visible rounded-xl overflow-hidden border border-dark-700 flex-1 relative">
