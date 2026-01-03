@@ -63,6 +63,18 @@ const SerbestBildirimPage = () => {
         )
     }, [scannedItems, selectedStokForDetail])
 
+    // Footer verisi (alt toplam satırı)
+    const footerData = useMemo(() => {
+        const totalOkutulan = gridData.reduce((sum, item) => sum + (item.okutulan || 0), 0)
+        return [{
+            isFooter: true,
+            stokKodu: `${gridData.length} Kalem`,
+            stokAdi: '',
+            turu: '',
+            okutulan: totalOkutulan
+        }]
+    }, [gridData])
+
     // İlk yükleme kontrolü için ref
     const isInitialized = useRef(false)
 
@@ -277,10 +289,15 @@ const SerbestBildirimPage = () => {
     const columnDefs = useMemo(() => [
         {
             headerName: '#',
-            valueGetter: 'node.rowIndex + 1',
-            width: 60,
-            cellClass: 'text-center font-semibold text-gray-600',
-            pinned: 'left'
+            width: 80,
+            cellClass: 'text-center font-semibold',
+            pinned: 'left',
+            cellRenderer: (params) => {
+                if (params.node.rowPinned) {
+                    return <span className="text-primary-400 font-bold">Toplam</span>
+                }
+                return <span className="text-gray-600">{params.node.rowIndex + 1}</span>
+            }
         },
         {
             headerName: 'Türü',
@@ -288,6 +305,7 @@ const SerbestBildirimPage = () => {
             width: 90,
             cellClass: 'text-center',
             cellRenderer: (params) => {
+                if (params.node.rowPinned) return null
                 if (params.value === 'ITS') {
                     return <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">ITS</span>
                 }
@@ -301,7 +319,13 @@ const SerbestBildirimPage = () => {
             headerName: 'Stok Kodu',
             field: 'stokKodu',
             width: 150,
-            cellClass: 'font-mono'
+            cellClass: 'font-mono',
+            cellRenderer: (params) => {
+                if (params.node.rowPinned) {
+                    return <span className="text-primary-400 font-bold">{gridData.length} Kalem</span>
+                }
+                return params.value
+            }
         },
         {
             headerName: 'Stok Adı',
@@ -313,17 +337,26 @@ const SerbestBildirimPage = () => {
             headerName: 'Okutulan',
             field: 'okutulan',
             width: 110,
-            cellClass: 'text-center cursor-pointer',
-            cellRenderer: (params) => (
-                <span
-                    className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-primary-500/20 text-primary-400 border border-primary-500/30 hover:bg-primary-500/30 transition-colors"
-                    onClick={() => setSelectedStokForDetail(params.data)}
-                >
-                    {params.value || 0}
-                </span>
-            )
+            cellClass: 'text-center',
+            cellRenderer: (params) => {
+                if (params.node.rowPinned) {
+                    return (
+                        <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                            {params.value || 0}
+                        </span>
+                    )
+                }
+                return (
+                    <span
+                        className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-primary-500/20 text-primary-400 border border-primary-500/30 hover:bg-primary-500/30 transition-colors cursor-pointer"
+                        onClick={() => setSelectedStokForDetail(params.data)}
+                    >
+                        {params.value || 0}
+                    </span>
+                )
+            }
         }
-    ], [])
+    ], [gridData.length])
 
     const defaultColDef = useMemo(() => ({
         sortable: true,
@@ -515,6 +548,7 @@ const SerbestBildirimPage = () => {
                     <AgGridReact
                         ref={gridRef}
                         rowData={gridData}
+                        pinnedBottomRowData={footerData}
                         columnDefs={columnDefs}
                         defaultColDef={defaultColDef}
                         enableCellTextSelection={true}
@@ -523,6 +557,7 @@ const SerbestBildirimPage = () => {
                         animateRows={true}
                         rowHeight={50}
                         headerHeight={48}
+                        getRowClass={(params) => params.node.rowPinned ? 'bg-dark-700 font-bold' : ''}
                         localeText={{
                             noRowsToShow: 'Henüz karekod okutulmadı'
                         }}
