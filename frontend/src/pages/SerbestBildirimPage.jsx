@@ -100,8 +100,9 @@ const SerbestBildirimPage = () => {
         localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(scannedItems))
     }, [scannedItems])
 
-    // Belge No değiştiğinde localStorage'a kaydet
+    // Belge No değiştiğinde localStorage'a kaydet (ilk render'ı atla)
     useEffect(() => {
+        if (!isInitialized.current) return
         localStorage.setItem(STORAGE_KEY_BELGE, belgeNo)
     }, [belgeNo])
 
