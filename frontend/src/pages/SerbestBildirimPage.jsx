@@ -90,8 +90,13 @@ const SerbestBildirimPage = () => {
         }
     }, [])
 
-    // scannedItems değiştiğinde localStorage'a kaydet
+    // scannedItems değiştiğinde localStorage'a kaydet (ilk render'ı atla)
+    const isInitialized = useRef(false)
     useEffect(() => {
+        if (!isInitialized.current) {
+            isInitialized.current = true
+            return // İlk render'da kaydetme
+        }
         localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(scannedItems))
     }, [scannedItems])
 
