@@ -63,6 +63,9 @@ const SerbestBildirimPage = () => {
         )
     }, [scannedItems, selectedStokForDetail])
 
+    // İlk yükleme kontrolü için ref
+    const isInitialized = useRef(false)
+
     // Sayfa yüklendiğinde localStorage'dan verileri oku
     useEffect(() => {
         // Detaylı kayıtları yükle
@@ -88,15 +91,15 @@ const SerbestBildirimPage = () => {
                 console.error('localStorage cari parse hatası:', e)
             }
         }
+        // Yükleme tamamlandı, artık kaydetme yapılabilir
+        setTimeout(() => {
+            isInitialized.current = true
+        }, 100)
     }, [])
 
     // scannedItems değiştiğinde localStorage'a kaydet (ilk render'ı atla)
-    const isInitialized = useRef(false)
     useEffect(() => {
-        if (!isInitialized.current) {
-            isInitialized.current = true
-            return // İlk render'da kaydetme
-        }
+        if (!isInitialized.current) return
         localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(scannedItems))
     }, [scannedItems])
 
