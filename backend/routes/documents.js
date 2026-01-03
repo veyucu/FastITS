@@ -1,6 +1,7 @@
 import express from 'express'
 import documentService from '../services/documentService.js'
 import itsService from '../services/itsService.js'
+import cariService from '../services/cariService.js'
 import { parseITSBarcode, formatMiad } from '../utils/itsParser.js'
 import { log } from '../utils/logger.js'
 import companyMiddleware from '../middleware/companyMiddleware.js'
@@ -9,6 +10,31 @@ const router = express.Router()
 
 // Tüm document route'larına company middleware uygula
 router.use(companyMiddleware)
+
+// GET /api/documents/cariler - Cari listesini getir
+router.get('/cariler', async (req, res) => {
+  try {
+    console.log('📋 Cari listesi isteği alındı')
+    const { search } = req.query
+    console.log('🔍 Arama:', search || '(boş)')
+
+    const result = await cariService.getAllCariler(search || '')
+    console.log('✅ Cari listesi sonucu:', result.success, 'Adet:', result.data?.length || 0)
+
+    res.json({
+      success: true,
+      data: result.data,
+      count: result.data.length
+    })
+  } catch (error) {
+    console.error('❌ Cari listesi hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Cari listesi alınamadı',
+      error: error.message
+    })
+  }
+})
 
 // GET /api/documents - Tüm belgeleri getir (tarih zorunlu)
 router.get('/', async (req, res) => {

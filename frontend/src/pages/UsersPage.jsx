@@ -26,16 +26,15 @@ const UsersPage = () => {
         password: '',
         name: '',
         email: '',
-        department: '',
         role: 'user',
         aktif: true,
         permissions: {
             urunHazirlama: true,
             pts: true,
-            mesajKodlari: false,
             ayarlar: false,
-            sirketAyarlari: false,
-            kullanicilar: false
+            kullanicilar: false,
+            utsIslemleri: false,
+            serbestBildirim: false
         },
         authorizedCompanies: ''
     })
@@ -79,7 +78,6 @@ const UsersPage = () => {
         { headerName: 'Kullanıcı Adı', field: 'username', width: 130 },
         { headerName: 'Ad Soyad', field: 'name', flex: 1 },
         { headerName: 'Email', field: 'email', width: 200 },
-        { headerName: 'Departman', field: 'department', width: 120 },
         { headerName: 'Rol', field: 'role', width: 80 },
         {
             headerName: 'Durum',
@@ -93,20 +91,43 @@ const UsersPage = () => {
         },
         {
             headerName: 'Yetkiler',
-            width: 200,
+            flex: 1,
+            minWidth: 300,
             cellRenderer: (params) => {
                 const p = params.data.permissions || {}
                 const perms = []
-                if (p.urunHazirlama) perms.push('ÜH')
-                if (p.pts) perms.push('PTS')
-                if (p.mesajKodlari) perms.push('MK')
-                if (p.ayarlar) perms.push('AY')
-                if (p.kullanicilar) perms.push('KL')
+                if (p.urunHazirlama) perms.push('Ürün Hazırlama')
+                if (p.pts) perms.push('PTS Yönetimi')
+                if (p.ayarlar) perms.push('Ayarlar')
+                if (p.kullanicilar) perms.push('Kullanıcılar')
+                if (p.utsIslemleri) perms.push('UTS İşlemleri')
+                if (p.serbestBildirim) perms.push('Serbest Bildirim')
                 return (
                     <div className="flex gap-1 flex-wrap">
                         {perms.map((p, i) => (
                             <span key={i} className="px-1.5 py-0.5 bg-primary-500/20 text-primary-400 rounded text-xs">{p}</span>
                         ))}
+                    </div>
+                )
+            }
+        },
+        {
+            headerName: 'Yetkili Şirketler',
+            field: 'authorizedCompanies',
+            width: 150,
+            cellRenderer: (params) => {
+                const companies = params.value
+                if (!companies) return <span className="text-slate-500 text-xs">Tümü</span>
+                const companyList = companies.split(',').map(c => c.trim()).filter(c => c)
+                if (companyList.length === 0) return <span className="text-slate-500 text-xs">Tümü</span>
+                return (
+                    <div className="flex gap-1 flex-wrap">
+                        {companyList.slice(0, 2).map((c, i) => (
+                            <span key={i} className="px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded text-xs">{c}</span>
+                        ))}
+                        {companyList.length > 2 && (
+                            <span className="px-1.5 py-0.5 bg-slate-500/20 text-slate-400 rounded text-xs">+{companyList.length - 2}</span>
+                        )}
                     </div>
                 )
             }
@@ -157,16 +178,15 @@ const UsersPage = () => {
             password: '',
             name: user.name || '',
             email: user.email || '',
-            department: user.department || '',
             role: user.role || 'user',
             aktif: user.aktif !== false,
             permissions: user.permissions || {
                 urunHazirlama: true,
                 pts: true,
-                mesajKodlari: false,
                 ayarlar: false,
-                sirketAyarlari: false,
-                kullanicilar: false
+                kullanicilar: false,
+                utsIslemleri: false,
+                serbestBildirim: false
             },
             authorizedCompanies: user.authorizedCompanies || ''
         })
@@ -256,16 +276,15 @@ const UsersPage = () => {
             password: '',
             name: '',
             email: '',
-            department: '',
             role: 'user',
             aktif: true,
             permissions: {
                 urunHazirlama: true,
                 pts: true,
-                mesajKodlari: false,
                 ayarlar: false,
-                sirketAyarlari: false,
-                kullanicilar: false
+                kullanicilar: false,
+                utsIslemleri: false,
+                serbestBildirim: false
             },
             authorizedCompanies: ''
         })
@@ -285,7 +304,7 @@ const UsersPage = () => {
         <div className="flex flex-col h-screen bg-dark-950">
             {/* Header */}
             <div className="bg-dark-900/80 backdrop-blur-sm border-b border-dark-700">
-                <div className="px-6 py-3">
+                <div className="px-4 py-2">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-2">
                             <button
@@ -305,17 +324,17 @@ const UsersPage = () => {
                             <button
                                 onClick={fetchUsers}
                                 disabled={loading}
-                                className="flex items-center gap-2 px-4 py-2 bg-dark-700 text-slate-300 rounded-lg hover:bg-dark-600 transition-colors border border-dark-600"
+                                className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-slate-300 hover:bg-dark-600 rounded transition-colors border border-dark-600"
                             >
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                                Yenile
+                                <span className="hidden sm:inline">Yenile</span>
                             </button>
                             <button
                                 onClick={() => setShowAddModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg shadow-lg shadow-primary-600/30 hover:bg-primary-500 transition-colors"
+                                className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 rounded transition-colors shadow-lg shadow-primary-600/30"
                             >
                                 <Plus className="w-4 h-4" />
-                                Yeni Kullanıcı
+                                <span className="hidden sm:inline">Yeni Kullanıcı</span>
                             </button>
                         </div>
                     </div>
@@ -398,26 +417,29 @@ const UsersPage = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm text-slate-400 mb-1">Departman</label>
-                                <input
-                                    type="text"
-                                    value={formData.department}
-                                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-slate-100"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm text-slate-400 mb-1">Rol</label>
-                                <select
-                                    value={formData.role}
-                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                    className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-slate-100"
-                                >
-                                    <option value="user">Kullanıcı</option>
-                                    <option value="admin">Admin</option>
-                                </select>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-1">Rol</label>
+                                    <select
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                        className="w-full px-3 py-2 bg-dark-700 border border-dark-600 rounded-lg text-slate-100"
+                                    >
+                                        <option value="user">Kullanıcı</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-center">
+                                    <label className="flex items-center gap-2 cursor-pointer mt-6">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.aktif}
+                                            onChange={(e) => setFormData({ ...formData, aktif: e.target.checked })}
+                                            className="w-4 h-4 rounded bg-dark-600 border-dark-500 text-primary-600"
+                                        />
+                                        <span className="text-slate-300">Aktif Kullanıcı</span>
+                                    </label>
+                                </div>
                             </div>
 
                             {/* Yetkiler */}
@@ -427,10 +449,10 @@ const UsersPage = () => {
                                     {[
                                         { key: 'urunHazirlama', label: 'Ürün Hazırlama' },
                                         { key: 'pts', label: 'PTS Yönetimi' },
-                                        { key: 'mesajKodlari', label: 'Mesaj Kodları' },
                                         { key: 'ayarlar', label: 'Ayarlar' },
-                                        { key: 'sirketAyarlari', label: 'Şirket Ayarları' },
-                                        { key: 'kullanicilar', label: 'Kullanıcılar' }
+                                        { key: 'kullanicilar', label: 'Kullanıcılar' },
+                                        { key: 'utsIslemleri', label: 'UTS İşlemleri' },
+                                        { key: 'serbestBildirim', label: 'Serbest Bildirim' }
                                     ].map(({ key, label }) => (
                                         <label key={key} className="flex items-center gap-2 cursor-pointer">
                                             <input

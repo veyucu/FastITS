@@ -70,52 +70,42 @@ async function createAuthTables() {
         AD_SOYAD NVARCHAR(100),
         EMAIL NVARCHAR(100),
         ROL NVARCHAR(20) DEFAULT 'user',
-        DEPARTMAN NVARCHAR(50),
         AKTIF BIT DEFAULT 1,
-        YETKI_URUN_HAZIRLAMA BIT DEFAULT 1,
-        YETKI_PTS BIT DEFAULT 1,
-        YETKI_MESAJ_KODLARI BIT DEFAULT 0,
-        YETKI_AYARLAR BIT DEFAULT 0,
-        YETKI_KULLANICILAR BIT DEFAULT 0,
+        MENU_YETKILERI NVARCHAR(500) DEFAULT 'UrunHazirlama,PTS',
+        SIRKET_YETKILERI NVARCHAR(500) NULL,
         SON_GIRIS DATETIME,
         OLUSTURMA_TARIHI DATETIME DEFAULT GETDATE()
       );
     END
   `)
 
-  // Migration: Yetki kolonlarını ekle
-  const yetkiKolonlari = [
-    'YETKI_URUN_HAZIRLAMA',
-    'YETKI_PTS',
-    'YETKI_MESAJ_KODLARI',
-    'YETKI_AYARLAR',
-    'YETKI_KULLANICILAR',
-    'YETKI_SIRKET_AYARLARI'
-  ]
+  // Migration: Yeni yetki kolonlarını ekle (eski sistemden geçiş)
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLKULLANICI') AND name = 'MENU_YETKILERI')
+    BEGIN
+      ALTER TABLE AKTBLKULLANICI ADD MENU_YETKILERI NVARCHAR(500) DEFAULT 'UrunHazirlama,PTS';
+    END
+  `)
 
-  for (const col of yetkiKolonlari) {
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLKULLANICI') AND name = '${col}')
-      BEGIN
-        ALTER TABLE AKTBLKULLANICI ADD ${col} BIT DEFAULT ${col === 'YETKI_URUN_HAZIRLAMA' || col === 'YETKI_PTS' ? '1' : '0'};
-      END
-    `)
-  }
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('AKTBLKULLANICI') AND name = 'SIRKET_YETKILERI')
+    BEGIN
+      ALTER TABLE AKTBLKULLANICI ADD SIRKET_YETKILERI NVARCHAR(500) NULL;
+    END
+  `)
 
   // Varsayılan admin kullanıcısı
   await pool.request().query(`
     IF NOT EXISTS (SELECT * FROM AKTBLKULLANICI WHERE KULLANICI_ADI = 'admin')
     BEGIN
-      INSERT INTO AKTBLKULLANICI (KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, DEPARTMAN, AKTIF,
-        YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR)
-      VALUES ('admin', 'admin123', 'Admin Kullanıcı', 'admin@atakodits.com', 'admin', 'Yönetim', 1,
-        1, 1, 1, 1, 1);
+      INSERT INTO AKTBLKULLANICI (KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, AKTIF, MENU_YETKILERI)
+      VALUES ('admin', 'admin123', 'Admin Kullanıcı', 'admin@fastits.com', 'admin', 1,
+        'UrunHazirlama,PTS,Ayarlar,Kullanicilar,UTSIslemleri,SerbestBildirim');
     END
     ELSE
     BEGIN
       UPDATE AKTBLKULLANICI SET 
-        YETKI_URUN_HAZIRLAMA = 1, YETKI_PTS = 1, YETKI_MESAJ_KODLARI = 1, 
-        YETKI_AYARLAR = 1, YETKI_KULLANICILAR = 1
+        MENU_YETKILERI = 'UrunHazirlama,PTS,Ayarlar,Kullanicilar,UTSIslemleri,SerbestBildirim'
       WHERE KULLANICI_ADI = 'admin';
     END
   `)
@@ -124,10 +114,9 @@ async function createAuthTables() {
   await pool.request().query(`
     IF NOT EXISTS (SELECT * FROM AKTBLKULLANICI WHERE KULLANICI_ADI = 'demo')
     BEGIN
-      INSERT INTO AKTBLKULLANICI (KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, DEPARTMAN, AKTIF,
-        YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR)
-      VALUES ('demo', 'demo123', 'Demo Kullanıcı', 'demo@atakodits.com', 'user', 'Satış', 1,
-        1, 1, 0, 0, 0);
+      INSERT INTO AKTBLKULLANICI (KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, AKTIF, MENU_YETKILERI)
+      VALUES ('demo', 'demo123', 'Demo Kullanıcı', 'demo@fastits.com', 'user', 1,
+        'UrunHazirlama,PTS');
     END
   `)
 

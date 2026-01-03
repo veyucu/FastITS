@@ -1,5 +1,30 @@
 import { getPTSConnection } from '../config/database.js'
 
+// Yetki string'ini parse et ve object'e çevir
+const parsePermissions = (menuYetkileri) => {
+    const yetkiler = (menuYetkileri || '').split(',').map(y => y.trim()).filter(y => y)
+    return {
+        urunHazirlama: yetkiler.includes('UrunHazirlama'),
+        pts: yetkiler.includes('PTS'),
+        ayarlar: yetkiler.includes('Ayarlar'),
+        kullanicilar: yetkiler.includes('Kullanicilar'),
+        utsIslemleri: yetkiler.includes('UTSIslemleri'),
+        serbestBildirim: yetkiler.includes('SerbestBildirim')
+    }
+}
+
+// Permission object'i string'e çevir
+const serializePermissions = (permissions) => {
+    const yetkiler = []
+    if (permissions?.urunHazirlama) yetkiler.push('UrunHazirlama')
+    if (permissions?.pts) yetkiler.push('PTS')
+    if (permissions?.ayarlar) yetkiler.push('Ayarlar')
+    if (permissions?.kullanicilar) yetkiler.push('Kullanicilar')
+    if (permissions?.utsIslemleri) yetkiler.push('UTSIslemleri')
+    if (permissions?.serbestBildirim) yetkiler.push('SerbestBildirim')
+    return yetkiler.join(',')
+}
+
 const userService = {
     // Kullanıcı doğrulama
     async login(username, password) {
@@ -16,14 +41,8 @@ const userService = {
             AD_SOYAD,
             EMAIL,
             ROL,
-            DEPARTMAN,
-            YETKI_URUN_HAZIRLAMA,
-            YETKI_PTS,
-            YETKI_MESAJ_KODLARI,
-            YETKI_AYARLAR,
-            YETKI_KULLANICILAR,
-            YETKI_SIRKET_AYARLARI,
-            YETKI_SIRKETLER
+            MENU_YETKILERI,
+            SIRKET_YETKILERI
           FROM AKTBLKULLANICI 
           WHERE KULLANICI_ADI = @username 
             AND SIFRE = @password 
@@ -49,16 +68,8 @@ const userService = {
                     name: user.AD_SOYAD,
                     email: user.EMAIL,
                     role: user.ROL,
-                    department: user.DEPARTMAN,
-                    permissions: {
-                        urunHazirlama: user.YETKI_URUN_HAZIRLAMA === true || user.YETKI_URUN_HAZIRLAMA === 1,
-                        pts: user.YETKI_PTS === true || user.YETKI_PTS === 1,
-                        mesajKodlari: user.YETKI_MESAJ_KODLARI === true || user.YETKI_MESAJ_KODLARI === 1,
-                        ayarlar: user.YETKI_AYARLAR === true || user.YETKI_AYARLAR === 1,
-                        kullanicilar: user.YETKI_KULLANICILAR === true || user.YETKI_KULLANICILAR === 1,
-                        sirketAyarlari: user.YETKI_SIRKET_AYARLARI === true || user.YETKI_SIRKET_AYARLARI === 1
-                    },
-                    authorizedCompanies: user.YETKI_SIRKETLER || null
+                    permissions: parsePermissions(user.MENU_YETKILERI),
+                    authorizedCompanies: user.SIRKET_YETKILERI || null
                 }
             }
         } catch (error) {
@@ -80,15 +91,9 @@ const userService = {
             AD_SOYAD,
             EMAIL,
             ROL,
-            DEPARTMAN,
             AKTIF,
-            YETKI_URUN_HAZIRLAMA,
-            YETKI_PTS,
-            YETKI_MESAJ_KODLARI,
-            YETKI_AYARLAR,
-            YETKI_KULLANICILAR,
-            YETKI_SIRKET_AYARLARI,
-            YETKI_SIRKETLER,
+            MENU_YETKILERI,
+            SIRKET_YETKILERI,
             SON_GIRIS,
             OLUSTURMA_TARIHI
           FROM AKTBLKULLANICI 
@@ -103,17 +108,9 @@ const userService = {
                     name: u.AD_SOYAD,
                     email: u.EMAIL,
                     role: u.ROL,
-                    department: u.DEPARTMAN,
                     aktif: u.AKTIF,
-                    permissions: {
-                        urunHazirlama: u.YETKI_URUN_HAZIRLAMA === true || u.YETKI_URUN_HAZIRLAMA === 1,
-                        pts: u.YETKI_PTS === true || u.YETKI_PTS === 1,
-                        mesajKodlari: u.YETKI_MESAJ_KODLARI === true || u.YETKI_MESAJ_KODLARI === 1,
-                        ayarlar: u.YETKI_AYARLAR === true || u.YETKI_AYARLAR === 1,
-                        kullanicilar: u.YETKI_KULLANICILAR === true || u.YETKI_KULLANICILAR === 1,
-                        sirketAyarlari: u.YETKI_SIRKET_AYARLARI === true || u.YETKI_SIRKET_AYARLARI === 1
-                    },
-                    authorizedCompanies: u.YETKI_SIRKETLER || null,
+                    permissions: parsePermissions(u.MENU_YETKILERI),
+                    authorizedCompanies: u.SIRKET_YETKILERI || null,
                     sonGiris: u.SON_GIRIS,
                     olusturmaTarihi: u.OLUSTURMA_TARIHI
                 }))
@@ -129,28 +126,24 @@ const userService = {
         try {
             const pool = await getPTSConnection()
 
+            const menuYetkileri = serializePermissions(userData.permissions)
+
             const result = await pool.request()
                 .input('username', userData.username)
                 .input('password', userData.password)
                 .input('name', userData.name)
                 .input('email', userData.email)
                 .input('role', userData.role || 'user')
-                .input('department', userData.department)
-                .input('yetkiUrunHazirlama', userData.permissions?.urunHazirlama ? 1 : 0)
-                .input('yetkiPts', userData.permissions?.pts ? 1 : 0)
-                .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
-                .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
-                .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
-                .input('yetkiSirketAyarlari', userData.permissions?.sirketAyarlari ? 1 : 0)
-                .input('yetkiSirketler', userData.authorizedCompanies || null)
+                .input('menuYetkileri', menuYetkileri)
+                .input('sirketYetkileri', userData.authorizedCompanies || null)
                 .query(`
           INSERT INTO AKTBLKULLANICI (
-            KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL, DEPARTMAN,
-            YETKI_URUN_HAZIRLAMA, YETKI_PTS, YETKI_MESAJ_KODLARI, YETKI_AYARLAR, YETKI_KULLANICILAR, YETKI_SIRKET_AYARLARI, YETKI_SIRKETLER
+            KULLANICI_ADI, SIFRE, AD_SOYAD, EMAIL, ROL,
+            MENU_YETKILERI, SIRKET_YETKILERI
           )
           VALUES (
-            @username, @password, @name, @email, @role, @department,
-            @yetkiUrunHazirlama, @yetkiPts, @yetkiMesajKodlari, @yetkiAyarlar, @yetkiKullanicilar, @yetkiSirketAyarlari, @yetkiSirketler
+            @username, @password, @name, @email, @role,
+            @menuYetkileri, @sirketYetkileri
           );
           SELECT SCOPE_IDENTITY() AS ID;
         `)
@@ -167,34 +160,24 @@ const userService = {
         try {
             const pool = await getPTSConnection()
 
+            const menuYetkileri = serializePermissions(userData.permissions)
+
             await pool.request()
                 .input('id', id)
                 .input('name', userData.name)
                 .input('email', userData.email)
                 .input('role', userData.role)
-                .input('department', userData.department)
                 .input('aktif', userData.aktif ? 1 : 0)
-                .input('yetkiUrunHazirlama', userData.permissions?.urunHazirlama ? 1 : 0)
-                .input('yetkiPts', userData.permissions?.pts ? 1 : 0)
-                .input('yetkiMesajKodlari', userData.permissions?.mesajKodlari ? 1 : 0)
-                .input('yetkiAyarlar', userData.permissions?.ayarlar ? 1 : 0)
-                .input('yetkiKullanicilar', userData.permissions?.kullanicilar ? 1 : 0)
-                .input('yetkiSirketAyarlari', userData.permissions?.sirketAyarlari ? 1 : 0)
-                .input('yetkiSirketler', userData.authorizedCompanies || null)
+                .input('menuYetkileri', menuYetkileri)
+                .input('sirketYetkileri', userData.authorizedCompanies || null)
                 .query(`
           UPDATE AKTBLKULLANICI 
           SET AD_SOYAD = @name, 
               EMAIL = @email, 
               ROL = @role, 
-              DEPARTMAN = @department,
               AKTIF = @aktif,
-              YETKI_URUN_HAZIRLAMA = @yetkiUrunHazirlama,
-              YETKI_PTS = @yetkiPts,
-              YETKI_MESAJ_KODLARI = @yetkiMesajKodlari,
-              YETKI_AYARLAR = @yetkiAyarlar,
-              YETKI_KULLANICILAR = @yetkiKullanicilar,
-              YETKI_SIRKET_AYARLARI = @yetkiSirketAyarlari,
-              YETKI_SIRKETLER = @yetkiSirketler
+              MENU_YETKILERI = @menuYetkileri,
+              SIRKET_YETKILERI = @sirketYetkileri
           WHERE ID = @id
         `)
 

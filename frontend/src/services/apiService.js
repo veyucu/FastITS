@@ -462,6 +462,24 @@ const apiService = {
     }
   },
 
+  // ==================== Cari İşlemleri ====================
+
+  // Cari Listesi Getir
+  getCariler: async (searchText = '') => {
+    try {
+      const params = searchText ? `?search=${encodeURIComponent(searchText)}` : ''
+      const response = await apiClient.get(`/documents/cariler${params}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Cari listesi hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Cari listesi alınamadı',
+        data: []
+      }
+    }
+  },
+
   // ==================== PTS İşlemleri ====================
 
   // Tarih aralığında paket listesi sorgula

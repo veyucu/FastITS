@@ -8,9 +8,9 @@ import DocumentDetailPage from './pages/DocumentDetailPage'
 import PTSPage from './pages/PTSPage'
 import PTSDetailPage from './pages/PTSDetailPage'
 import SettingsPage from './pages/SettingsPage'
-import MesajKodlariPage from './pages/MesajKodlariPage'
 import UsersPage from './pages/UsersPage'
-import CompanySettingsPage from './pages/CompanySettingsPage'
+import UTSPage from './pages/UTSPage'
+import SerbestBildirimPage from './pages/SerbestBildirimPage'
 
 function App() {
   return (
@@ -67,15 +67,6 @@ function App() {
           />
 
           <Route
-            path="/mesaj-kodlari"
-            element={
-              <ProtectedRoute>
-                <MesajKodlariPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
             path="/settings"
             element={
               <ProtectedRoute>
@@ -94,14 +85,22 @@ function App() {
           />
 
           <Route
-            path="/company-settings"
+            path="/uts"
             element={
               <ProtectedRoute>
-                <CompanySettingsPage />
+                <UTSPage />
               </ProtectedRoute>
             }
           />
 
+          <Route
+            path="/serbest-bildirim"
+            element={
+              <ProtectedRoute>
+                <SerbestBildirimPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Default Route - Login'e yönlendir */}
           <Route path="/" element={<Navigate to="/login" replace />} />

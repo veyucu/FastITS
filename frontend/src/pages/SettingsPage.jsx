@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, Save, Eye, EyeOff, Home, RefreshCw, Download, MessageSquare, AlertTriangle } from 'lucide-react'
+import { Settings, Save, Eye, EyeOff, Home, RefreshCw, Download, MessageSquare, AlertTriangle, Building2, Check, X } from 'lucide-react'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
@@ -55,8 +55,26 @@ const DEFAULT_SETTINGS = {
 
   // Cari Ayarları
   cariGlnBilgisi: 'TBLCASABIT.EMAIL',
-  cariUtsBilgisi: 'TBLCASABITEK.KULL3S'
+  cariUtsBilgisi: 'TBLCASABITEK.KULL3S',
+  cariEpostaBilgisi: 'TBLCASABITEK.CARIALIAS'
 }
+
+// Stable InputField Component - uncontrolled input (focus kaybı yok)
+const StableInputField = memo(({ label, field, placeholder, type, required, defaultValue, onBlur }) => (
+  <div className="mb-4">
+    <label className="block text-sm font-semibold text-slate-300 mb-2">
+      {label}
+      {required && <span className="text-rose-400 ml-1">*</span>}
+    </label>
+    <input
+      type={type || 'text'}
+      defaultValue={defaultValue || ''}
+      onBlur={(e) => onBlur && onBlur(field, e.target.value)}
+      placeholder={placeholder}
+      className="w-full px-4 py-2.5 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+    />
+  </div>
+))
 
 const SettingsPage = () => {
   usePageTitle('Ayarlar')
@@ -74,6 +92,10 @@ const SettingsPage = () => {
   const [mesajLoading, setMesajLoading] = useState(false)
   const [mesajUpdateLoading, setMesajUpdateLoading] = useState(false)
   const [mesajUpdateTooltip, setMesajUpdateTooltip] = useState(null)
+
+  // Şirket Ayarları için state'ler
+  const [companies, setCompanies] = useState([])
+  const [companiesLoading, setCompaniesLoading] = useState(false)
 
   useEffect(() => {
     // Veritabanından ayarları yükle
@@ -105,13 +127,27 @@ const SettingsPage = () => {
     loadSettings()
   }, [])
 
-  const handleChange = (field, value) => {
+  const handleChange = useCallback((field, value) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
     }))
     setHasChanges(true)
-  }
+  }, [])
+
+  // InputField wrapper - uncontrolled input
+  const InputField = ({ label, field, placeholder, type = 'text', required = false }) => (
+    <StableInputField
+      key={field}
+      label={label}
+      field={field}
+      placeholder={placeholder}
+      type={type}
+      required={required}
+      defaultValue={settings[field]}
+      onBlur={handleChange}
+    />
+  )
 
   const handleSave = async () => {
     try {
@@ -120,6 +156,11 @@ const SettingsPage = () => {
 
       // Backend'e de kaydet
       await apiService.saveSettings(settings)
+
+      // Şirket durumlarını kaydet
+      for (const company of companies) {
+        await apiService.updateCompanyStatus(company.sirket, company.aktif)
+      }
 
       setHasChanges(false)
       setMessage({ type: 'success', text: '✅ Ayarlar başarıyla kaydedildi!' })
@@ -185,6 +226,35 @@ const SettingsPage = () => {
     }
   }, [activeTab])
 
+  // Şirket Ayarları Fonksiyonları
+  const fetchCompanies = async () => {
+    setCompaniesLoading(true)
+    try {
+      const result = await apiService.getCompanySettings()
+      if (result.success) {
+        setCompanies(result.data || [])
+      }
+    } catch (error) {
+      console.error('Şirketler yüklenirken hata:', error)
+    } finally {
+      setCompaniesLoading(false)
+    }
+  }
+
+  const toggleCompany = (sirket, currentStatus) => {
+    setCompanies(prev => prev.map(c =>
+      c.sirket === sirket ? { ...c, aktif: !currentStatus } : c
+    ))
+    setHasChanges(true)
+  }
+
+  // Genel sekmesi açıldığında şirketleri yükle
+  useEffect(() => {
+    if (activeTab === 'genel' && companies.length === 0) {
+      fetchCompanies()
+    }
+  }, [activeTab])
+
   // Mesaj Kodları Grid Column Definitions
   const mesajKodlariColumnDefs = useMemo(() => [
     {
@@ -204,22 +274,6 @@ const SettingsPage = () => {
       autoHeight: true
     }
   ], [])
-
-  const InputField = ({ label, field, placeholder, type = 'text', required = false }) => (
-    <div className="mb-4">
-      <label className="block text-sm font-semibold text-slate-300 mb-2">
-        {label}
-        {required && <span className="text-rose-400 ml-1">*</span>}
-      </label>
-      <input
-        type={type}
-        value={settings[field]}
-        onChange={(e) => handleChange(field, e.target.value)}
-        placeholder={placeholder}
-        className="w-full px-4 py-2.5 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-      />
-    </div>
-  )
 
   return (
     <div className="min-h-screen bg-dark-950">
@@ -295,12 +349,15 @@ const SettingsPage = () => {
             {/* Sağ - Butonlar */}
             <div className="flex gap-2">
               <button
+                onClick={() => navigate('/dashboard')}
+                className="px-3 py-1.5 text-sm rounded font-semibold transition-colors flex items-center gap-1.5 bg-dark-700 text-slate-300 hover:bg-dark-600 border border-dark-600"
+              >
+                <X className="w-4 h-4" />
+                İptal
+              </button>
+              <button
                 onClick={handleSave}
-                disabled={!hasChanges}
-                className={`px-3 py-1.5 text-sm rounded font-semibold transition-colors flex items-center gap-1.5 ${hasChanges
-                  ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30'
-                  : 'bg-dark-700 text-slate-500 border border-dark-600 cursor-not-allowed'
-                  }`}
+                className="px-3 py-1.5 text-sm rounded font-semibold transition-colors flex items-center gap-1.5 bg-primary-600 text-white hover:bg-primary-500 shadow-lg shadow-primary-600/30"
               >
                 <Save className="w-4 h-4" />
                 Kaydet
@@ -344,9 +401,78 @@ const SettingsPage = () => {
                   required
                 />
               </div>
-              <p className="text-sm text-slate-500 mt-4">
+              <p className="text-sm text-slate-500 mt-4 mb-8">
                 💡 Backend API'nizin çalıştığı adres. Genellikle <code className="bg-dark-700 px-2 py-1 rounded text-primary-400">http://localhost:5000</code>
               </p>
+
+              {/* Şirket Ayarları */}
+              <div className="border-t border-dark-600 pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-cyan-400" />
+                    <h3 className="text-lg font-semibold text-slate-100">Şirket Ayarları</h3>
+                  </div>
+                  <button
+                    onClick={fetchCompanies}
+                    disabled={companiesLoading}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-slate-300 hover:bg-dark-700 rounded-lg transition-colors border border-dark-600"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${companiesLoading ? 'animate-spin' : ''}`} />
+                    Yenile
+                  </button>
+                </div>
+                <p className="text-slate-400 text-sm mb-4">
+                  Aşağıdaki şirketlerden hangilerinin FastITS'de aktif olacağını seçin.
+                  Sadece aktif şirketler login ekranında görünür.
+                </p>
+
+                {companiesLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="w-6 h-6 text-primary-400 animate-spin" />
+                  </div>
+                ) : companies.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500">
+                    Şirket bulunamadı
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {companies.map(company => (
+                      <label
+                        key={company.sirket}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer hover:bg-dark-700/50 ${company.aktif
+                          ? 'bg-emerald-500/10 border-emerald-500/30'
+                          : 'bg-dark-800/60 border-dark-700'
+                          }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={company.aktif}
+                          onChange={() => toggleCompany(company.sirket, company.aktif)}
+                          className="w-4 h-4 rounded border-dark-600 bg-dark-700 text-emerald-500 focus:ring-emerald-500/50 focus:ring-offset-0"
+                        />
+                        <Building2 className={`w-4 h-4 ${company.aktif ? 'text-emerald-400' : 'text-slate-500'}`} />
+                        <span className={`font-medium ${company.aktif ? 'text-emerald-300' : 'text-slate-400'}`}>
+                          {company.sirket}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                {/* Özet */}
+                {companies.length > 0 && (
+                  <div className="mt-4 p-3 bg-dark-800/60 rounded-lg border border-dark-700">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-400">Toplam Şirket:</span>
+                      <span className="text-slate-200">{companies.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-1">
+                      <span className="text-slate-400">Aktif Şirket:</span>
+                      <span className="text-emerald-400">{companies.filter(c => c.aktif).length}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -356,7 +482,7 @@ const SettingsPage = () => {
               <h2 className="text-xl font-bold text-slate-100 mb-6">ITS Web Servis Ayarları</h2>
 
               {/* Temel Bilgiler */}
-              <div className="grid grid-cols-2 gap-6 mb-8">
+              <div className="grid grid-cols-3 gap-6 mb-8">
                 <InputField
                   label="ITS GLN No"
                   field="itsGlnNo"
@@ -369,29 +495,34 @@ const SettingsPage = () => {
                   placeholder="86800010845240000"
                   required
                 />
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">
+                    ITS Şifre <span className="text-rose-400 ml-1">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={settings.itsPassword}
+                      onChange={(e) => handleChange('itsPassword', e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-2.5 pr-12 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Şifre */}
-              <div className="mb-8">
-                <label className="block text-sm font-semibold text-slate-300 mb-2">
-                  ITS Şifre <span className="text-rose-400 ml-1">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={settings.itsPassword}
-                    onChange={(e) => handleChange('itsPassword', e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-2.5 pr-12 bg-dark-800 border border-dark-600 rounded-lg text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+              {/* Uyarı Notu */}
+              <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded mb-6">
+                <p className="text-sm text-amber-400">
+                  <strong>⚠️ Dikkat:</strong> Bilmiyorsanız lütfen aşağıdaki ayarları değiştirmeyin.
+                </p>
               </div>
 
               {/* Web Servis Adresi */}
@@ -432,29 +563,36 @@ const SettingsPage = () => {
             <div>
               <h2 className="text-xl font-bold text-slate-100 mb-6">UTS Web Servis Ayarları</h2>
 
-              {/* UTS No */}
-              <div className="mb-8">
-                <InputField
-                  label="UTS No"
-                  field="utsNo"
-                  placeholder="8680001084524"
-                  required
-                />
-                <p className="text-sm text-slate-500 mt-1">
-                  Firmanın Sağlık Bakanlığı'ndan aldığı UTS numarası
-                </p>
+              {/* UTS No ve UTS ID */}
+              <div className="grid grid-cols-2 gap-6 mb-8">
+                <div>
+                  <InputField
+                    label="UTS No"
+                    field="utsNo"
+                    placeholder="8680001084524"
+                    required
+                  />
+                  <p className="text-sm text-slate-500 -mt-3">
+                    Firmanın Sağlık Bakanlığı'ndan aldığı UTS numarası
+                  </p>
+                </div>
+                <div>
+                  <InputField
+                    label="UTS ID"
+                    field="utsId"
+                    placeholder="Systemfed20222-7305-4225-bb27-89a7d28b68aa"
+                    required
+                  />
+                  <p className="text-sm text-slate-500 -mt-3">
+                    Sağlık Bakanlığı tarafından verilen UTS kimlik numarası (System ile başlar)
+                  </p>
+                </div>
               </div>
 
-              {/* UTS ID */}
-              <div className="mb-8">
-                <InputField
-                  label="UTS ID"
-                  field="utsId"
-                  placeholder="Systemfed20222-7305-4225-bb27-89a7d28b68aa"
-                  required
-                />
-                <p className="text-sm text-slate-500 mt-1">
-                  Sağlık Bakanlığı tarafından verilen UTS kimlik numarası (System ile başlar)
+              {/* Uyarı Notu */}
+              <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded mb-6">
+                <p className="text-sm text-amber-400">
+                  <strong>⚠️ Dikkat:</strong> Bilmiyorsanız lütfen aşağıdaki ayarları değiştirmeyin.
                 </p>
               </div>
 
@@ -503,6 +641,12 @@ const SettingsPage = () => {
           {activeTab === 'mapping' && (
             <div>
               <h2 className="text-xl font-bold text-slate-100 mb-6">Veritabanı Alan Eşleştirmeleri</h2>
+
+              <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded mb-6">
+                <p className="text-sm text-amber-400">
+                  <strong>⚠️ Dikkat:</strong> Bu ayarlar değiştirildiğinde backend'in yeniden başlatılması gerekebilir.
+                </p>
+              </div>
 
               {/* Ürün Ayarları */}
               <div className="mb-8">
@@ -575,13 +719,18 @@ const SettingsPage = () => {
                       Cari UTS numarasının bulunduğu alan (TBLCASABIT veya TBLCASABITEK)
                     </p>
                   </div>
-                </div>
-              </div>
 
-              <div className="bg-amber-500/10 border-l-4 border-amber-500 p-4 rounded">
-                <p className="text-sm text-amber-400">
-                  <strong>⚠️ Dikkat:</strong> Bu ayarlar değiştirildiğinde backend'in yeniden başlatılması gerekebilir.
-                </p>
+                  <div>
+                    <InputField
+                      label="Cari ePosta Bilgisi (Tablo.Kolon)"
+                      field="cariEpostaBilgisi"
+                      placeholder="TBLCASABITEK.CARIALIAS"
+                    />
+                    <p className="text-sm text-slate-500">
+                      Cari e-posta adresinin bulunduğu alan (TBLCASABIT veya TBLCASABITEK)
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -612,7 +761,7 @@ const SettingsPage = () => {
                       className="px-3 py-1.5 text-sm rounded text-white bg-indigo-600 hover:bg-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50 font-semibold"
                     >
                       <Download className={`w-4 h-4 ${mesajUpdateLoading ? 'animate-spin' : ''}`} />
-                      {mesajUpdateLoading ? 'Güncelleniyor...' : 'Mesajları Güncelle'}
+                      {mesajUpdateLoading ? 'Güncelleniyor...' : 'Güncelle'}
                     </button>
                   </div>
                 </div>
@@ -622,8 +771,8 @@ const SettingsPage = () => {
               {mesajUpdateTooltip && (
                 <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right duration-300">
                   <div className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-xl border backdrop-blur-sm min-w-[300px] max-w-[450px] ${mesajUpdateTooltip.type === 'success'
-                      ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50'
-                      : 'bg-rose-900/90 text-rose-100 border-rose-500/50'
+                    ? 'bg-emerald-900/90 text-emerald-100 border-emerald-500/50'
+                    : 'bg-rose-900/90 text-rose-100 border-rose-500/50'
                     }`}>
                     <div className="flex-shrink-0">
                       {mesajUpdateTooltip.type === 'success' && <MessageSquare className="w-5 h-5 text-emerald-400" />}
@@ -640,7 +789,7 @@ const SettingsPage = () => {
                 </div>
               )}
 
-              <div className="ag-theme-alpine" style={{ height: '400px' }}>
+              <div className="ag-theme-alpine" style={{ height: 'calc(100vh - 200px)' }}>
                 {mesajLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">

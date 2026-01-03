@@ -550,7 +550,7 @@ const PTSPage = () => {
           {/* Üst Satır - Logo, Başlık, İşlem Butonları */}
           <div className="flex items-center gap-2 md:gap-4">
             {/* Sol - Başlık (PTS ikonu ve başlığı sadece desktop) */}
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/')}
                 className="w-8 h-8 bg-dark-700 rounded flex items-center justify-center hover:bg-dark-600 transition-colors border border-dark-600 flex-shrink-0"
@@ -558,11 +558,13 @@ const PTSPage = () => {
               >
                 <Home className="w-5 h-5 text-slate-300" />
               </button>
-              {/* PTS ikonu ve başlığı sadece desktop'ta görünür */}
-              <div className="hidden md:flex w-8 h-8 bg-primary-600 rounded items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
-                <Truck className="w-5 h-5 text-white" />
+              {/* PTS ikonu ve başlığı */}
+              <div className="flex items-center gap-2">
+                <div className="hidden md:flex w-8 h-8 bg-primary-600 rounded items-center justify-center shadow-lg shadow-primary-600/30 flex-shrink-0">
+                  <Truck className="w-5 h-5 text-white" />
+                </div>
+                <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS</h1>
               </div>
-              <h1 className="text-lg font-bold text-slate-100 flex-shrink-0">PTS</h1>
             </div>
 
             {/* Orta - Arama (Desktop'ta) + İşlem Butonları */}
