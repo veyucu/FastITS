@@ -480,6 +480,21 @@ const apiService = {
     }
   },
 
+  // GTIN ile Stok Bilgisi Getir (Serbest Bildirim için)
+  getStockByGtin: async (gtin) => {
+    try {
+      const response = await apiClient.get(`/documents/stock/${encodeURIComponent(gtin)}`)
+      return response.data
+    } catch (error) {
+      console.error('❌ Stok bilgisi hatası:', error)
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Stok bilgisi alınamadı',
+        data: null
+      }
+    }
+  },
+
   // ==================== PTS İşlemleri ====================
 
   // Tarih aralığında paket listesi sorgula

@@ -36,6 +36,35 @@ router.get('/cariler', async (req, res) => {
   }
 })
 
+// GET /api/documents/stock/:gtin - GTIN ile stok bilgisi getir (Serbest Bildirim için)
+router.get('/stock/:gtin', async (req, res) => {
+  try {
+    const { gtin } = req.params
+    console.log('📋 Stok bilgisi isteği:', gtin)
+
+    const result = await documentService.getStockByGtin(gtin)
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stok bulunamadı'
+      })
+    }
+
+    res.json({
+      success: true,
+      data: result
+    })
+  } catch (error) {
+    console.error('❌ Stok bilgisi hatası:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Stok bilgisi alınamadı',
+      error: error.message
+    })
+  }
+})
+
 // GET /api/documents - Tüm belgeleri getir (tarih zorunlu)
 router.get('/', async (req, res) => {
   try {

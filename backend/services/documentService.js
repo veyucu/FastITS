@@ -2240,6 +2240,48 @@ const documentService = {
       console.error('❌ FAST Durumu Güncelleme Hatası:', error)
       throw error
     }
+  },
+
+  // GTIN ile stok bilgisi getir (Serbest Bildirim için)
+  async getStockByGtin(gtin) {
+    try {
+      const pool = await getConnection()
+
+      // GTIN temizle (başındaki sıfırları kaldır)
+      const cleanGtin = gtin.replace(/^0+/, '')
+
+      const query = `
+        SELECT TOP 1
+          S.STOK_KODU,
+          DBO.TRK(S.STOK_ADI) AS STOK_ADI,
+          S.KOD_5
+        FROM TBLSTSABIT S WITH (NOLOCK)
+        WHERE S.STOK_KODU = @gtin
+           OR S.STOK_KODU = @cleanGtin
+           OR S.BARKOD1 = @gtin
+           OR S.BARKOD1 = @cleanGtin
+      `
+
+      const request = pool.request()
+      request.input('gtin', gtin)
+      request.input('cleanGtin', cleanGtin)
+
+      const result = await request.query(query)
+
+      if (result.recordset.length === 0) {
+        return null
+      }
+
+      const row = result.recordset[0]
+      return {
+        stokKodu: row.STOK_KODU,
+        stokAdi: row.STOK_ADI,
+        turu: row.KOD_5 === 'BESERI' ? 'ITS' : (row.KOD_5 === 'UTS' ? 'UTS' : 'DGR')
+      }
+    } catch (error) {
+      console.error('❌ Stok Bilgisi Getirme Hatası:', error)
+      throw error
+    }
   }
 }
 

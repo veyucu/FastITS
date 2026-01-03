@@ -1,22 +1,32 @@
-import { useState, useRef, useMemo, useEffect } from 'react'
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AgGridReact } from 'ag-grid-react'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
-import { FileText, Home, QrCode, RefreshCw, User, X, Search, Hash, MapPin, Info } from 'lucide-react'
+import { FileText, Home, QrCode, RefreshCw, User, X, Search, Hash, MapPin, Info, Trash2, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import usePageTitle from '../hooks/usePageTitle'
 import apiService from '../services/apiService'
+import { parseITSBarcode, detectBarcodeType, formatExpiryDate } from '../utils/barcodeParser'
 
 const SerbestBildirimPage = () => {
     usePageTitle('Serbest Bildirim')
     const navigate = useNavigate()
     const barcodeInputRef = useRef(null)
+    const gridRef = useRef(null)
+
+    // LocalStorage key'leri
+    const STORAGE_KEY_ITEMS = 'serbest_bildirim_items'      // Detaylı kayıtlar: gtin, seriNo, miad, lotNo, bildirim, okutmaZamani, stokKodu, stokAdi, turu
+    const STORAGE_KEY_BELGE = 'serbest_bildirim_belge'      // Belge No
+    const STORAGE_KEY_CARI = 'serbest_bildirim_cari'        // Cari bilgileri
 
     // State'ler
     const [barcodeInput, setBarcodeInput] = useState('')
+    const [belgeNo, setBelgeNo] = useState('')
     const [deleteMode, setDeleteMode] = useState(false)
     const [showBulkScanModal, setShowBulkScanModal] = useState(false)
-    const [items, setItems] = useState([]) // Boş grid verisi
+    const [scannedItems, setScannedItems] = useState([]) // Detaylı barkodlar (localStorage'a kaydedilir)
+    const [message, setMessage] = useState(null) // {type: 'success'|'error', text: '...'}
+    const [selectedStokForDetail, setSelectedStokForDetail] = useState(null) // Detay modalı için seçilen stok
 
     // Cari Seçimi State'leri
     const [selectedCari, setSelectedCari] = useState(null)
@@ -24,6 +34,88 @@ const SerbestBildirimPage = () => {
     const [cariSearchText, setCariSearchText] = useState('')
     const [cariler, setCariler] = useState([])
     const [cariLoading, setCariLoading] = useState(false)
+
+    // Grid için gruplandırılmış veri (GTIN bazında toplam okutulmuş adet)
+    const gridData = useMemo(() => {
+        const grouped = {}
+        scannedItems.forEach(item => {
+            const key = item.gtin || item.stokKodu
+            if (!grouped[key]) {
+                grouped[key] = {
+                    gtin: item.gtin,
+                    stokKodu: item.stokKodu,
+                    stokAdi: item.stokAdi,
+                    turu: item.turu,
+                    okutulan: 0
+                }
+            }
+            grouped[key].okutulan += 1
+        })
+        return Object.values(grouped)
+    }, [scannedItems])
+
+    // Detay modalı için filtrelenmiş kayıtlar
+    const detailItems = useMemo(() => {
+        if (!selectedStokForDetail) return []
+        return scannedItems.filter(item =>
+            (item.gtin === selectedStokForDetail.gtin) ||
+            (item.stokKodu === selectedStokForDetail.stokKodu)
+        )
+    }, [scannedItems, selectedStokForDetail])
+
+    // Sayfa yüklendiğinde localStorage'dan verileri oku
+    useEffect(() => {
+        // Detaylı kayıtları yükle
+        const savedItems = localStorage.getItem(STORAGE_KEY_ITEMS)
+        if (savedItems) {
+            try {
+                setScannedItems(JSON.parse(savedItems))
+            } catch (e) {
+                console.error('localStorage parse hatası:', e)
+            }
+        }
+        // Belge No'yu yükle
+        const savedBelge = localStorage.getItem(STORAGE_KEY_BELGE)
+        if (savedBelge) {
+            setBelgeNo(savedBelge)
+        }
+        // Cari bilgilerini yükle
+        const savedCari = localStorage.getItem(STORAGE_KEY_CARI)
+        if (savedCari) {
+            try {
+                setSelectedCari(JSON.parse(savedCari))
+            } catch (e) {
+                console.error('localStorage cari parse hatası:', e)
+            }
+        }
+    }, [])
+
+    // scannedItems değiştiğinde localStorage'a kaydet
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_ITEMS, JSON.stringify(scannedItems))
+    }, [scannedItems])
+
+    // Belge No değiştiğinde localStorage'a kaydet
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY_BELGE, belgeNo)
+    }, [belgeNo])
+
+    // Cari değiştiğinde localStorage'a kaydet
+    useEffect(() => {
+        if (selectedCari) {
+            localStorage.setItem(STORAGE_KEY_CARI, JSON.stringify(selectedCari))
+        } else {
+            localStorage.removeItem(STORAGE_KEY_CARI)
+        }
+    }, [selectedCari])
+
+    // Mesajı otomatik kapat
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => setMessage(null), 3000)
+            return () => clearTimeout(timer)
+        }
+    }, [message])
 
     // Cari listesini API'den çek
     const fetchCariler = async (searchText = '') => {
@@ -76,19 +168,100 @@ const SerbestBildirimPage = () => {
         { headerName: 'GLN No', field: 'glnNo', width: 150, cellClass: 'font-mono' }
     ], [])
 
-    // Barkod okutma işlemi (placeholder)
-    const handleBarcodeScan = (e) => {
+    // Barkod okutma işlemi
+    const handleBarcodeScan = useCallback(async (e) => {
         e.preventDefault()
-        if (!barcodeInput.trim()) return
-        // TODO: Barkod işleme mantığı
-        console.log('Karekod okutuldu:', barcodeInput)
+        const barcode = barcodeInput.trim()
+        if (!barcode) return
+
+        try {
+            // Barkod tipini belirle
+            const barcodeType = detectBarcodeType(barcode)
+
+            if (barcodeType === 'its') {
+                // ITS barkod parse et
+                const parsedData = parseITSBarcode(barcode)
+                if (!parsedData) {
+                    setMessage({ type: 'error', text: 'Geçersiz ITS karekod formatı' })
+                    setBarcodeInput('')
+                    return
+                }
+
+                // Silme modunda mı?
+                if (deleteMode) {
+                    // Seri no ile bul ve sil
+                    const existingIndex = scannedItems.findIndex(item => item.seriNo === parsedData.serialNumber)
+                    if (existingIndex !== -1) {
+                        setScannedItems(prev => prev.filter((_, i) => i !== existingIndex))
+                        setMessage({ type: 'success', text: `Silindi: ${parsedData.serialNumber}` })
+                    } else {
+                        setMessage({ type: 'error', text: `Kayıt bulunamadı: ${parsedData.serialNumber}` })
+                    }
+                } else {
+                    // Mükerrer kontrol
+                    const isDuplicate = scannedItems.some(item => item.seriNo === parsedData.serialNumber)
+                    if (isDuplicate) {
+                        setMessage({ type: 'error', text: `Mükerrer! Bu seri no zaten okutulmuş: ${parsedData.serialNumber}` })
+                        setBarcodeInput('')
+                        return
+                    }
+
+                    // Stok bilgisini API'den al
+                    let stokBilgisi = { stokKodu: parsedData.gtin, stokAdi: '', turu: 'ITS' }
+                    try {
+                        const stockResult = await apiService.getStockByGtin(parsedData.gtin)
+                        if (stockResult.success && stockResult.data) {
+                            stokBilgisi = stockResult.data
+                        }
+                    } catch (err) {
+                        console.warn('Stok bilgisi alınamadı:', err)
+                    }
+
+                    // Yeni kayıt ekle (localStorage detay formatı)
+                    const newItem = {
+                        id: Date.now(),
+                        gtin: parsedData.gtin,
+                        seriNo: parsedData.serialNumber,
+                        miad: parsedData.expiryDate,
+                        lotNo: parsedData.lotNumber,
+                        bildirim: null,
+                        okutmaZamani: new Date().toISOString(),
+                        stokKodu: stokBilgisi.stokKodu,
+                        stokAdi: stokBilgisi.stokAdi,
+                        turu: stokBilgisi.turu || 'ITS'
+                    }
+                    setScannedItems(prev => [newItem, ...prev])
+                    setMessage({ type: 'success', text: `Eklendi: ${stokBilgisi.stokAdi || parsedData.gtin}` })
+                }
+            } else {
+                // Diğer barkod tipleri (şimdilik desteklenmiyor)
+                setMessage({ type: 'error', text: 'Sadece ITS karekodları desteklenmektedir' })
+            }
+        } catch (error) {
+            console.error('Barkod işleme hatası:', error)
+            setMessage({ type: 'error', text: error.message || 'Barkod işlenirken hata oluştu' })
+        }
+
         setBarcodeInput('')
+        barcodeInputRef.current?.focus()
+    }, [barcodeInput, deleteMode, scannedItems])
+
+    // Tüm verileri temizle
+    const handleClearAll = () => {
+        if (confirm('Tüm okutulan veriler, belge no ve cari bilgileri silinecek. Emin misiniz?')) {
+            setScannedItems([])
+            setBelgeNo('')
+            setSelectedCari(null)
+            localStorage.removeItem(STORAGE_KEY_ITEMS)
+            localStorage.removeItem(STORAGE_KEY_BELGE)
+            localStorage.removeItem(STORAGE_KEY_CARI)
+            setMessage({ type: 'success', text: 'Tüm veriler temizlendi' })
+        }
     }
 
-    // Yenile işlemi (placeholder)
+    // Yenile işlemi
     const handleRefresh = () => {
-        // TODO: Veri yenileme
-        console.log('Yenileme')
+        barcodeInputRef.current?.focus()
     }
 
     // AG Grid Column Definitions
@@ -116,44 +289,28 @@ const SerbestBildirimPage = () => {
             }
         },
         {
-            headerName: 'Karekod / Barkod',
-            field: 'barcode',
+            headerName: 'Stok Kodu',
+            field: 'stokKodu',
+            width: 150,
+            cellClass: 'font-mono'
+        },
+        {
+            headerName: 'Stok Adı',
+            field: 'stokAdi',
             flex: 1,
-            minWidth: 300,
-            cellClass: 'font-mono font-bold'
+            minWidth: 250
         },
         {
-            headerName: 'GTIN',
-            field: 'gtin',
-            width: 180,
-            cellClass: 'font-mono'
-        },
-        {
-            headerName: 'Parti No',
-            field: 'lot',
-            width: 120,
-            cellClass: 'font-mono'
-        },
-        {
-            headerName: 'Seri No',
-            field: 'seriNo',
-            width: 120,
-            cellClass: 'font-mono'
-        },
-        {
-            headerName: 'S.K.T',
-            field: 'skt',
-            width: 100,
-            cellClass: 'text-center'
-        },
-        {
-            headerName: 'Adet',
-            field: 'miktar',
-            width: 90,
-            cellClass: 'text-center',
+            headerName: 'Okutulan',
+            field: 'okutulan',
+            width: 110,
+            cellClass: 'text-center cursor-pointer',
             cellRenderer: (params) => (
-                <span className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-primary-500/20 text-primary-400 border border-primary-500/30">
-                    {params.value || 1}
+                <span
+                    className="inline-flex items-center justify-center px-3 py-1 rounded-md text-base font-bold bg-primary-500/20 text-primary-400 border border-primary-500/30 hover:bg-primary-500/30 transition-colors"
+                    onClick={() => setSelectedStokForDetail(params.data)}
+                >
+                    {params.value || 0}
                 </span>
             )
         }
@@ -314,6 +471,14 @@ const SerbestBildirimPage = () => {
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={handleClearAll}
+                                        className="w-9 h-9 flex items-center justify-center rounded transition-all bg-rose-600/20 text-rose-400 hover:bg-rose-600/30 border border-rose-500/50"
+                                        title="Tümünü Temizle"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => console.log('ITS Bildirim')}
                                         className="w-9 h-9 flex items-center justify-center rounded transition-all bg-dark-700 text-slate-200 border border-dark-600 hover:bg-dark-600"
                                         title="ITS Bildirim"
@@ -337,9 +502,10 @@ const SerbestBildirimPage = () => {
 
             {/* AG Grid */}
             <div className="flex-1 px-3 py-3 relative">
-                <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700 h-full">
+                <div className="ag-theme-alpine rounded-xl overflow-hidden border border-dark-700 h-full relative">
                     <AgGridReact
-                        rowData={items}
+                        ref={gridRef}
+                        rowData={gridData}
                         columnDefs={columnDefs}
                         defaultColDef={defaultColDef}
                         enableCellTextSelection={true}
@@ -352,6 +518,20 @@ const SerbestBildirimPage = () => {
                             noRowsToShow: 'Henüz karekod okutulmadı'
                         }}
                     />
+                    {/* Message Overlay - Grid üzerinde */}
+                    {message && (
+                        <div className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg flex items-center gap-2 shadow-xl ${message.type === 'success'
+                            ? 'bg-emerald-600/90 text-white'
+                            : 'bg-rose-600/90 text-white'
+                            }`}>
+                            {message.type === 'success' ? (
+                                <CheckCircle className="w-5 h-5 shrink-0" />
+                            ) : (
+                                <AlertCircle className="w-5 h-5 shrink-0" />
+                            )}
+                            <span className="text-sm font-semibold">{message.text}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -417,6 +597,106 @@ const SerbestBildirimPage = () => {
                                     localeText={{
                                         noRowsToShow: 'Arama yapın (en az 3 karakter)'
                                     }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Detay Modal - Okutulan karekodları göster */}
+            {selectedStokForDetail && (
+                <div
+                    className="fixed inset-0 flex items-center justify-center"
+                    style={{ zIndex: 9999, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                    onClick={() => setSelectedStokForDetail(null)}
+                >
+                    <div
+                        className="bg-dark-900 rounded-xl border border-dark-700 w-full max-w-4xl mx-4 shadow-2xl max-h-[80vh] flex flex-col overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-primary-600/30 to-cyan-600/30 border-b border-primary-500/30 px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-100">Okutulan Karekodlar</h2>
+                                    <p className="text-sm text-primary-300">{selectedStokForDetail.stokAdi || selectedStokForDetail.stokKodu}</p>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                        <p className="text-xs text-slate-400">Toplam Okutulan</p>
+                                        <p className="text-2xl font-bold text-primary-400">{detailItems.length}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedStokForDetail(null)}
+                                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-dark-600 transition-colors text-slate-400 hover:text-slate-200"
+                                    >
+                                        <XCircle className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="flex-1 p-4 overflow-hidden bg-dark-800">
+                            <div className="ag-theme-alpine-dark h-full" style={{ height: '400px' }}>
+                                <AgGridReact
+                                    rowData={detailItems}
+                                    columnDefs={[
+                                        {
+                                            headerName: '#',
+                                            valueGetter: 'node.rowIndex + 1',
+                                            width: 60,
+                                            cellClass: 'text-center font-semibold text-slate-400'
+                                        },
+                                        {
+                                            headerName: 'Seri No',
+                                            field: 'seriNo',
+                                            flex: 1,
+                                            minWidth: 200,
+                                            cellClass: 'font-mono font-bold text-primary-400'
+                                        },
+                                        {
+                                            headerName: 'MIAD',
+                                            field: 'miad',
+                                            width: 120,
+                                            cellClass: 'text-center',
+                                            valueFormatter: (params) => {
+                                                if (!params.value || params.value.length !== 6) return params.value
+                                                const yy = params.value.substring(0, 2)
+                                                const mm = params.value.substring(2, 4)
+                                                const dd = params.value.substring(4, 6)
+                                                return `${dd}.${mm}.20${yy}`
+                                            }
+                                        },
+                                        {
+                                            headerName: 'Lot No',
+                                            field: 'lotNo',
+                                            width: 150,
+                                            cellClass: 'font-mono'
+                                        },
+                                        {
+                                            headerName: 'Okutma Zamanı',
+                                            field: 'okutmaZamani',
+                                            width: 170,
+                                            cellClass: 'text-slate-400',
+                                            valueFormatter: (params) => {
+                                                if (!params.value) return ''
+                                                try {
+                                                    return new Date(params.value).toLocaleString('tr-TR')
+                                                } catch {
+                                                    return params.value
+                                                }
+                                            }
+                                        }
+                                    ]}
+                                    defaultColDef={{
+                                        sortable: true,
+                                        resizable: true,
+                                        filter: true
+                                    }}
+                                    animateRows={true}
+                                    enableCellTextSelection={true}
                                 />
                             </div>
                         </div>
