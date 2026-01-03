@@ -319,7 +319,7 @@ const SerbestBildirimPage = () => {
             headerName: 'Stok Kodu',
             field: 'stokKodu',
             width: 150,
-            cellClass: 'font-mono',
+            cellClass: 'font-mono text-center',
             cellRenderer: (params) => {
                 if (params.node.rowPinned) {
                     return <span className="text-primary-400 font-bold">{gridData.length} Kalem</span>
