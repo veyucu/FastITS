@@ -486,12 +486,7 @@ const DocumentDetailPage = () => {
       width: 150,
       cellClass: 'font-mono',
       pinned: 'left',
-      cellStyle: (params) => {
-        if (params.node.rowPinned === 'bottom') {
-          return {}
-        }
-        return {}
-      }
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center' }
     },
     {
       headerName: 'Ürün Adı',
